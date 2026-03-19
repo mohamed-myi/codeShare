@@ -5,7 +5,7 @@ import {
   boilerplateRepository,
   hintRepository,
 } from "../index.js";
-import { fixtures } from "./data/fixtures.js";
+import { fixtures } from "./data/index.js";
 
 async function seed(): Promise<void> {
   console.log("Seeding database...");
