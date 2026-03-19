@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+
+dist/
+build/
+
+*.tsbuildinfo
+
+.turbo/
+
+.env
+.env.local
+.env.*.local
+
+.idea/
+.vscode/
+*.swp
+*.swo
+*.njsproj
+*.ntvs*
+*.sln
+*.suo
+
+.DS_Store
+Thumbs.db
+
+coverage/
+
+# Logs
+*.log
+logs/
+
+*.sql.bak
+
+docs
+*.md
+*.markdown

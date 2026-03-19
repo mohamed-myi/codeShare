@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: codeshare-postgres
+    environment:
+      POSTGRES_USER: codeshare
+      POSTGRES_PASSWORD: codeshare
+      POSTGRES_DB: codeshare_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:

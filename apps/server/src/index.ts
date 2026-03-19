@@ -1,0 +1,27 @@
+import Fastify from "fastify";
+import { loadConfig } from "./config.js";
+import { createLogger } from "./lib/logger.js";
+import { setupUpgradeRouting } from "./server.js";
+import { registerCors } from "./plugins/cors.js";
+import { registerRateLimit } from "./plugins/rateLimit.js";
+import { healthRoutes } from "./routes/health.js";
+import { roomRoutes } from "./routes/rooms.js";
+import { problemRoutes } from "./routes/problems.js";
+
+const config = loadConfig();
+const logger = createLogger(config.LOG_LEVEL);
+
+const app = Fastify({ logger: true });
+
+await registerCors(app, config);
+await registerRateLimit(app, config);
+
+await app.register(healthRoutes);
+await app.register(roomRoutes, { prefix: "/api" });
+await app.register(problemRoutes, { prefix: "/api" });
+
+const address = await app.listen({ port: config.PORT, host: "0.0.0.0" });
+logger.info(`Server listening on ${address}`);
+
+const httpServer = app.server;
+setupUpgradeRouting(httpServer, config, logger);
