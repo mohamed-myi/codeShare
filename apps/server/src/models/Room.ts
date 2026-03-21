@@ -33,6 +33,7 @@ export class Room {
   submissionLimit = ROOM_LIMITS.MAX_SUBMISSIONS;
   executionInProgress = false;
   hintStreaming = false;
+  llmCallsUsed = 0;
   importsUsed = 0;
   readonly yjsToken: string;
   createdAt: Date;

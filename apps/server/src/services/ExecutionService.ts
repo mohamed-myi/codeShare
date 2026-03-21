@@ -1,4 +1,14 @@
-import type { TestCase, RunResult, SubmitResult } from "@codeshare/shared";
+import type { TestCase, RunResult, SubmitResult, CaseResult } from "@codeshare/shared";
+import { TIMEOUTS } from "@codeshare/shared";
+
+export interface HarnessCase {
+  index: number;
+  passed: boolean;
+  elapsed_ms?: number;
+  got?: string | null;
+  expected?: string | null;
+  error?: string | null;
+}
 
 const HARNESS_TEMPLATE = `import json, time, traceback, sys, io, os
 
@@ -59,10 +69,12 @@ export const executionService = {
   },
 
   parseResult(stdout: string): { results: unknown[]; userStdout: string } | null {
-    const startMarker = "===HARNESS_RESULT===";
-    const endMarker = "===END_HARNESS_RESULT===";
-    const startIdx = stdout.indexOf(startMarker);
-    const endIdx = stdout.indexOf(endMarker);
+    const startMarker = "===HARNESS_RESULT===\n";
+    const endMarker = "\n===END_HARNESS_RESULT===";
+    const startIdx = stdout.lastIndexOf(startMarker);
+    const endIdx = startIdx === -1
+      ? -1
+      : stdout.indexOf(endMarker, startIdx + startMarker.length);
     if (startIdx === -1 || endIdx === -1) return null;
 
     const jsonStr = stdout.slice(startIdx + startMarker.length, endIdx).trim();
@@ -74,19 +86,67 @@ export const executionService = {
   },
 
   buildRunResult(
-    _parsedResults: unknown[],
-    _userStdout: string,
-    _visibleTestCases: TestCase[],
+    parsedResults: HarnessCase[],
+    userStdout: string,
+    testCases: Array<Pick<TestCase, "input" | "expectedOutput">>,
   ): RunResult {
-    // TODO: Map parsed results to typed RunResult
-    return { type: "run", passed: 0, total: 0, cases: [], userStdout: "" };
+    const cases: CaseResult[] = parsedResults.map((r) => {
+      const tc = testCases[r.index];
+      const elapsedMs = r.elapsed_ms ?? 0;
+      const caseResult: CaseResult = {
+        index: r.index,
+        passed: r.passed,
+        elapsedMs,
+      };
+      if (elapsedMs > TIMEOUTS.SLOW_CASE_THRESHOLD_MS) {
+        caseResult.slow = true;
+      }
+      if (!r.passed) {
+        if (r.error) {
+          caseResult.error = r.error;
+        } else {
+          caseResult.got = r.got ?? undefined;
+          caseResult.expected = r.expected ?? undefined;
+        }
+        if (tc) {
+          caseResult.input = JSON.stringify(tc.input);
+        }
+      }
+      return caseResult;
+    });
+
+    return {
+      type: "run",
+      passed: cases.filter((c) => c.passed).length,
+      total: cases.length,
+      cases,
+      userStdout,
+    };
   },
 
   buildSubmitResult(
-    _parsedResults: unknown[],
-    _allTestCases: TestCase[],
+    parsedResults: HarnessCase[],
+    allTestCases: Array<Pick<TestCase, "input" | "expectedOutput" | "isVisible">>,
   ): SubmitResult {
-    // TODO: Map parsed results to typed SubmitResult
-    return { type: "submit", passed: 0, total: 0, firstFailure: null };
+    const passed = parsedResults.filter((r) => r.passed).length;
+    const total = parsedResults.length;
+
+    const firstFailed = parsedResults.find((r) => !r.passed);
+    let firstFailure: SubmitResult["firstFailure"] = null;
+
+    if (firstFailed) {
+      const tc = allTestCases[firstFailed.index];
+      const hiddenFailure = tc && !tc.isVisible;
+      firstFailure = {
+        index: firstFailed.index,
+        input: hiddenFailure ? "" : tc ? JSON.stringify(tc.input) : "",
+        got: hiddenFailure
+          ? "Output did not match a hidden test case."
+          : firstFailed.got ?? firstFailed.error ?? "",
+        expected: hiddenFailure ? "Hidden test case expectation." : firstFailed.expected ?? "",
+      };
+    }
+
+    return { type: "submit", passed, total, firstFailure };
   },
 };

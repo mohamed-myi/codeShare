@@ -1,4 +1,4 @@
-import type { Problem, ProblemListItem, ProblemDetail } from "@codeshare/shared";
+import type { ProblemListItem, ProblemDetail } from "@codeshare/shared";
 import { problemRepository, testCaseRepository, boilerplateRepository } from "@codeshare/db";
 
 export const problemService = {
@@ -20,9 +20,5 @@ export const problemService = {
     );
 
     return { ...problem, visibleTestCases, boilerplate };
-  },
-
-  async getBySlug(slug: string): Promise<Problem | null> {
-    return problemRepository.findBySlug(slug);
   },
 };
