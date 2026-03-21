@@ -1,4 +1,9 @@
 import { z } from "zod";
+import { ROOM_CODE } from "./constants.js";
+
+const roomCodePattern = new RegExp(
+  `^[${ROOM_CODE.ALPHABET}]{${ROOM_CODE.SEGMENT_LENGTH}}-[${ROOM_CODE.ALPHABET}]{${ROOM_CODE.SEGMENT_LENGTH}}$`,
+);
 
 // --- Socket Event Payload Schemas ---
 
@@ -6,6 +11,8 @@ export const userJoinSchema = z.object({
   displayName: z.string().min(1).max(30).trim(),
   reconnectToken: z.string().optional(),
 });
+
+export const roomCodeSchema = z.string().trim().toLowerCase().regex(roomCodePattern);
 
 export const problemSelectSchema = z.object({
   problemId: z.string().uuid(),

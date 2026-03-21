@@ -27,7 +27,8 @@ export const TIMEOUTS = {
 } as const;
 
 export const ROOM_CODE = {
-  SEGMENT_LENGTH: 3,
+  ALPHABET: "abcdefghijklmnopqrstuvwxyz234567",
+  SEGMENT_LENGTH: 4,
   SEGMENT_COUNT: 2,
   MAX_RETRIES: 5,
 } as const;

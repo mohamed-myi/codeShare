@@ -32,6 +32,7 @@ logs/
 
 *.sql.bak
 
-docs
+# Worktrees
+.worktrees/
+
 *.md
-*.markdown
