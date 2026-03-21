@@ -9,6 +9,7 @@ import type {
 } from "@codeshare/shared";
 import { ROOM_LIMITS } from "@codeshare/shared";
 import { generateReconnectToken } from "../lib/reconnectToken.js";
+import crypto from "node:crypto";
 
 interface RoomUserInternal extends RoomUser {
   reconnectToken: string;
@@ -27,11 +28,13 @@ export class Room {
   hintLimit = 0;
   pendingHintRequest: PendingHintRequest | null = null;
   customTestCases: CustomTestCase[] = [];
+  hintHistory: string[] = [];
   submissionsUsed = 0;
   submissionLimit = ROOM_LIMITS.MAX_SUBMISSIONS;
   executionInProgress = false;
   hintStreaming = false;
   importsUsed = 0;
+  readonly yjsToken: string;
   createdAt: Date;
   lastActivityAt: Date;
   gracePeriodTimers = new Map<string, NodeJS.Timeout>();
@@ -39,6 +42,7 @@ export class Room {
   constructor(roomCode: string, mode: RoomMode) {
     this.roomCode = roomCode;
     this.mode = mode;
+    this.yjsToken = crypto.randomBytes(16).toString("hex");
     this.createdAt = new Date();
     this.lastActivityAt = new Date();
   }
@@ -73,6 +77,12 @@ export class Room {
     return user;
   }
 
+  findBySocketId(socketId: string): RoomUserInternal | null {
+    return this.users.find(
+      (user) => user.socketId === socketId && user.connected,
+    ) ?? null;
+  }
+
   findByReconnectToken(token: string): RoomUserInternal | null {
     return this.users.find(
       (u) => !u.connected && u.reconnectToken === token,
@@ -96,6 +106,9 @@ export class Room {
   }
 
   canExecute(): { allowed: boolean; reason?: string } {
+    if (!this.problemId) {
+      return { allowed: false, reason: "Select a problem before running code." };
+    }
     if (this.executionInProgress) {
       return { allowed: false, reason: "Execution already in progress." };
     }
@@ -119,6 +132,7 @@ export class Room {
     this.problemId = problemId;
     this.hintLimit = hintLimit;
     this.hintsUsed = 0;
+    this.hintHistory = [];
     this.pendingHintRequest = null;
     this.customTestCases = [];
     this.lastActivityAt = new Date();
@@ -130,6 +144,10 @@ export class Room {
 
   connectedUserCount(): number {
     return this.users.filter((u) => u.connected).length;
+  }
+
+  occupiedUserCount(): number {
+    return this.users.length;
   }
 
   toSyncPayload(): RoomState {

@@ -1,9 +1,10 @@
 import type { RoomMode } from "@codeshare/shared";
 import { Room } from "./Room.js";
-import { generateRoomCode } from "../lib/roomCode.js";
+import { generateRoomCode, normalizeRoomCode } from "../lib/roomCode.js";
 
 class RoomManagerSingleton {
   private rooms = new Map<string, Room>();
+  private destroyListeners = new Set<(roomCode: string) => void>();
 
   createRoom(mode: RoomMode): Room {
     const activeCodes = new Set(this.rooms.keys());
@@ -14,22 +15,33 @@ class RoomManagerSingleton {
   }
 
   getRoom(roomCode: string): Room | undefined {
-    return this.rooms.get(roomCode.toLowerCase());
+    return this.rooms.get(normalizeRoomCode(roomCode));
   }
 
   destroyRoom(roomCode: string): void {
-    const room = this.rooms.get(roomCode);
+    const normalizedRoomCode = normalizeRoomCode(roomCode);
+    const room = this.rooms.get(normalizedRoomCode);
     if (!room) return;
 
     for (const [, timer] of room.gracePeriodTimers) {
       clearTimeout(timer);
     }
     room.gracePeriodTimers.clear();
-    this.rooms.delete(roomCode);
+    for (const listener of this.destroyListeners) {
+      listener(normalizedRoomCode);
+    }
+    this.rooms.delete(normalizedRoomCode);
   }
 
   getRoomCount(): number {
     return this.rooms.size;
+  }
+
+  onDestroy(listener: (roomCode: string) => void): () => void {
+    this.destroyListeners.add(listener);
+    return () => {
+      this.destroyListeners.delete(listener);
+    };
   }
 }
 

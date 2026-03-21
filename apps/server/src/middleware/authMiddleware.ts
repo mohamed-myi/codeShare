@@ -25,6 +25,16 @@ const REQUIRES_NO_EXECUTION = new Set<string>([
   SocketEvents.CODE_SUBMIT,
 ]);
 
+const REQUIRES_SWITCHABLE_PROBLEM = new Set<string>([
+  SocketEvents.PROBLEM_SELECT,
+  SocketEvents.PROBLEM_IMPORT,
+]);
+
+const HINT_RESPONSE_EVENTS = new Set<string>([
+  SocketEvents.HINT_APPROVE,
+  SocketEvents.HINT_DENY,
+]);
+
 /**
  * Creates a per-event middleware factory.
  * Usage: socket.use(createAuthMiddleware(roomManager)(socket))
@@ -54,6 +64,17 @@ export function createAuthMiddleware(roomLookup: RoomLookup) {
       }
 
       // Role-based checks for interview mode
+      if (
+        eventName === SocketEvents.SOLUTION_REVEAL &&
+        room.mode !== "interview"
+      ) {
+        socket.emit(SocketEvents.EVENT_REJECTED, {
+          event: eventName,
+          reason: "Solutions can only be revealed in interview mode.",
+        });
+        return;
+      }
+
       if (room.mode === "interview") {
         if (INTERVIEWER_ONLY_EVENTS.has(eventName) && user.role !== "interviewer") {
           socket.emit(SocketEvents.EVENT_REJECTED, {
@@ -84,12 +105,30 @@ export function createAuthMiddleware(roomLookup: RoomLookup) {
         }
       }
 
-      if (eventName === SocketEvents.PROBLEM_SELECT) {
+      if (REQUIRES_SWITCHABLE_PROBLEM.has(eventName)) {
         const check = room.canSwitchProblem();
         if (!check.allowed) {
           socket.emit(SocketEvents.EVENT_REJECTED, {
             event: eventName,
             reason: check.reason!,
+          });
+          return;
+        }
+      }
+
+      if (HINT_RESPONSE_EVENTS.has(eventName)) {
+        if (!room.pendingHintRequest) {
+          socket.emit(SocketEvents.EVENT_REJECTED, {
+            event: eventName,
+            reason: "No hint request is pending.",
+          });
+          return;
+        }
+
+        if (room.pendingHintRequest.requestedBy === user.id) {
+          socket.emit(SocketEvents.EVENT_REJECTED, {
+            event: eventName,
+            reason: "Only the other participant can respond to a hint request.",
           });
           return;
         }
