@@ -23,6 +23,7 @@ export interface Problem {
   timeLimitMs: number;
   source: ProblemSource;
   sourceUrl: string | null;
+  deletedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -142,12 +143,14 @@ export interface UserJoinedPayload {
   role: UserRole;
   mode: RoomMode;
   reconnectToken: string;
+  yjsToken: string;
 }
 
 export interface ProblemLoadedPayload {
   problem: Problem;
   visibleTestCases: TestCase[];
   boilerplate: string;
+  parameterNames: string[];
 }
 
 export interface HintPendingPayload {
@@ -165,11 +168,13 @@ export interface HintDonePayload {
 export interface ImportStatusPayload {
   status: ImportStatus;
   message?: string;
+  retryAfterSeconds?: number;
 }
 
 export interface EventRejectedPayload {
   event: string;
   reason: string;
+  retryAfterSeconds?: number;
 }
 
 // --- API Response Types ---

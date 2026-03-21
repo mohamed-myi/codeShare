@@ -64,6 +64,7 @@ export function toProblem(row: ProblemRow): Problem {
     timeLimitMs: row.time_limit_ms,
     source: row.source as Problem["source"],
     sourceUrl: row.source_url,
+    deletedAt: row.deleted_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

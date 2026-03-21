@@ -34,6 +34,7 @@ export const hintChunkSchema = z.object({
 
 export const roomCreateSchema = z.object({
   mode: z.enum(["collaboration", "interview"]),
+  displayName: z.string().min(1).max(30).trim(),
 });
 
 // --- API Response Schemas ---
@@ -51,9 +52,9 @@ export const harnessResultSchema = z.object({
       index: z.number().int(),
       passed: z.boolean(),
       elapsed_ms: z.number().optional(),
-      got: z.string().optional(),
-      expected: z.string().optional(),
-      error: z.string().optional(),
+      got: z.string().nullish(),
+      expected: z.string().nullish(),
+      error: z.string().nullish(),
     }),
   ),
   userStdout: z.string(),

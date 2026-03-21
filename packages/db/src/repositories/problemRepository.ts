@@ -52,9 +52,25 @@ export const problemRepository = {
     return rows[0] ? toProblem(rows[0]) : null;
   },
 
+  async findBySlugIncludingDeleted(slug: string): Promise<Problem | null> {
+    const { rows } = await pool.query<ProblemRow>(
+      "SELECT * FROM problems WHERE slug = $1",
+      [slug],
+    );
+    return rows[0] ? toProblem(rows[0]) : null;
+  },
+
   async findBySourceUrl(url: string): Promise<Problem | null> {
     const { rows } = await pool.query<ProblemRow>(
       "SELECT * FROM problems WHERE source_url = $1 AND deleted_at IS NULL",
+      [url],
+    );
+    return rows[0] ? toProblem(rows[0]) : null;
+  },
+
+  async findBySourceUrlIncludingDeleted(url: string): Promise<Problem | null> {
+    const { rows } = await pool.query<ProblemRow>(
+      "SELECT * FROM problems WHERE source_url = $1",
       [url],
     );
     return rows[0] ? toProblem(rows[0]) : null;
@@ -90,5 +106,17 @@ export const problemRepository = {
       ],
     );
     return toProblem(rows[0]);
+  },
+
+  async deleteById(id: string): Promise<void> {
+    await pool.query("DELETE FROM problems WHERE id = $1", [id]);
+  },
+
+  async softDeleteById(id: string): Promise<void> {
+    await pool.query("UPDATE problems SET deleted_at = NOW() WHERE id = $1", [id]);
+  },
+
+  async restoreById(id: string): Promise<void> {
+    await pool.query("UPDATE problems SET deleted_at = NULL WHERE id = $1", [id]);
   },
 };
