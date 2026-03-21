@@ -57,6 +57,7 @@ export interface SocketIODeps {
   enableImportedProblemHints?: boolean;
   maxLLMPromptChars?: number;
   maxLLMHintChars?: number;
+  maxLLMCallsPerRoom?: number;
 }
 
 /**
@@ -136,6 +137,7 @@ export function setupSocketIO(io: Server, logger: Logger, deps?: SocketIODeps): 
       enableImportedProblemHints: deps?.enableImportedProblemHints ?? true,
       maxLLMPromptChars: deps?.maxLLMPromptChars ?? 12_000,
       maxLLMHintChars: deps?.maxLLMHintChars ?? 1_500,
+      maxLLMCallsPerRoom: deps?.maxLLMCallsPerRoom ?? 15,
       findStoredHint: deps?.findStoredHint ?? (async (problemId, hintsUsed) => {
         const hints = await hintRepository.findByProblemId(problemId);
         return hints[hintsUsed] ?? null;
