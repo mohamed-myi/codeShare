@@ -30,6 +30,8 @@ export function createGroqClient(config: Config) {
           model: config.GROQ_MODEL,
           messages,
           stream: true,
+          max_tokens: config.GROQ_MAX_TOKENS,
+          temperature: config.GROQ_TEMPERATURE,
         }),
       });
 

@@ -22,6 +22,7 @@ export interface HintHandlerDeps {
   enableImportedProblemHints: boolean;
   maxLLMPromptChars: number;
   maxLLMHintChars: number;
+  maxLLMCallsPerRoom: number;
   findStoredHint: (problemId: string, hintsUsed: number) => Promise<Hint | null>;
   findProblem: (problemId: string) => Promise<Problem | null>;
 }
@@ -223,6 +224,13 @@ async function deliverHint(
       return;
     }
 
+    if (room.llmCallsUsed >= deps.maxLLMCallsPerRoom) {
+      socket.emit(SocketEvents.HINT_ERROR, {
+        message: "AI hint limit for this room has been reached.",
+      });
+      return;
+    }
+
     if (!deps.groqClient) {
       socket.emit(SocketEvents.HINT_ERROR, {
         message:
@@ -265,10 +273,12 @@ async function deliverHint(
 
     room.hintStreaming = true;
     let generatedHint = "";
+    const maxAccumulateChars = deps.maxLLMHintChars * 2;
 
     try {
       for await (const chunk of deps.groqClient.streamCompletion(messages)) {
         generatedHint += chunk;
+        if (generatedHint.length > maxAccumulateChars) break;
       }
 
       const fullHint = hintService.sanitizeLLMHint(
@@ -276,6 +286,7 @@ async function deliverHint(
         deps.maxLLMHintChars,
       );
       room.hintsUsed += 1;
+      room.llmCallsUsed += 1;
       room.hintHistory.push(fullHint);
       const hintsRemaining = room.hintLimit - room.hintsUsed;
       io.to(roomCode).emit(SocketEvents.HINT_DONE, {
