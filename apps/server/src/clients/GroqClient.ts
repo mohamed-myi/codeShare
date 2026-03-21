@@ -1,26 +1,37 @@
 import type { Config } from "../config.js";
 
+const GROQ_CHAT_COMPLETIONS_URL =
+  "https://api.groq.com/openai/v1/chat/completions";
+
+interface GroqMessage {
+  role: "system" | "user";
+  content: string;
+}
+
 export function createGroqClient(config: Config) {
+  if (!config.GROQ_API_KEY) {
+    throw new Error("GROQ_API_KEY is required to create the Groq client.");
+  }
+
   return {
     /**
      * Streams a chat completion from Groq. Yields text chunks.
      */
-    async *streamCompletion(prompt: string): AsyncGenerator<string> {
-      const response = await fetch(
-        "https://api.groq.com/openai/v1/chat/completions",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${config.GROQ_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: config.GROQ_MODEL,
-            messages: [{ role: "user", content: prompt }],
-            stream: true,
-          }),
+    async *streamCompletion(messages: GroqMessage[]): AsyncGenerator<string> {
+      const response = await fetch(GROQ_CHAT_COMPLETIONS_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${config.GROQ_API_KEY}`,
+          "Content-Type": "application/json",
         },
-      );
+        redirect: "error",
+        signal: AbortSignal.timeout(config.GROQ_REQUEST_TIMEOUT_MS),
+        body: JSON.stringify({
+          model: config.GROQ_MODEL,
+          messages,
+          stream: true,
+        }),
+      });
 
       if (!response.ok || !response.body) {
         throw new Error(`Groq API error: ${response.status}`);
@@ -28,16 +39,22 @@ export function createGroqClient(config: Config) {
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
+      let buffer = "";
 
       try {
         while (true) {
           const { done, value } = await reader.read();
-          if (done) break;
+          buffer += decoder.decode(value ?? new Uint8Array(), { stream: !done });
 
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split("\n").filter((l) => l.startsWith("data: "));
+          const frames = buffer.split("\n");
+          buffer = frames.pop() ?? "";
 
-          for (const line of lines) {
+          for (const frame of frames) {
+            const line = frame.trim();
+            if (!line.startsWith("data: ")) {
+              continue;
+            }
+
             const data = line.slice(6);
             if (data === "[DONE]") return;
 
@@ -46,9 +63,11 @@ export function createGroqClient(config: Config) {
               const content = parsed.choices?.[0]?.delta?.content;
               if (content) yield content;
             } catch {
-              // skip malformed SSE lines
+              continue;
             }
           }
+
+          if (done) break;
         }
       } finally {
         reader.releaseLock();

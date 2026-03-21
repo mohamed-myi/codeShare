@@ -1,8 +1,15 @@
 import type { Socket, Server } from "socket.io";
 import type { Logger } from "pino";
 import { SocketEvents, userJoinSchema } from "@codeshare/shared";
-import type { UserJoinPayload } from "@codeshare/shared";
+import type {
+  EventRejectedPayload,
+  ProblemLoadedPayload,
+  UserJoinPayload,
+} from "@codeshare/shared";
 import type { Room } from "../models/Room.js";
+import { problemService } from "../services/ProblemService.js";
+import type { IpRateLimiter } from "../lib/ipRateLimiter.js";
+import { normalizeRoomCode } from "../lib/roomCode.js";
 
 interface RoomLookup {
   getRoom(roomCode: string): Room | undefined;
@@ -18,20 +25,111 @@ export function registerRoomHandler(
   socket: Socket,
   logger: Logger,
   roomLookup: RoomLookup,
+  deps: {
+    ipRateLimiter: IpRateLimiter;
+    joinAttemptsPerHour: number;
+  },
 ): void {
-  socket.on(SocketEvents.USER_JOIN, (rawPayload: unknown) => {
+  async function emitRoomHydration(room: Room): Promise<void> {
+    socket.emit(SocketEvents.ROOM_SYNC, room.toSyncPayload());
+
+    if (!room.problemId) {
+      return;
+    }
+
+    try {
+      const detail = await problemService.getById(room.problemId);
+      if (!detail) {
+        logger.warn(
+          { roomCode: room.roomCode, problemId: room.problemId },
+          "Active problem could not be loaded during room hydration",
+        );
+        return;
+      }
+
+      const payload: ProblemLoadedPayload = {
+        problem: detail,
+        visibleTestCases: detail.visibleTestCases,
+        boilerplate: detail.boilerplate?.template ?? "",
+        parameterNames: detail.boilerplate?.parameterNames ?? [],
+      };
+      socket.emit(SocketEvents.PROBLEM_LOADED, payload);
+    } catch (err) {
+      logger.error(
+        { err, roomCode: room.roomCode, problemId: room.problemId },
+        "Failed to hydrate active problem during room join",
+      );
+    }
+  }
+
+  async function emitJoinedPayload(
+    room: Room,
+    user: {
+      id: string;
+      displayName: string;
+      role: "peer" | "interviewer" | "candidate";
+      reconnectToken: string;
+    },
+  ): Promise<void> {
+    socket.join(room.roomCode);
+    socket.emit(SocketEvents.USER_JOINED, {
+      userId: user.id,
+      displayName: user.displayName,
+      role: user.role,
+      mode: room.mode,
+      reconnectToken: user.reconnectToken,
+      yjsToken: room.yjsToken,
+    });
+
+    await emitRoomHydration(room);
+  }
+
+  socket.on(SocketEvents.USER_JOIN, async (rawPayload: unknown) => {
     const parsed = userJoinSchema.safeParse(rawPayload);
     if (!parsed.success) {
-      socket.emit("error", { message: "Invalid join payload." });
+      socket.emit(SocketEvents.EVENT_REJECTED, {
+        event: SocketEvents.USER_JOIN,
+        reason: "Invalid join payload.",
+      });
       return;
     }
 
     const { displayName, reconnectToken } = parsed.data as UserJoinPayload;
-    const roomCode = socket.data.roomCode as string;
+    const roomCode = normalizeRoomCode(socket.data.roomCode as string);
     const room = roomLookup.getRoom(roomCode);
 
     if (!room) {
-      socket.emit("error", { message: "Room not found." });
+      socket.emit(SocketEvents.EVENT_REJECTED, {
+        event: SocketEvents.USER_JOIN,
+        reason: "Room not found.",
+      });
+      return;
+    }
+
+    const existingSocketUser = room.findBySocketId(socket.id);
+    if (existingSocketUser) {
+      await emitJoinedPayload(room, existingSocketUser);
+      logger.info(
+        { roomCode, userId: existingSocketUser.id, socketId: socket.id },
+        "Duplicate join ignored for existing socket",
+      );
+      return;
+    }
+
+    const clientIp = (socket.data.clientIp as string | undefined) ?? "unknown";
+    const joinCheck = deps.ipRateLimiter.consume(
+      "join-attempt",
+      clientIp,
+      deps.joinAttemptsPerHour,
+      60 * 60 * 1000,
+    );
+    if (!joinCheck.allowed) {
+      const payload: EventRejectedPayload = {
+        event: SocketEvents.USER_JOIN,
+        reason: `Too many join attempts. Try again in ${joinCheck.retryAfterSeconds}s.`,
+        retryAfterSeconds: joinCheck.retryAfterSeconds,
+      };
+      socket.emit(SocketEvents.EVENT_REJECTED, payload);
       return;
     }
 
@@ -41,24 +139,15 @@ export function registerRoomHandler(
       if (existingUser) {
         const reconnected = room.reconnectUser(existingUser.id, socket.id);
         if (reconnected) {
-          socket.join(roomCode);
+          await emitJoinedPayload(room, reconnected);
 
-          socket.emit(SocketEvents.USER_JOINED, {
-            userId: reconnected.id,
-            displayName: reconnected.displayName,
-            role: reconnected.role,
-            mode: room.mode,
-            reconnectToken: reconnected.reconnectToken,
-          });
-
-          socket.emit(SocketEvents.ROOM_SYNC, room.toSyncPayload());
-
-          socket.to(roomCode).emit(SocketEvents.USER_JOINED, {
+          socket.to(room.roomCode).emit(SocketEvents.USER_JOINED, {
             userId: reconnected.id,
             displayName: reconnected.displayName,
             role: reconnected.role,
             mode: room.mode,
             reconnectToken: "",
+            yjsToken: "",
           });
 
           logger.info({ roomCode, userId: reconnected.id }, "User reconnected");
@@ -84,49 +173,47 @@ export function registerRoomHandler(
     }
 
     const user = room.addUser(displayName, role, socket.id);
-    socket.join(roomCode);
+    await emitJoinedPayload(room, user);
 
-    socket.emit(SocketEvents.USER_JOINED, {
-      userId: user.id,
-      displayName: user.displayName,
-      role: user.role,
-      mode: room.mode,
-      reconnectToken: user.reconnectToken,
-    });
-
-    socket.to(roomCode).emit(SocketEvents.USER_JOINED, {
+    socket.to(room.roomCode).emit(SocketEvents.USER_JOINED, {
       userId: user.id,
       displayName: user.displayName,
       role: user.role,
       mode: room.mode,
       reconnectToken: "",
+      yjsToken: "",
     });
 
     logger.info({ roomCode, userId: user.id, displayName, role }, "User joined room");
   });
 
   socket.on("disconnect", () => {
-    const roomCode = socket.data.roomCode as string;
+    const roomCode = normalizeRoomCode(socket.data.roomCode as string);
     if (!roomCode) return;
 
     const room = roomLookup.getRoom(roomCode);
     if (!room) return;
 
-    const user = room.users.find((u) => u.socketId === socket.id);
+    const user = room.findBySocketId(socket.id);
     if (!user) return;
 
     user.connected = false;
     user.socketId = null;
 
-    socket.to(roomCode).emit(SocketEvents.USER_LEFT, { userId: user.id });
+    socket.to(room.roomCode).emit(SocketEvents.USER_LEFT, { userId: user.id });
 
     room.startGracePeriod(user.id, () => {
+      const expiredUser = room.users.find((candidate) => candidate.id === user.id);
+      if (!expiredUser || expiredUser.connected || expiredUser.socketId !== null) {
+        return;
+      }
+
       room.removeUser(user.id);
       logger.info({ roomCode, userId: user.id }, "User removed after grace period");
 
       if (room.users.length === 0) {
-        roomLookup.destroyRoom(roomCode);
-        logger.info({ roomCode }, "Room destroyed (empty after grace period)");
+        roomLookup.destroyRoom(room.roomCode);
+        logger.info({ roomCode: room.roomCode }, "Room destroyed (empty after grace period)");
       }
     });
 
