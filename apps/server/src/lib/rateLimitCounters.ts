@@ -27,6 +27,15 @@ class GlobalCounters {
     return this.judge0Today < dailyLimit;
   }
 
+  reserveSubmission(dailyLimit: number): boolean {
+    this.rolloverIfNeeded();
+    if (this.judge0Today >= dailyLimit) {
+      return false;
+    }
+    this.judge0Today++;
+    return true;
+  }
+
   recordSubmission(): void {
     this.rolloverIfNeeded();
     this.judge0Today++;
