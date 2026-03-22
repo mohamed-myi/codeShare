@@ -1,5 +1,5 @@
 import type { PendingHintRequest, Problem, RoomMode } from "@codeshare/shared";
-import { Lightbulb } from "lucide-react";
+
 
 interface HintProps {
   hintsUsed: number;
@@ -40,18 +40,6 @@ export function ProblemPanel({
     );
   }
 
-  // TODO: Re-enable hint button by removing the `false &&` guard
-  const showHintButton =
-    false &&
-    hint &&
-    hint.mode === "collaboration" &&
-    !hint.pendingHintRequest &&
-    !hint.isHintStreaming &&
-    !hint.executionInProgress &&
-    remainingHints(hint.hintsUsed, hint.hintLimit) > 0;
-
-  const hasCompletedHint = hint && !hint.isHintStreaming && hint.hintText.trim().length > 0;
-
   return (
     <div className="space-y-4 p-4">
       <div>
@@ -64,21 +52,7 @@ export function ProblemPanel({
           >
             {problem.difficulty}
           </span>
-          {showHintButton && (
-            <>
-              <div className="flex-1" />
-              <button
-                type="button"
-                className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--color-accent)] px-2.5 py-1 text-xs font-medium text-white transition-colors duration-[var(--transition-fast)] hover:bg-[var(--color-accent-hover)]"
-                onClick={hint.onRequestHint}
-              >
-                <Lightbulb size={12} />
-                {hasCompletedHint
-                  ? `Next Hint (${remainingHints(hint.hintsUsed, hint.hintLimit)} remaining)`
-                  : `Get Hint (${remainingHints(hint.hintsUsed, hint.hintLimit)} remaining)`}
-              </button>
-            </>
-          )}
+          {/* TODO: Re-enable hint button in header */}
         </div>
         <span className="text-xs text-[var(--color-text-tertiary)]">{problem.category}</span>
       </div>

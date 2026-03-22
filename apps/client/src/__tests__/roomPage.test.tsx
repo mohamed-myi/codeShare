@@ -1,4 +1,4 @@
-import { SocketEvents } from "@codeshare/shared";
+import { type PendingHintRequest, SocketEvents } from "@codeshare/shared";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -12,7 +12,7 @@ const mockRoomState = vi.hoisted(() => ({
     language: "python",
     hintsUsed: 0,
     hintLimit: 2,
-    pendingHintRequest: null,
+    pendingHintRequest: null as PendingHintRequest | null,
     customTestCases: [],
     submissionsUsed: 0,
     submissionLimit: 20,
