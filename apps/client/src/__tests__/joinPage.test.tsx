@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { cleanup, render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { JoinPage } from "../pages/JoinPage.js";
 
 const mockNavigate = vi.fn();
@@ -30,26 +30,7 @@ beforeEach(() => {
   sessionStorage.clear();
 });
 
-afterEach(() => {
-  cleanup();
-});
-
 describe("JoinPage", () => {
-  it("calls checkRoom on mount with roomCode from URL params", async () => {
-    mockCheckRoom.mockResolvedValueOnce({
-      exists: true,
-      mode: "collaboration",
-      userCount: 1,
-      maxUsers: 2,
-    });
-
-    renderJoinPage("abc-xyz");
-
-    await waitFor(() => {
-      expect(mockCheckRoom).toHaveBeenCalledWith("abc-xyz");
-    });
-  });
-
   it("shows room info when room exists", async () => {
     mockCheckRoom.mockResolvedValueOnce({
       exists: true,

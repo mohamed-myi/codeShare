@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 const { mockMonacoBindingDestroy, mockMonacoBinding, mockOnMount } = vi.hoisted(() => {
   const mockMonacoBindingDestroy = vi.fn();
@@ -16,7 +16,7 @@ vi.mock("y-monaco", () => ({
 
 vi.mock("@monaco-editor/react", () => ({
   default: (props: { onMount?: (editor: unknown) => void; options?: { readOnly?: boolean } }) => {
-    mockOnMount.mockImplementation(props.onMount);
+    if (props.onMount) mockOnMount.mockImplementation(props.onMount);
     return (
       <div data-testid="mock-editor" data-readonly={String(props.options?.readOnly ?? false)} />
     );
@@ -35,7 +35,6 @@ vi.mock("../providers/YjsProvider.tsx", () => ({
 import { CodeEditor } from "../components/CodeEditor.tsx";
 
 afterEach(() => {
-  cleanup();
   mockMonacoBinding.mockClear();
   mockMonacoBindingDestroy.mockClear();
   mockOnMount.mockReset();
@@ -48,6 +47,17 @@ describe("CodeEditor", () => {
     mockYjsContext.doc = null;
 
     render(<CodeEditor />);
+
+    const editor = screen.getByTestId("mock-editor");
+    expect(editor.dataset.readonly).toBe("true");
+  });
+
+  it("renders in read-only mode when explicitly disabled by room state", () => {
+    mockYjsContext.doc = {
+      getText: vi.fn(() => "ytext-object"),
+    };
+
+    render(<CodeEditor readOnly={true} />);
 
     const editor = screen.getByTestId("mock-editor");
     expect(editor.dataset.readonly).toBe("true");
@@ -69,12 +79,11 @@ describe("CodeEditor", () => {
     const mockEditor = {
       getModel: vi.fn(() => "editor-model"),
     };
-    if (mockOnMount.getMockImplementation()) {
-      mockOnMount.getMockImplementation()!(mockEditor);
-    }
-
-    // Wait for effects to run
-    await new Promise((r) => setTimeout(r, 50));
+    await act(async () => {
+      if (mockOnMount.getMockImplementation()) {
+        mockOnMount.getMockImplementation()?.(mockEditor);
+      }
+    });
 
     expect(mockDoc.getText).toHaveBeenCalledWith("monaco");
     expect(mockMonacoBinding).toHaveBeenCalledWith(

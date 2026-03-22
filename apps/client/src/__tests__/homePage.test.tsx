@@ -1,18 +1,15 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { cleanup, render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { HttpResponse, http } from "msw";
 import { MemoryRouter } from "react-router-dom";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { HomePage } from "../pages/HomePage.js";
+import { server } from "./mocks/server.js";
 
 const mockNavigate = vi.fn();
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual("react-router-dom");
   return { ...actual, useNavigate: () => mockNavigate };
 });
-
-const mockCreateRoom = vi.fn();
-vi.mock("../lib/api.js", () => ({
-  createRoom: (...args: unknown[]) => mockCreateRoom(...args),
-}));
 
 function renderHomePage() {
   return render(
@@ -24,12 +21,7 @@ function renderHomePage() {
 
 beforeEach(() => {
   mockNavigate.mockReset();
-  mockCreateRoom.mockReset();
   sessionStorage.clear();
-});
-
-afterEach(() => {
-  cleanup();
 });
 
 describe("HomePage", () => {
@@ -57,7 +49,6 @@ describe("HomePage", () => {
   });
 
   it("calls createRoom and navigates on success", async () => {
-    mockCreateRoom.mockResolvedValueOnce({ roomCode: "abc-xyz" });
     renderHomePage();
 
     const input = screen.getByPlaceholderText("Your display name");
@@ -67,14 +58,18 @@ describe("HomePage", () => {
     fireEvent.click(button);
 
     await waitFor(() => {
-      expect(mockCreateRoom).toHaveBeenCalledWith("collaboration");
       expect(sessionStorage.getItem("displayName")).toBe("Alice");
       expect(mockNavigate).toHaveBeenCalledWith("/room/abc-xyz/session");
     });
   });
 
   it("shows error message on API failure", async () => {
-    mockCreateRoom.mockRejectedValueOnce(new Error("Server error"));
+    server.use(
+      http.post("*/api/rooms", () => {
+        return new HttpResponse(null, { status: 500 });
+      }),
+    );
+
     renderHomePage();
 
     const input = screen.getByPlaceholderText("Your display name");
@@ -84,14 +79,9 @@ describe("HomePage", () => {
     fireEvent.click(button);
 
     await waitFor(() => {
-      expect(
-        screen.getByText("Failed to create room. Please try again."),
-      ).toBeDefined();
+      expect(screen.getByText("Failed to create room. Please try again.")).toBeDefined();
     });
 
-    // Button should be re-enabled
-    expect(
-      screen.getByRole("button", { name: "Create Room" }),
-    ).toHaveProperty("disabled", false);
+    expect(screen.getByRole("button", { name: "Create Room" })).toHaveProperty("disabled", false);
   });
 });

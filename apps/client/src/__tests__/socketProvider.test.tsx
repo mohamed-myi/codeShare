@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { SocketProvider, useSocketContext } from "../providers/SocketProvider.tsx";
 
 const mockIo = vi.fn();
@@ -23,7 +23,7 @@ function createMockSocket() {
   return {
     on: vi.fn((event: string, cb: () => void) => {
       if (!listeners.has(event)) listeners.set(event, []);
-      listeners.get(event)!.push(cb);
+      listeners.get(event)?.push(cb);
     }),
     off: vi.fn(),
     disconnect: vi.fn(),
@@ -34,7 +34,6 @@ function createMockSocket() {
 }
 
 afterEach(() => {
-  cleanup();
   mockIo.mockReset();
 });
 
