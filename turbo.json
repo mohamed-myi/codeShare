@@ -1,5 +1,21 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalEnv": [
+    "DATABASE_URL",
+    "JUDGE0_API_URL",
+    "JUDGE0_API_KEY",
+    "JUDGE0_DAILY_LIMIT",
+    "GROQ_API_KEY",
+    "GROQ_MODEL",
+    "PORT",
+    "NODE_ENV",
+    "CORS_ORIGIN",
+    "LOG_LEVEL",
+    "RATE_LIMIT_ROOM_CREATE",
+    "RATE_LIMIT_WS_CONNECT",
+    "RATE_LIMIT_JOIN",
+    "RATE_LIMIT_IMPORT"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
@@ -15,6 +31,8 @@
     "typecheck": {
       "dependsOn": ["^build"]
     },
-    "lint": {}
+    "lint": {
+      "outputs": []
+    }
   }
 }

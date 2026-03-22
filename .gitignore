@@ -32,7 +32,17 @@ logs/
 
 *.sql.bak
 
-# Worktrees
+# Playwright
+e2e/test-results/
+e2e/playwright-report/
+
+# Local tooling
+.claude/
+.firecrawl/
+.serena/
 .worktrees/
 
-*.md
+# Local Docker overrides
+docker-compose.override.yml
+
+

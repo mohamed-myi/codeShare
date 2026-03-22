@@ -7,18 +7,27 @@
     "test": "turbo test",
     "typecheck": "turbo typecheck",
     "lint": "turbo lint",
+    "lint:fix": "biome check --write .",
+    "e2e": "playwright test --config e2e/playwright.config.ts",
+    "e2e:ui": "playwright test --config e2e/playwright.config.ts --ui",
     "db:migrate": "pnpm --filter @codeshare/db migrate",
     "db:seed": "pnpm --filter @codeshare/db seed",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.1",
+    "@biomejs/biome": "^2.4.8",
+    "@playwright/test": "^1.58.2",
     "turbo": "^2.8.17",
     "typescript": "^5.8.2"
   },
   "packageManager": "pnpm@10.32.1",
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild"]
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "msw"
+    ]
   },
   "engines": {
     "node": ">=20.0.0"
