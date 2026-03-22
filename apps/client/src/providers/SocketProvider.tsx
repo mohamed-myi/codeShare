@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { io, type Socket } from "socket.io-client";
 
@@ -24,10 +24,11 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!roomCode) return;
 
+    const normalizedRoomCode = roomCode.toLowerCase();
     const s = io({
       path: "/ws/socket",
       autoConnect: true,
-      query: { roomCode },
+      query: { roomCode: normalizedRoomCode },
     });
     setSocket(s);
 
@@ -39,9 +40,5 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     };
   }, [roomCode]);
 
-  return (
-    <SocketContext value={{ socket, connected }}>
-      {children}
-    </SocketContext>
-  );
+  return <SocketContext value={{ socket, connected }}>{children}</SocketContext>;
 }

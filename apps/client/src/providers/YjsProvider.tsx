@@ -1,7 +1,8 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import * as Y from "yjs";
-import { WebsocketProvider } from "y-websocket";
+import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { WebsocketProvider } from "y-websocket";
+import * as Y from "yjs";
+import { useRoom } from "../hooks/useRoom.ts";
 
 interface YjsContextValue {
   doc: Y.Doc | null;
@@ -19,15 +20,21 @@ export function useYjsContext(): YjsContextValue {
 
 export function YjsProvider({ children }: { children: ReactNode }) {
   const { roomCode } = useParams<{ roomCode: string }>();
+  const { state } = useRoom();
   const [doc, setDoc] = useState<Y.Doc | null>(null);
   const [provider, setProvider] = useState<WebsocketProvider | null>(null);
 
-  useEffect(() => {
-    if (!roomCode) return;
+  const yjsToken = state.currentUserId ? sessionStorage.getItem("yjsToken") : null;
 
+  useEffect(() => {
+    if (!roomCode || !yjsToken) return;
+
+    const normalizedRoomCode = roomCode.toLowerCase();
     const ydoc = new Y.Doc();
     const wsUrl = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws/yjs`;
-    const wsProvider = new WebsocketProvider(wsUrl, roomCode, ydoc);
+    const wsProvider = new WebsocketProvider(wsUrl, normalizedRoomCode, ydoc, {
+      params: { token: yjsToken },
+    });
 
     setDoc(ydoc);
     setProvider(wsProvider);
@@ -35,12 +42,10 @@ export function YjsProvider({ children }: { children: ReactNode }) {
     return () => {
       wsProvider.destroy();
       ydoc.destroy();
+      setDoc(null);
+      setProvider(null);
     };
-  }, [roomCode]);
+  }, [roomCode, yjsToken]);
 
-  return (
-    <YjsContext value={{ doc, provider }}>
-      {children}
-    </YjsContext>
-  );
+  return <YjsContext value={{ doc, provider }}>{children}</YjsContext>;
 }

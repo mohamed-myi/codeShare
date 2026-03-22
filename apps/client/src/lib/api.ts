@@ -1,9 +1,4 @@
-import type {
-  ProblemListItem,
-  ProblemDetail,
-  RoomMode,
-  RoomInfoResponse,
-} from "@codeshare/shared";
+import type { ProblemListItem, RoomInfoResponse, RoomMode } from "@codeshare/shared";
 
 const BASE = "/api";
 
@@ -22,28 +17,21 @@ export async function fetchProblems(filters?: {
   return data.problems;
 }
 
-export async function fetchProblem(id: string): Promise<ProblemDetail> {
-  const res = await fetch(`${BASE}/problems/${id}`);
-  if (!res.ok) throw new Error(`Failed to fetch problem: ${res.status}`);
-  return res.json();
-}
-
 export async function createRoom(
   mode: RoomMode,
+  displayName: string,
 ): Promise<{ roomCode: string }> {
   const res = await fetch(`${BASE}/rooms`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ mode }),
+    body: JSON.stringify({ mode, displayName }),
   });
   if (!res.ok) throw new Error(`Failed to create room: ${res.status}`);
   return res.json();
 }
 
-export async function checkRoom(roomCode: string): Promise<RoomInfoResponse> {
-  const res = await fetch(
-    `${BASE}/rooms/${encodeURIComponent(roomCode)}`,
-  );
+export async function checkRoom(roomCode: string, signal?: AbortSignal): Promise<RoomInfoResponse> {
+  const res = await fetch(`${BASE}/rooms/${encodeURIComponent(roomCode)}`, { signal });
   if (!res.ok) throw new Error(`Failed to check room: ${res.status}`);
   return res.json();
 }

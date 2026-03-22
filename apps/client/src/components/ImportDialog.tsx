@@ -1,19 +1,147 @@
+import type { ImportStatusPayload } from "@codeshare/shared";
+import { Info, X } from "lucide-react";
+import { useEffect, useId, useState } from "react";
+
 interface ImportDialogProps {
   isOpen: boolean;
   onClose: () => void;
+  onSubmit: (leetcodeUrl: string) => void;
+  importStatus: ImportStatusPayload | null;
+  disabledReason: string | null;
 }
 
-export function ImportDialog({ isOpen, onClose }: ImportDialogProps) {
+const LEETCODE_URL_PATTERN = /^https:\/\/leetcode\.com\/problems\/[\w-]+\/?$/;
+
+export function ImportDialog({
+  isOpen,
+  onClose,
+  onSubmit,
+  importStatus,
+  disabledReason,
+}: ImportDialogProps) {
+  const inputId = useId();
+  const [leetcodeUrl, setLeetCodeUrl] = useState("");
+  const [validationError, setValidationError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setLeetCodeUrl("");
+      setValidationError(null);
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
-  // TODO: URL-paste import modal with status feedback
+  const isSubmitting = importStatus?.status === "scraping";
+  const disabled = isSubmitting || disabledReason !== null;
+  const statusMessage =
+    importStatus?.status === "scraping"
+      ? "Importing from LeetCode..."
+      : importStatus?.status === "saved"
+        ? "Problem imported and loaded."
+        : importStatus?.status === "failed"
+          ? (importStatus.message ?? "Import failed.")
+          : null;
+
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const trimmedUrl = leetcodeUrl.trim();
+    if (disabledReason) {
+      setValidationError(disabledReason);
+      return;
+    }
+
+    if (!LEETCODE_URL_PATTERN.test(trimmedUrl)) {
+      setValidationError("Paste a valid LeetCode problem URL.");
+      return;
+    }
+
+    setValidationError(null);
+    onSubmit(trimmedUrl);
+  }
+
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black/50">
-      <div className="rounded bg-white p-6 shadow-lg">
-        <h2 className="mb-4 font-semibold">Import Problem</h2>
-        <button onClick={onClose} className="text-gray-500">
-          Close
-        </button>
+    <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/70 p-4">
+      <div className="w-full max-w-lg rounded-[var(--radius-lg)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-elevated)] p-7 shadow-lg">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="font-semibold text-[var(--color-text-primary)]">Import Problem</h2>
+            <p className="mt-1 text-sm text-[var(--color-text-tertiary)]">
+              Paste a LeetCode problem URL. Only `leetcode.com/problems/*` is supported.
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-[var(--radius-sm)] p-1 text-[var(--color-text-tertiary)] transition-colors duration-[var(--transition-fast)] hover:bg-[var(--color-hover-overlay)] hover:text-[var(--color-text-secondary)]"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <form className="mt-4 space-y-4" onSubmit={handleSubmit}>
+          <div>
+            <label
+              htmlFor={inputId}
+              className="block text-sm font-medium text-[var(--color-text-secondary)]"
+            >
+              LeetCode URL
+            </label>
+            <input
+              id={inputId}
+              type="url"
+              value={leetcodeUrl}
+              onChange={(event) => {
+                setLeetCodeUrl(event.target.value);
+                if (validationError) {
+                  setValidationError(null);
+                }
+              }}
+              placeholder="https://leetcode.com/problems/two-sum/"
+              className="mt-1 w-full rounded-[var(--radius-sm)] border border-[var(--color-border-strong)] bg-[var(--color-bg-tertiary)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-tertiary)] focus:border-[var(--color-accent)] focus:ring-2 focus:ring-[var(--color-focus-ring)]"
+            />
+          </div>
+
+          <div className="flex items-start gap-2 rounded-[var(--radius-sm)] border border-dashed border-[var(--color-border-strong)] bg-[var(--color-bg-tertiary)] px-3 py-2 text-xs text-[var(--color-text-tertiary)]">
+            <Info size={14} className="mt-0.5 shrink-0" />3 imports per room session. Imported
+            problems keep visible attribution and only include visible sample cases.
+          </div>
+
+          {disabledReason && !validationError && (
+            <p className="text-sm text-[var(--color-error-text)]">{disabledReason}</p>
+          )}
+          {validationError && (
+            <p className="text-sm text-[var(--color-error-text)]">{validationError}</p>
+          )}
+          {statusMessage && (
+            <p
+              className={
+                importStatus?.status === "failed"
+                  ? "text-sm text-[var(--color-error-text)]"
+                  : "text-sm text-[var(--color-text-secondary)]"
+              }
+            >
+              {statusMessage}
+            </p>
+          )}
+
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-[var(--radius-sm)] border border-[var(--color-border-strong)] px-3 py-2 text-sm text-[var(--color-text-secondary)] transition-colors duration-[var(--transition-fast)] hover:bg-[var(--color-hover-overlay)]"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="rounded-[var(--radius-sm)] bg-[var(--color-accent)] px-3 py-2 text-sm text-white transition-colors duration-[var(--transition-fast)] hover:bg-[var(--color-accent-hover)] disabled:opacity-40"
+              disabled={disabled}
+            >
+              {isSubmitting ? "Importing..." : "Import Problem"}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

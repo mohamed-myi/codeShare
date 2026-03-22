@@ -1,15 +1,18 @@
 import type {
-  RoomState,
-  UserJoinedPayload,
-  ProblemLoadedPayload,
-  ExecutionResult,
-  ExecutionError,
-  HintPendingPayload,
-  HintDonePayload,
-  ImportStatus,
   CustomTestCase,
+  ExecutionError,
+  ExecutionResult,
   ExecutionType,
+  HintDonePayload,
+  HintPendingPayload,
+  ImportStatus,
+  Problem,
+  ProblemLoadedPayload,
+  RoomState,
+  TestCase,
+  UserJoinedPayload,
 } from "@codeshare/shared";
+import { HINT_LIMIT_BY_DIFFICULTY } from "@codeshare/shared";
 
 export type RoomAction =
   | { type: "USER_JOINED"; payload: UserJoinedPayload }
@@ -32,9 +35,14 @@ export type RoomAction =
 
 export interface ClientRoomState extends RoomState {
   currentUserId: string | null;
+  currentProblem: Problem | null;
+  visibleTestCases: TestCase[];
+  parameterNames: string[];
   lastError: string | null;
   executionResult: ExecutionResult | null;
+  importStatus: { status: ImportStatus; message?: string } | null;
   hintText: string;
+  isHintStreaming: boolean;
   solution: string | null;
 }
 
@@ -55,33 +63,40 @@ export const initialRoomState: ClientRoomState = {
   createdAt: "",
   lastActivityAt: "",
   currentUserId: null,
+  currentProblem: null,
+  visibleTestCases: [],
+  parameterNames: [],
   lastError: null,
   executionResult: null,
+  importStatus: null,
   hintText: "",
+  isHintStreaming: false,
   solution: null,
 };
 
-export function roomReducer(
-  state: ClientRoomState,
-  action: RoomAction,
-): ClientRoomState {
+export function roomReducer(state: ClientRoomState, action: RoomAction): ClientRoomState {
   switch (action.type) {
     case "ROOM_SYNC":
       return { ...state, ...action.payload, lastError: null };
 
-    case "USER_JOINED":
-      return {
-        ...state,
-        users: [
-          ...state.users,
-          {
-            id: action.payload.userId,
-            displayName: action.payload.displayName,
-            role: action.payload.role,
-            connected: true,
-          },
-        ],
+    case "USER_JOINED": {
+      const newUser = {
+        id: action.payload.userId,
+        displayName: action.payload.displayName,
+        role: action.payload.role,
+        connected: true,
       };
+      const currentUserId = action.payload.reconnectToken
+        ? action.payload.userId
+        : state.currentUserId;
+      const existingIndex = state.users.findIndex((u) => u.id === action.payload.userId);
+      if (existingIndex >= 0) {
+        const updated = [...state.users];
+        updated[existingIndex] = newUser;
+        return { ...state, users: updated, currentUserId };
+      }
+      return { ...state, users: [...state.users, newUser], currentUserId };
+    }
 
     case "USER_LEFT":
       return {
@@ -91,11 +106,63 @@ export function roomReducer(
         ),
       };
 
+    case "PROBLEM_LOADED":
+      return {
+        ...state,
+        problemId: action.payload.problem.id,
+        currentProblem: action.payload.problem,
+        visibleTestCases: action.payload.visibleTestCases,
+        parameterNames: action.payload.parameterNames ?? [],
+        hintLimit: HINT_LIMIT_BY_DIFFICULTY[action.payload.problem.difficulty],
+        hintsUsed: 0,
+        customTestCases: [],
+        pendingHintRequest: null,
+        hintText: "",
+        isHintStreaming: false,
+        solution: null,
+        lastError: null,
+        executionResult: null,
+        importStatus: null,
+      };
+
+    case "PROBLEM_ERROR":
+      return { ...state, lastError: action.payload.message };
+
+    case "IMPORT_STATUS":
+      return { ...state, importStatus: action.payload };
+
+    case "HINT_PENDING":
+      return {
+        ...state,
+        pendingHintRequest: {
+          requestedBy: action.payload.requestedBy,
+          requestedAt: new Date().toISOString(),
+        },
+      };
+
+    case "HINT_ERROR":
+      return {
+        ...state,
+        lastError: action.payload.message,
+        isHintStreaming: false,
+        pendingHintRequest: null,
+      };
+
     case "EXECUTION_STARTED":
-      return { ...state, executionInProgress: true, executionResult: null };
+      return {
+        ...state,
+        executionInProgress: true,
+        executionResult: null,
+        lastError: null,
+      };
 
     case "EXECUTION_RESULT":
-      return { ...state, executionInProgress: false, executionResult: action.payload };
+      return {
+        ...state,
+        executionInProgress: false,
+        executionResult: action.payload,
+        lastError: null,
+      };
 
     case "EXECUTION_ERROR":
       return {
@@ -105,17 +172,19 @@ export function roomReducer(
       };
 
     case "HINT_CHUNK":
-      return { ...state, hintText: state.hintText + action.payload.text };
+      return { ...state, hintText: state.hintText + action.payload.text, isHintStreaming: true };
 
     case "HINT_DONE":
       return {
         ...state,
         hintText: action.payload.fullHint,
         hintsUsed: state.hintsUsed + 1,
+        isHintStreaming: false,
+        pendingHintRequest: null,
       };
 
     case "HINT_DENIED":
-      return { ...state, pendingHintRequest: null };
+      return { ...state, pendingHintRequest: null, isHintStreaming: false };
 
     case "TESTCASE_ADDED":
       return {
