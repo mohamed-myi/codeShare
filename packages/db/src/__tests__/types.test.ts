@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { toProblem, type ProblemRow } from "../types.js";
+import { describe, expect, it } from "vitest";
+import { type ProblemRow, toProblem } from "../types.js";
 
 describe("toProblem", () => {
   it("maps snake_case row to camelCase type", () => {

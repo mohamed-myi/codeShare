@@ -1,12 +1,9 @@
 import type { Problem, ProblemListItem } from "@codeshare/shared";
 import { pool } from "../pool.js";
-import { toProblem, type ProblemRow } from "../types.js";
+import { type ProblemRow, toProblem } from "../types.js";
 
 export const problemRepository = {
-  async findAll(filters?: {
-    category?: string;
-    difficulty?: string;
-  }): Promise<ProblemListItem[]> {
+  async findAll(filters?: { category?: string; difficulty?: string }): Promise<ProblemListItem[]> {
     const conditions = ["deleted_at IS NULL"];
     const params: string[] = [];
 
@@ -53,10 +50,7 @@ export const problemRepository = {
   },
 
   async findBySlugIncludingDeleted(slug: string): Promise<Problem | null> {
-    const { rows } = await pool.query<ProblemRow>(
-      "SELECT * FROM problems WHERE slug = $1",
-      [slug],
-    );
+    const { rows } = await pool.query<ProblemRow>("SELECT * FROM problems WHERE slug = $1", [slug]);
     return rows[0] ? toProblem(rows[0]) : null;
   },
 
@@ -69,10 +63,9 @@ export const problemRepository = {
   },
 
   async findBySourceUrlIncludingDeleted(url: string): Promise<Problem | null> {
-    const { rows } = await pool.query<ProblemRow>(
-      "SELECT * FROM problems WHERE source_url = $1",
-      [url],
-    );
+    const { rows } = await pool.query<ProblemRow>("SELECT * FROM problems WHERE source_url = $1", [
+      url,
+    ]);
     return rows[0] ? toProblem(rows[0]) : null;
   },
 

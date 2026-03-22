@@ -1,15 +1,11 @@
-import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
-import type { Socket as ClientSocket } from "socket.io-client";
+import type { RoomState, UserJoinedPayload } from "@codeshare/shared";
 import { SocketEvents } from "@codeshare/shared";
-import type { UserJoinedPayload, RoomState } from "@codeshare/shared";
-import {
-  createTestServer,
-  createTestClient,
-  waitForEvent,
-} from "../helpers/socketTestHelper.js";
-import { setupSocketIO } from "../../ws/socketio.js";
-import { roomManager } from "../../models/RoomManager.js";
+import type { Socket as ClientSocket } from "socket.io-client";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLogger } from "../../lib/logger.js";
+import { roomManager } from "../../models/RoomManager.js";
+import { setupSocketIO } from "../../ws/socketio.js";
+import { createTestClient, createTestServer, waitForEvent } from "../helpers/socketTestHelper.js";
 
 const logger = createLogger("silent");
 
@@ -54,10 +50,7 @@ describe("Integration: two-client room join flow", () => {
     await waitForEvent(alice, "connect");
 
     alice.emit(SocketEvents.USER_JOIN, { displayName: "Alice" });
-    const aliceJoined = await waitForEvent<UserJoinedPayload>(
-      alice,
-      SocketEvents.USER_JOINED,
-    );
+    const aliceJoined = await waitForEvent<UserJoinedPayload>(alice, SocketEvents.USER_JOINED);
     expect(aliceJoined.displayName).toBe("Alice");
     expect(aliceJoined.role).toBe("peer");
     expect(aliceJoined.reconnectToken).toBeDefined();
@@ -66,16 +59,10 @@ describe("Integration: two-client room join flow", () => {
     const bob = connectClient(server.port, room.roomCode);
     await waitForEvent(bob, "connect");
 
-    const aliceBroadcastPromise = waitForEvent<UserJoinedPayload>(
-      alice,
-      SocketEvents.USER_JOINED,
-    );
+    const aliceBroadcastPromise = waitForEvent<UserJoinedPayload>(alice, SocketEvents.USER_JOINED);
 
     bob.emit(SocketEvents.USER_JOIN, { displayName: "Bob" });
-    const bobJoined = await waitForEvent<UserJoinedPayload>(
-      bob,
-      SocketEvents.USER_JOINED,
-    );
+    const bobJoined = await waitForEvent<UserJoinedPayload>(bob, SocketEvents.USER_JOINED);
     expect(bobJoined.displayName).toBe("Bob");
     expect(bobJoined.role).toBe("peer");
 
@@ -86,24 +73,15 @@ describe("Integration: two-client room join flow", () => {
     // --- Bob disconnects ---
     bob.disconnect();
 
-    const leftPayload = await waitForEvent<{ userId: string }>(
-      alice,
-      SocketEvents.USER_LEFT,
-    );
+    const leftPayload = await waitForEvent<{ userId: string }>(alice, SocketEvents.USER_LEFT);
     expect(leftPayload.userId).toBe(bobJoined.userId);
 
     // --- Bob reconnects with token ---
     const bob2 = connectClient(server.port, room.roomCode);
     await waitForEvent(bob2, "connect");
 
-    const bob2JoinedPromise = waitForEvent<UserJoinedPayload>(
-      bob2,
-      SocketEvents.USER_JOINED,
-    );
-    const bob2SyncPromise = waitForEvent<RoomState>(
-      bob2,
-      SocketEvents.ROOM_SYNC,
-    );
+    const bob2JoinedPromise = waitForEvent<UserJoinedPayload>(bob2, SocketEvents.USER_JOINED);
+    const bob2SyncPromise = waitForEvent<RoomState>(bob2, SocketEvents.ROOM_SYNC);
     const aliceReconnectBroadcast = waitForEvent<UserJoinedPayload>(
       alice,
       SocketEvents.USER_JOINED,

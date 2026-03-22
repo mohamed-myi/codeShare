@@ -1,6 +1,6 @@
-import type { FastifyInstance } from "fastify";
-import type { HealthResponse } from "@codeshare/shared";
 import { pool } from "@codeshare/db";
+import type { HealthResponse } from "@codeshare/shared";
+import type { FastifyInstance } from "fastify";
 import { roomManager } from "../models/RoomManager.js";
 
 export async function healthRoutes(app: FastifyInstance): Promise<void> {

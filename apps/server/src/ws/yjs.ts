@@ -1,14 +1,14 @@
-import { WebSocketServer, type WebSocket, type RawData } from "ws";
 import type { IncomingMessage } from "node:http";
-import type { Logger } from "pino";
-import * as Y from "yjs";
-import * as syncProtocol from "y-protocols/sync.js";
-import * as awarenessProtocol from "y-protocols/awareness.js";
-import * as encoding from "lib0/encoding";
 import * as decoding from "lib0/decoding";
-import { roomManager } from "../models/RoomManager.js";
-import { normalizeRoomCode } from "../lib/roomCode.js";
+import * as encoding from "lib0/encoding";
+import type { Logger } from "pino";
+import { type RawData, type WebSocket, WebSocketServer } from "ws";
+import * as awarenessProtocol from "y-protocols/awareness.js";
+import * as syncProtocol from "y-protocols/sync.js";
+import * as Y from "yjs";
 import { isOriginAllowed } from "../lib/networkSecurity.js";
+import { normalizeRoomCode } from "../lib/roomCode.js";
+import { roomManager } from "../models/RoomManager.js";
 
 const docs = new Map<string, WSSharedDoc>();
 const messageSync = 0;
@@ -32,11 +32,7 @@ class WSSharedDoc extends Y.Doc {
     this.awareness.on(
       "update",
       (
-        {
-          added,
-          updated,
-          removed,
-        }: { added: number[]; updated: number[]; removed: number[] },
+        { added, updated, removed }: { added: number[]; updated: number[]; removed: number[] },
         conn: unknown,
       ) => {
         const changedClients = added.concat(updated, removed);
@@ -129,10 +125,16 @@ export function setupYjsServer(
     }
 
     logger.info({ roomName }, "Yjs client connected");
-    setupWSConnection(ws, req, logger, {
-      maxMessageBytes,
-      maxDocBytes,
-    }, roomName);
+    setupWSConnection(
+      ws,
+      req,
+      logger,
+      {
+        maxMessageBytes,
+        maxDocBytes,
+      },
+      roomName,
+    );
   });
 
   return {
@@ -249,10 +251,7 @@ function setupWSConnection(
     encoding.writeVarUint(awarenessEncoder, messageAwareness);
     encoding.writeVarUint8Array(
       awarenessEncoder,
-      awarenessProtocol.encodeAwarenessUpdate(
-        doc.awareness,
-        Array.from(awarenessStates.keys()),
-      ),
+      awarenessProtocol.encodeAwarenessUpdate(doc.awareness, Array.from(awarenessStates.keys())),
     );
     send(doc, conn, encoding.toUint8Array(awarenessEncoder));
   }
@@ -302,10 +301,7 @@ function messageListener(
 }
 
 function send(doc: WSSharedDoc, conn: WebSocket, message: Uint8Array): void {
-  if (
-    conn.readyState !== wsReadyStateConnecting &&
-    conn.readyState !== wsReadyStateOpen
-  ) {
+  if (conn.readyState !== wsReadyStateConnecting && conn.readyState !== wsReadyStateOpen) {
     closeConn(doc, conn);
     return;
   }
@@ -321,25 +317,13 @@ function send(doc: WSSharedDoc, conn: WebSocket, message: Uint8Array): void {
   }
 }
 
-function closeConn(
-  doc: WSSharedDoc,
-  conn: WebSocket,
-  code?: number,
-  reason?: string,
-): void {
+function closeConn(doc: WSSharedDoc, conn: WebSocket, code?: number, reason?: string): void {
   if (doc.conns.has(conn)) {
     const controlledIds = doc.conns.get(conn);
     doc.conns.delete(conn);
-    awarenessProtocol.removeAwarenessStates(
-      doc.awareness,
-      Array.from(controlledIds ?? []),
-      null,
-    );
+    awarenessProtocol.removeAwarenessStates(doc.awareness, Array.from(controlledIds ?? []), null);
   }
-  if (
-    conn.readyState === wsReadyStateConnecting ||
-    conn.readyState === wsReadyStateOpen
-  ) {
+  if (conn.readyState === wsReadyStateConnecting || conn.readyState === wsReadyStateOpen) {
     conn.close(code, reason);
   }
 }
@@ -357,11 +341,7 @@ function toUint8Array(message: RawData): Uint8Array {
     return new TextEncoder().encode(message);
   }
 
-  return new Uint8Array(
-    message.buffer,
-    message.byteOffset,
-    message.byteLength,
-  );
+  return new Uint8Array(message.buffer, message.byteOffset, message.byteLength);
 }
 
 function extractRoomName(url: string | undefined): string {

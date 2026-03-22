@@ -1,7 +1,6 @@
 import type { Config } from "../config.js";
 
-const GROQ_CHAT_COMPLETIONS_URL =
-  "https://api.groq.com/openai/v1/chat/completions";
+const GROQ_CHAT_COMPLETIONS_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 interface GroqMessage {
   role: "system" | "user";
@@ -64,9 +63,7 @@ export function createGroqClient(config: Config) {
               const parsed = JSON.parse(data);
               const content = parsed.choices?.[0]?.delta?.content;
               if (content) yield content;
-            } catch {
-              continue;
-            }
+            } catch {}
           }
 
           if (done) break;

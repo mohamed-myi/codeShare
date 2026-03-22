@@ -1,6 +1,6 @@
 import type { RoomMode } from "@codeshare/shared";
-import { Room } from "./Room.js";
 import { generateRoomCode, normalizeRoomCode } from "../lib/roomCode.js";
+import { Room } from "./Room.js";
 
 class RoomManagerSingleton {
   private rooms = new Map<string, Room>();

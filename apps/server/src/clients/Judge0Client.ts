@@ -3,14 +3,27 @@ import type { Config } from "../config.js";
 
 const RAPID_API_HOST = "judge0-ce.p.rapidapi.com";
 const judge0ResponseSchema = z.object({
-  stdout: z.string().nullish().transform((value) => value ?? null),
-  stderr: z.string().nullish().transform((value) => value ?? null),
+  stdout: z
+    .string()
+    .nullish()
+    .transform((value) => value ?? null),
+  stderr: z
+    .string()
+    .nullish()
+    .transform((value) => value ?? null),
   status: z.object({
     id: z.number().int(),
     description: z.string().default(""),
   }),
-  time: z.string().nullish().transform((value) => value ?? null),
-  memory: z.number().int().nullish().transform((value) => value ?? null),
+  time: z
+    .string()
+    .nullish()
+    .transform((value) => value ?? null),
+  memory: z
+    .number()
+    .int()
+    .nullish()
+    .transform((value) => value ?? null),
 });
 
 type Judge0Response = z.infer<typeof judge0ResponseSchema>;
@@ -24,10 +37,7 @@ export function createJudge0Client(config: Config) {
   return {
     async submit(sourceCode: string, timeLimitMs: number): Promise<Judge0Response> {
       const controller = new AbortController();
-      const timeout = setTimeout(
-        () => controller.abort(),
-        config.JUDGE0_REQUEST_TIMEOUT_MS,
-      );
+      const timeout = setTimeout(() => controller.abort(), config.JUDGE0_REQUEST_TIMEOUT_MS);
 
       try {
         const response = await fetch(

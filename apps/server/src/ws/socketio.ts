@@ -1,30 +1,30 @@
-import type { Server, Socket } from "socket.io";
-import type { Logger } from "pino";
-import type * as Y from "yjs";
-import type { Hint } from "@codeshare/shared";
-import { createAuthMiddleware } from "../middleware/authMiddleware.js";
-import { registerRoomHandler } from "../handlers/roomHandler.js";
-import { registerProblemHandler } from "../handlers/problemHandler.js";
-import { registerTestcaseHandler } from "../handlers/testcaseHandler.js";
-import { registerExecutionHandler } from "../handlers/executionHandler.js";
-import { registerHintHandler } from "../handlers/hintHandler.js";
-import { registerSolutionHandler } from "../handlers/solutionHandler.js";
-import { roomManager } from "../models/RoomManager.js";
 import {
   boilerplateRepository,
-  testCaseRepository,
-  problemRepository,
   hintRepository,
+  problemRepository,
+  testCaseRepository,
 } from "@codeshare/db";
+import type { Hint } from "@codeshare/shared";
+import type { Logger } from "pino";
+import type { Server } from "socket.io";
+import type * as Y from "yjs";
+import { registerExecutionHandler } from "../handlers/executionHandler.js";
+import { registerHintHandler } from "../handlers/hintHandler.js";
+import { registerProblemHandler } from "../handlers/problemHandler.js";
+import { registerRoomHandler } from "../handlers/roomHandler.js";
+import { registerSolutionHandler } from "../handlers/solutionHandler.js";
+import { registerTestcaseHandler } from "../handlers/testcaseHandler.js";
 import { IpRateLimiter } from "../lib/ipRateLimiter.js";
+import { extractClientIp, isOriginAllowed } from "../lib/networkSecurity.js";
 import { normalizeRoomCode } from "../lib/roomCode.js";
-import {
-  extractClientIp,
-  isOriginAllowed,
-} from "../lib/networkSecurity.js";
+import { createAuthMiddleware } from "../middleware/authMiddleware.js";
+import { roomManager } from "../models/RoomManager.js";
 
 interface Judge0Client {
-  submit(source: string, timeLimitMs: number): Promise<{
+  submit(
+    source: string,
+    timeLimitMs: number,
+  ): Promise<{
     stdout: string | null;
     stderr: string | null;
     status: { id: number; description: string };
@@ -84,8 +84,7 @@ export function setupSocketIO(io: Server, logger: Logger, deps?: SocketIODeps): 
     }
 
     const clientIp = extractClientIp({
-      remoteAddress:
-        socket.request.socket.remoteAddress ?? socket.handshake.address,
+      remoteAddress: socket.request.socket.remoteAddress ?? socket.handshake.address,
       forwardedForHeader: socket.handshake.headers["x-forwarded-for"],
       trustedProxyIps,
     });
@@ -125,9 +124,8 @@ export function setupSocketIO(io: Server, logger: Logger, deps?: SocketIODeps): 
         enableProblemImport: deps?.enableProblemImport ?? true,
       });
     }
-    registerTestcaseHandler(
-      io, socket, logger, roomManager,
-      (problemId, language) => boilerplateRepository.findByProblemAndLanguage(problemId, language),
+    registerTestcaseHandler(io, socket, logger, roomManager, (problemId, language) =>
+      boilerplateRepository.findByProblemAndLanguage(problemId, language),
     );
     registerHintHandler(io, socket, logger, {
       roomLookup: roomManager,
@@ -138,10 +136,12 @@ export function setupSocketIO(io: Server, logger: Logger, deps?: SocketIODeps): 
       maxLLMPromptChars: deps?.maxLLMPromptChars ?? 12_000,
       maxLLMHintChars: deps?.maxLLMHintChars ?? 1_500,
       maxLLMCallsPerRoom: deps?.maxLLMCallsPerRoom ?? 15,
-      findStoredHint: deps?.findStoredHint ?? (async (problemId, hintsUsed) => {
-        const hints = await hintRepository.findByProblemId(problemId);
-        return hints[hintsUsed] ?? null;
-      }),
+      findStoredHint:
+        deps?.findStoredHint ??
+        (async (problemId, hintsUsed) => {
+          const hints = await hintRepository.findByProblemId(problemId);
+          return hints[hintsUsed] ?? null;
+        }),
       findProblem: (problemId) => problemRepository.findById(problemId),
     });
     registerSolutionHandler(io, socket, logger, {
@@ -156,7 +156,8 @@ export function setupSocketIO(io: Server, logger: Logger, deps?: SocketIODeps): 
         dailyLimit: deps.dailyLimit ?? 100,
         findVisible: (problemId) => testCaseRepository.findVisible(problemId),
         findByProblemId: (problemId) => testCaseRepository.findByProblemId(problemId),
-        findBoilerplate: (problemId, language) => boilerplateRepository.findByProblemAndLanguage(problemId, language),
+        findBoilerplate: (problemId, language) =>
+          boilerplateRepository.findByProblemAndLanguage(problemId, language),
         findProblem: (problemId) => problemRepository.findById(problemId),
         maxCodeBytes: deps?.maxCodeBytes ?? 65_536,
       });

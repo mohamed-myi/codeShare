@@ -1,6 +1,6 @@
 import type { TestCase } from "@codeshare/shared";
 import { pool } from "../pool.js";
-import { toTestCase, type TestCaseRow } from "../types.js";
+import { type TestCaseRow, toTestCase } from "../types.js";
 
 export const testCaseRepository = {
   async findByProblemId(problemId: string): Promise<TestCase[]> {

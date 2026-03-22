@@ -6,18 +6,14 @@ const optionalSecretSchema = z
   .optional()
   .transform((value) => (value && value.length > 0 ? value : undefined));
 
-const csvStringSchema = z
-  .string()
-  .transform((value) =>
-    value
-      .split(",")
-      .map((entry) => entry.trim())
-      .filter(Boolean),
-  );
+const csvStringSchema = z.string().transform((value) =>
+  value
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean),
+);
 
-const booleanFromStringSchema = z
-  .enum(["true", "false"])
-  .transform((value) => value === "true");
+const booleanFromStringSchema = z.enum(["true", "false"]).transform((value) => value === "true");
 
 const envSchema = z.object({
   DATABASE_URL: z.string().url(),
@@ -27,14 +23,10 @@ const envSchema = z.object({
   GROQ_API_KEY: optionalSecretSchema,
   GROQ_MODEL: z.string().default("llama-3.3-70b-versatile"),
   PORT: z.coerce.number().int().positive().default(3001),
-  NODE_ENV: z
-    .enum(["development", "production", "test"])
-    .default("development"),
+  NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   CORS_ORIGIN: z.string().default("http://localhost:5173"),
   ALLOWED_ORIGINS: csvStringSchema.default("http://localhost:5173"),
-  LOG_LEVEL: z
-    .enum(["fatal", "error", "warn", "info", "debug", "trace"])
-    .default("info"),
+  LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
   RATE_LIMIT_ROOM_CREATE: z.coerce.number().int().positive().default(10),
   RATE_LIMIT_WS_CONNECT: z.coerce.number().int().positive().default(20),
   RATE_LIMIT_JOIN: z.coerce.number().int().positive().default(30),

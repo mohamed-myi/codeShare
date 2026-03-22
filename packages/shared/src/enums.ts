@@ -28,8 +28,7 @@ export const ProblemSource = {
   CURATED: "curated",
   USER_SUBMITTED: "user_submitted",
 } as const;
-export type ProblemSource =
-  (typeof ProblemSource)[keyof typeof ProblemSource];
+export type ProblemSource = (typeof ProblemSource)[keyof typeof ProblemSource];
 
 export const ExecutionErrorType = {
   API_ERROR: "api_error",
@@ -41,13 +40,11 @@ export const ExecutionErrorType = {
   ROOM_LIMIT: "room_limit",
   GLOBAL_LIMIT: "global_limit",
 } as const;
-export type ExecutionErrorType =
-  (typeof ExecutionErrorType)[keyof typeof ExecutionErrorType];
+export type ExecutionErrorType = (typeof ExecutionErrorType)[keyof typeof ExecutionErrorType];
 
 export const ImportStatus = {
   SCRAPING: "scraping",
   SAVED: "saved",
   FAILED: "failed",
 } as const;
-export type ImportStatus =
-  (typeof ImportStatus)[keyof typeof ImportStatus];
+export type ImportStatus = (typeof ImportStatus)[keyof typeof ImportStatus];

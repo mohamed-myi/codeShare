@@ -1,19 +1,11 @@
-import type { Socket, Server } from "socket.io";
+import type { BoilerplateTemplate, ExecutionErrorType, Problem, TestCase } from "@codeshare/shared";
+import { harnessResultSchema, SocketEvents } from "@codeshare/shared";
 import type { Logger } from "pino";
+import type { Server, Socket } from "socket.io";
 import type * as Y from "yjs";
-import {
-  SocketEvents,
-  harnessResultSchema,
-} from "@codeshare/shared";
-import type {
-  ExecutionErrorType,
-  TestCase,
-  BoilerplateTemplate,
-  Problem,
-} from "@codeshare/shared";
+import { globalCounters } from "../lib/rateLimitCounters.js";
 import type { Room } from "../models/Room.js";
 import { executionService } from "../services/ExecutionService.js";
-import { globalCounters } from "../lib/rateLimitCounters.js";
 
 interface RoomLookup {
   getRoom(roomCode: string): Room | undefined;
@@ -75,14 +67,17 @@ export function registerExecutionHandler(
 
       const [testCases, boilerplate, problem] = await Promise.all([
         executionType === "run"
-          ? deps.findVisible(room.problemId).then((visible) => [...visible, ...room.customTestCases.map((ct, i) => ({
-              id: `custom-${i}`,
-              problemId: room.problemId!,
-              input: ct.input,
-              expectedOutput: ct.expectedOutput,
-              isVisible: true,
-              orderIndex: visible.length + i,
-            }))])
+          ? deps.findVisible(room.problemId).then((visible) => [
+              ...visible,
+              ...room.customTestCases.map((ct, i) => ({
+                id: `custom-${i}`,
+                problemId: room.problemId!,
+                input: ct.input,
+                expectedOutput: ct.expectedOutput,
+                isVisible: true,
+                orderIndex: visible.length + i,
+              })),
+            ])
           : deps.findByProblemId(room.problemId),
         deps.findBoilerplate(room.problemId, room.language),
         deps.findProblem(room.problemId),
@@ -161,17 +156,12 @@ export function registerExecutionHandler(
         );
         io.to(roomCode).emit(SocketEvents.EXECUTION_RESULT, result);
       } else {
-        const result = executionService.buildSubmitResult(
-          validated.data.results,
-          testCases,
-        );
+        const result = executionService.buildSubmitResult(validated.data.results, testCases);
         io.to(roomCode).emit(SocketEvents.EXECUTION_RESULT, result);
       }
     } catch (err) {
       const errorType: ExecutionErrorType =
-        err instanceof DOMException && err.name === "AbortError"
-          ? "api_timeout"
-          : "api_error";
+        err instanceof DOMException && err.name === "AbortError" ? "api_timeout" : "api_error";
 
       logger.error({ err, roomCode, executionType }, "Execution failed");
 

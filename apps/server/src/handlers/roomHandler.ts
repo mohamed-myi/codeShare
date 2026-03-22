@@ -1,15 +1,15 @@
-import type { Socket, Server } from "socket.io";
-import type { Logger } from "pino";
-import { SocketEvents, userJoinSchema } from "@codeshare/shared";
 import type {
   EventRejectedPayload,
   ProblemLoadedPayload,
   UserJoinPayload,
 } from "@codeshare/shared";
-import type { Room } from "../models/Room.js";
-import { problemService } from "../services/ProblemService.js";
+import { SocketEvents, userJoinSchema } from "@codeshare/shared";
+import type { Logger } from "pino";
+import type { Server, Socket } from "socket.io";
 import type { IpRateLimiter } from "../lib/ipRateLimiter.js";
 import { normalizeRoomCode } from "../lib/roomCode.js";
+import type { Room } from "../models/Room.js";
+import { problemService } from "../services/ProblemService.js";
 
 interface RoomLookup {
   getRoom(roomCode: string): Room | undefined;
@@ -21,7 +21,7 @@ interface RoomLookup {
  * Manages slot assignment, reconnect token validation, grace periods.
  */
 export function registerRoomHandler(
-  io: Server,
+  _io: Server,
   socket: Socket,
   logger: Logger,
   roomLookup: RoomLookup,

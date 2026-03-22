@@ -1,15 +1,11 @@
-import { describe, it, expect, afterEach } from "vitest";
-import type { Socket as ClientSocket } from "socket.io-client";
 import { SocketEvents } from "@codeshare/shared";
-import {
-  createTestServer,
-  createTestClient,
-  waitForEvent,
-} from "../helpers/socketTestHelper.js";
-import { setupSocketIO } from "../../ws/socketio.js";
+import type { Socket as ClientSocket } from "socket.io-client";
+import { afterEach, describe, expect, it } from "vitest";
+import { createLogger } from "../../lib/logger.js";
 import { createAuthMiddleware } from "../../middleware/authMiddleware.js";
 import { roomManager } from "../../models/RoomManager.js";
-import { createLogger } from "../../lib/logger.js";
+import { setupSocketIO } from "../../ws/socketio.js";
+import { createTestClient, createTestServer, waitForEvent } from "../helpers/socketTestHelper.js";
 
 const logger = createLogger("silent");
 

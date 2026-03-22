@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { RoomMode, Difficulty, HINT_LIMIT_BY_DIFFICULTY } from "../index.js";
+import { describe, expect, it } from "vitest";
+import { Difficulty, HINT_LIMIT_BY_DIFFICULTY, RoomMode } from "../index.js";
 
 describe("enums", () => {
   it("defines room modes", () => {

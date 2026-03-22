@@ -1,21 +1,14 @@
-import type { Socket, Server } from "socket.io";
-import type { Logger } from "pino";
-import {
-  SocketEvents,
-  ROOM_LIMITS,
-  testcaseAddSchema,
-} from "@codeshare/shared";
 import type { BoilerplateTemplate } from "@codeshare/shared";
+import { ROOM_LIMITS, SocketEvents, testcaseAddSchema } from "@codeshare/shared";
+import type { Logger } from "pino";
+import type { Server, Socket } from "socket.io";
 import type { Room } from "../models/Room.js";
 
 interface RoomLookup {
   getRoom(roomCode: string): Room | undefined;
 }
 
-type GetBoilerplate = (
-  problemId: string,
-  language: string,
-) => Promise<BoilerplateTemplate | null>;
+type GetBoilerplate = (problemId: string, language: string) => Promise<BoilerplateTemplate | null>;
 
 export function registerTestcaseHandler(
   io: Server,
@@ -92,10 +85,7 @@ export function registerTestcaseHandler(
 
       io.to(roomCode).emit(SocketEvents.TESTCASE_ADDED, { testCase });
 
-      logger.info(
-        { roomCode, customCount: room.customTestCases.length },
-        "Custom test case added",
-      );
+      logger.info({ roomCode, customCount: room.customTestCases.length }, "Custom test case added");
     } catch (err) {
       logger.error({ err, roomCode }, "Failed to add test case");
       socket.emit(SocketEvents.TESTCASE_ERROR, {

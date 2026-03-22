@@ -1,6 +1,6 @@
-import { describe, it, expect } from "vitest";
-import { executionService, type HarnessCase } from "../ExecutionService.js";
 import type { TestCase } from "@codeshare/shared";
+import { describe, expect, it } from "vitest";
+import { executionService, type HarnessCase } from "../ExecutionService.js";
 
 const makeTestCase = (
   input: Record<string, unknown>,
@@ -45,7 +45,7 @@ describe("parseResult", () => {
   });
 
   it("returns null when start marker present but end marker missing", () => {
-    const stdout = "===HARNESS_RESULT===\n{\"results\":[]}\nno end marker";
+    const stdout = '===HARNESS_RESULT===\n{"results":[]}\nno end marker';
     expect(executionService.parseResult(stdout)).toBeNull();
   });
 
@@ -98,9 +98,7 @@ describe("buildRunResult", () => {
     const parsed: HarnessCase[] = [
       { index: 0, passed: false, elapsed_ms: 15, got: "[1, 0]", expected: "[0, 1]" },
     ];
-    const testCases = [
-      makeTestCase({ nums: [2, 7], target: 9 }, [0, 1]),
-    ];
+    const testCases = [makeTestCase({ nums: [2, 7], target: 9 }, [0, 1])];
 
     const result = executionService.buildRunResult(parsed, "", testCases);
 
@@ -172,9 +170,7 @@ describe("buildRunResult", () => {
   });
 
   it("missing elapsed_ms defaults to 0", () => {
-    const parsed: HarnessCase[] = [
-      { index: 0, passed: true, got: null, expected: null },
-    ];
+    const parsed: HarnessCase[] = [{ index: 0, passed: true, got: null, expected: null }];
     const testCases = [makeTestCase({ n: 1 }, 1)];
 
     const result = executionService.buildRunResult(parsed, "", testCases);
@@ -221,10 +217,10 @@ describe("buildSubmitResult", () => {
     expect(result.passed).toBe(1);
     expect(result.total).toBe(3);
     expect(result.firstFailure).not.toBeNull();
-    expect(result.firstFailure!.index).toBe(1);
-    expect(result.firstFailure!.got).toBe("[2, 1]");
-    expect(result.firstFailure!.expected).toBe("[1, 2]");
-    expect(result.firstFailure!.input).toBe(JSON.stringify({ nums: [3, 2], target: 5 }));
+    expect(result.firstFailure?.index).toBe(1);
+    expect(result.firstFailure?.got).toBe("[2, 1]");
+    expect(result.firstFailure?.expected).toBe("[1, 2]");
+    expect(result.firstFailure?.input).toBe(JSON.stringify({ nums: [3, 2], target: 5 }));
   });
 
   it("multiple failures: only first captured", () => {
@@ -239,8 +235,8 @@ describe("buildSubmitResult", () => {
 
     const result = executionService.buildSubmitResult(parsed, testCases);
 
-    expect(result.firstFailure!.index).toBe(0);
-    expect(result.firstFailure!.got).toBe("wrong0");
+    expect(result.firstFailure?.index).toBe(0);
+    expect(result.firstFailure?.got).toBe("wrong0");
   });
 
   it("error case counts as failure", () => {
@@ -258,20 +254,16 @@ describe("buildSubmitResult", () => {
     expect(result.passed).toBe(1);
     expect(result.total).toBe(2);
     expect(result.firstFailure).not.toBeNull();
-    expect(result.firstFailure!.index).toBe(1);
+    expect(result.firstFailure?.index).toBe(1);
   });
 
   it("redacts hidden test case details in firstFailure", () => {
-    const parsed: HarnessCase[] = [
-      { index: 0, passed: false, got: "[1, 0]", expected: "[0, 1]" },
-    ];
-    const testCases = [
-      makeTestCase({ nums: [2, 7] }, [0, 1], { isVisible: false }),
-    ];
+    const parsed: HarnessCase[] = [{ index: 0, passed: false, got: "[1, 0]", expected: "[0, 1]" }];
+    const testCases = [makeTestCase({ nums: [2, 7] }, [0, 1], { isVisible: false })];
     const result = executionService.buildSubmitResult(parsed, testCases);
     expect(result.firstFailure).not.toBeNull();
-    expect(result.firstFailure!.input).toBe("");
-    expect(result.firstFailure!.got).toContain("hidden");
-    expect(result.firstFailure!.expected).toContain("Hidden");
+    expect(result.firstFailure?.input).toBe("");
+    expect(result.firstFailure?.got).toContain("hidden");
+    expect(result.firstFailure?.expected).toContain("Hidden");
   });
 });

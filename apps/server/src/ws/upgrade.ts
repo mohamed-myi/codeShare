@@ -1,8 +1,8 @@
 import type http from "node:http";
-import type { WebSocketServer } from "ws";
-import type { Server as SocketIOServer } from "socket.io";
-import type { Logger } from "pino";
 import type net from "node:net";
+import type { Logger } from "pino";
+import type { Server as SocketIOServer } from "socket.io";
+import type { WebSocketServer } from "ws";
 
 /**
  * Registers the HTTP upgrade listener that routes WebSocket connections
@@ -25,7 +25,11 @@ export function registerUpgradeHandler(
     } else if (pathname.startsWith("/ws/socket")) {
       // Socket.io engine's handleUpgrade accepts IncomingMessage at runtime
       // but types require EngineRequest with _query -- safe to cast
-      (io.engine as unknown as { handleUpgrade(req: http.IncomingMessage, socket: net.Socket, head: Buffer): void }).handleUpgrade(req, socket, head);
+      (
+        io.engine as unknown as {
+          handleUpgrade(req: http.IncomingMessage, socket: net.Socket, head: Buffer): void;
+        }
+      ).handleUpgrade(req, socket, head);
     } else {
       logger.warn({ pathname }, "Rejecting WebSocket upgrade for unknown path");
       socket.destroy();

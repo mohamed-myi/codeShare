@@ -1,13 +1,13 @@
 import type http from "node:http";
-import { Server as SocketIOServer } from "socket.io";
-import type { Config } from "./config.js";
 import type { Logger } from "pino";
-import { setupSocketIO } from "./ws/socketio.js";
-import { setupYjsServer } from "./ws/yjs.js";
-import { registerUpgradeHandler } from "./ws/upgrade.js";
-import { createJudge0Client } from "./clients/Judge0Client.js";
+import { Server as SocketIOServer } from "socket.io";
 import { createGroqClient } from "./clients/GroqClient.js";
+import { createJudge0Client } from "./clients/Judge0Client.js";
+import type { Config } from "./config.js";
 import { roomManager } from "./models/RoomManager.js";
+import { setupSocketIO } from "./ws/socketio.js";
+import { registerUpgradeHandler } from "./ws/upgrade.js";
+import { setupYjsServer } from "./ws/yjs.js";
 
 /**
  * Sets up the HTTP upgrade routing for dual WebSocket channels.
@@ -35,9 +35,7 @@ export function setupUpgradeRouting(
     maxDocBytes: config.MAX_YJS_DOC_BYTES,
   });
   const judge0Client = createJudge0Client(config);
-  const groqClient = config.GROQ_API_KEY
-    ? createGroqClient(config)
-    : undefined;
+  const groqClient = config.GROQ_API_KEY ? createGroqClient(config) : undefined;
 
   setupSocketIO(io, logger, {
     getDoc,
@@ -59,7 +57,9 @@ export function setupUpgradeRouting(
   httpServer.removeAllListeners("upgrade");
   registerUpgradeHandler(httpServer, wss, io, logger);
 
-  logger.info("WebSocket upgrade routing configured: /ws/socket (Socket.io), /ws/yjs (y-websocket)");
+  logger.info(
+    "WebSocket upgrade routing configured: /ws/socket (Socket.io), /ws/yjs (y-websocket)",
+  );
 
   return io;
 }

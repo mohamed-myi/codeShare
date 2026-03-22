@@ -1,6 +1,6 @@
 import type { Hint } from "@codeshare/shared";
 import { pool } from "../pool.js";
-import { toHint, type HintRow } from "../types.js";
+import { type HintRow, toHint } from "../types.js";
 
 export const hintRepository = {
   async findByProblemId(problemId: string): Promise<Hint[]> {
@@ -13,11 +13,7 @@ export const hintRepository = {
     return rows.map(toHint);
   },
 
-  async create(data: {
-    problemId: string;
-    hintText: string;
-    orderIndex: number;
-  }): Promise<Hint> {
+  async create(data: { problemId: string; hintText: string; orderIndex: number }): Promise<Hint> {
     const { rows } = await pool.query<HintRow>(
       `INSERT INTO hints (problem_id, hint_text, order_index)
        VALUES ($1, $2, $3)

@@ -32,15 +32,12 @@ function buildContentSecurityPolicy(config: Config): string {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data:",
     "font-src 'self'",
-    "connect-src " + Array.from(connectSources).join(" "),
+    `connect-src ${Array.from(connectSources).join(" ")}`,
     "worker-src 'self' blob:",
   ].join("; ");
 }
 
-export async function registerSecurityHeaders(
-  app: FastifyInstance,
-  config: Config,
-): Promise<void> {
+export async function registerSecurityHeaders(app: FastifyInstance, config: Config): Promise<void> {
   const contentSecurityPolicy = buildContentSecurityPolicy(config);
 
   app.addHook("onSend", async (_request, reply, payload) => {
@@ -53,10 +50,7 @@ export async function registerSecurityHeaders(
     reply.header("X-Frame-Options", "DENY");
 
     if (config.NODE_ENV === "production") {
-      reply.header(
-        "Strict-Transport-Security",
-        "max-age=63072000; includeSubDomains; preload",
-      );
+      reply.header("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
     }
 
     return payload;

@@ -1,12 +1,8 @@
-import { describe, it, expect, afterEach } from "vitest";
 import type { Socket as ClientSocket } from "socket.io-client";
-import {
-  createTestServer,
-  createTestClient,
-  waitForEvent,
-} from "../helpers/socketTestHelper.js";
-import { setupSocketIO } from "../../ws/socketio.js";
+import { afterEach, describe, expect, it } from "vitest";
 import { createLogger } from "../../lib/logger.js";
+import { setupSocketIO } from "../../ws/socketio.js";
+import { createTestClient, createTestServer, waitForEvent } from "../helpers/socketTestHelper.js";
 
 const logger = createLogger("silent");
 
@@ -81,10 +77,7 @@ describe("Socket.io server setup", () => {
     const client2 = createTestClient(server.port, "room-bbb");
     clients.push(client1, client2);
 
-    await Promise.all([
-      waitForEvent(client1, "connect"),
-      waitForEvent(client2, "connect"),
-    ]);
+    await Promise.all([waitForEvent(client1, "connect"), waitForEvent(client2, "connect")]);
 
     expect(client1.connected).toBe(true);
     expect(client2.connected).toBe(true);

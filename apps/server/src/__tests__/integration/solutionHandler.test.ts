@@ -1,15 +1,11 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
-import type { Socket as ClientSocket } from "socket.io-client";
-import { SocketEvents } from "@codeshare/shared";
 import type { Problem, UserJoinedPayload } from "@codeshare/shared";
-import {
-  createTestServer,
-  createTestClient,
-  waitForEvent,
-} from "../helpers/socketTestHelper.js";
-import { setupSocketIO } from "../../ws/socketio.js";
-import { roomManager } from "../../models/RoomManager.js";
+import { SocketEvents } from "@codeshare/shared";
+import type { Socket as ClientSocket } from "socket.io-client";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLogger } from "../../lib/logger.js";
+import { roomManager } from "../../models/RoomManager.js";
+import { setupSocketIO } from "../../ws/socketio.js";
+import { createTestClient, createTestServer, waitForEvent } from "../helpers/socketTestHelper.js";
 
 const VALID_UUID = "00000000-0000-4000-8000-000000000001";
 
@@ -92,10 +88,7 @@ describe("Solution handler", () => {
     const interviewer = createTestClient(server.port, room.roomCode);
     clients.push(interviewer);
     await waitForEvent(interviewer, "connect");
-    const joinP = waitForEvent<UserJoinedPayload>(
-      interviewer,
-      SocketEvents.USER_JOINED,
-    );
+    const joinP = waitForEvent<UserJoinedPayload>(interviewer, SocketEvents.USER_JOINED);
     interviewer.emit(SocketEvents.USER_JOIN, { displayName: "Interviewer" });
     const interviewerPayload = await joinP;
     expect(interviewerPayload.role).toBe("interviewer");
@@ -104,10 +97,7 @@ describe("Solution handler", () => {
     const candidate = createTestClient(server.port, room.roomCode);
     clients.push(candidate);
     await waitForEvent(candidate, "connect");
-    const joinPC = waitForEvent<UserJoinedPayload>(
-      candidate,
-      SocketEvents.USER_JOINED,
-    );
+    const joinPC = waitForEvent<UserJoinedPayload>(candidate, SocketEvents.USER_JOINED);
     candidate.emit(SocketEvents.USER_JOIN, { displayName: "Candidate" });
     await joinPC;
     // Consume the broadcast that interviewer receives about candidate joining
@@ -127,10 +117,7 @@ describe("Solution handler", () => {
     const interviewer = createTestClient(server.port, room.roomCode);
     clients.push(interviewer);
     await waitForEvent(interviewer, "connect");
-    const joinP = waitForEvent<UserJoinedPayload>(
-      interviewer,
-      SocketEvents.USER_JOINED,
-    );
+    const joinP = waitForEvent<UserJoinedPayload>(interviewer, SocketEvents.USER_JOINED);
     interviewer.emit(SocketEvents.USER_JOIN, { displayName: "Interviewer" });
     await joinP;
 
@@ -153,10 +140,7 @@ describe("Solution handler", () => {
 
     interviewer.emit(SocketEvents.SOLUTION_REVEAL);
 
-    const [iPayload, cPayload] = await Promise.all([
-      interviewerResult,
-      candidateResult,
-    ]);
+    const [iPayload, cPayload] = await Promise.all([interviewerResult, candidateResult]);
 
     expect(iPayload.solution).toBe("Use a hash map to store complements");
     expect(cPayload.solution).toBe("Use a hash map to store complements");
@@ -166,10 +150,7 @@ describe("Solution handler", () => {
     const { interviewer } = await setupSingleUser();
     // room.problemId is null by default
 
-    const error = waitForEvent<{ message: string }>(
-      interviewer,
-      SocketEvents.HINT_ERROR,
-    );
+    const error = waitForEvent<{ message: string }>(interviewer, SocketEvents.HINT_ERROR);
     interviewer.emit(SocketEvents.SOLUTION_REVEAL);
     const payload = await error;
 
@@ -186,10 +167,7 @@ describe("Solution handler", () => {
     };
     mockFindProblemById.mockResolvedValue(problemWithoutSolution);
 
-    const error = waitForEvent<{ message: string }>(
-      interviewer,
-      SocketEvents.HINT_ERROR,
-    );
+    const error = waitForEvent<{ message: string }>(interviewer, SocketEvents.HINT_ERROR);
     interviewer.emit(SocketEvents.SOLUTION_REVEAL);
     const payload = await error;
 

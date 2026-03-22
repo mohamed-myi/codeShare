@@ -1,11 +1,11 @@
-import { describe, it, expect, afterEach } from "vitest";
 import http from "node:http";
+import { afterEach, describe, expect, it } from "vitest";
 import WebSocket from "ws";
-import * as Y from "yjs";
 import { WebsocketProvider } from "y-websocket";
-import { setupYjsServer } from "../../ws/yjs.js";
+import * as Y from "yjs";
 import { createLogger } from "../../lib/logger.js";
 import { roomManager } from "../../models/RoomManager.js";
+import { setupYjsServer } from "../../ws/yjs.js";
 import { listenOnLocalhost, TEST_HOST } from "../helpers/networkTestHelper.js";
 
 type YDoc = import("yjs").Doc;
@@ -48,15 +48,10 @@ function createYjsClient(
   token?: string,
 ): { doc: YDoc; provider: YWebsocketProvider } {
   const doc = new Y.Doc();
-  const provider = new WebsocketProvider(
-    `ws://${TEST_HOST}:${port}`,
-    roomName,
-    doc,
-    {
-      WebSocketPolyfill: WebSocket as unknown as typeof globalThis.WebSocket,
-      ...(token ? { params: { token } } : {}),
-    },
-  );
+  const provider = new WebsocketProvider(`ws://${TEST_HOST}:${port}`, roomName, doc, {
+    WebSocketPolyfill: WebSocket as unknown as typeof globalThis.WebSocket,
+    ...(token ? { params: { token } } : {}),
+  });
   return { doc, provider };
 }
 
@@ -154,7 +149,7 @@ describe("y-websocket server", () => {
 
     const serverDoc = server.getDoc(roomCode);
     expect(serverDoc).toBeDefined();
-    expect(serverDoc!.getText("monaco").toString()).toBe("server-readable");
+    expect(serverDoc?.getText("monaco").toString()).toBe("server-readable");
   });
 
   it("destroys the Yjs doc when the owning room is destroyed", async () => {
@@ -198,9 +193,7 @@ describe("y-websocket server", () => {
     cleanup = server.cleanup;
     const { roomCode } = createTestRoom();
 
-    const ws = new WebSocket(
-      `ws://${TEST_HOST}:${server.port}/${roomCode}?token=wrong-token`,
-    );
+    const ws = new WebSocket(`ws://${TEST_HOST}:${server.port}/${roomCode}?token=wrong-token`);
 
     const closeCode = await new Promise<number>((resolve) => {
       ws.on("close", (code) => resolve(code));
@@ -214,9 +207,7 @@ describe("y-websocket server", () => {
     const server = await startServer();
     cleanup = server.cleanup;
 
-    const ws = new WebSocket(
-      `ws://${TEST_HOST}:${server.port}/nop-nop?token=anything`,
-    );
+    const ws = new WebSocket(`ws://${TEST_HOST}:${server.port}/nop-nop?token=anything`);
 
     const closeCode = await new Promise<number>((resolve) => {
       ws.on("close", (code) => resolve(code));
@@ -233,12 +224,9 @@ describe("y-websocket server", () => {
     cleanup = server.cleanup;
     const { roomCode, yjsToken } = createTestRoom();
 
-    const ws = new WebSocket(
-      `ws://${TEST_HOST}:${server.port}/${roomCode}?token=${yjsToken}`,
-      {
-        origin: "https://evil.example",
-      },
-    );
+    const ws = new WebSocket(`ws://${TEST_HOST}:${server.port}/${roomCode}?token=${yjsToken}`, {
+      origin: "https://evil.example",
+    });
 
     const closeCode = await new Promise<number>((resolve) => {
       ws.on("close", (code) => resolve(code));
@@ -255,9 +243,7 @@ describe("y-websocket server", () => {
     cleanup = server.cleanup;
     const { roomCode, yjsToken } = createTestRoom();
 
-    const ws = new WebSocket(
-      `ws://${TEST_HOST}:${server.port}/${roomCode}?token=${yjsToken}`,
-    );
+    const ws = new WebSocket(`ws://${TEST_HOST}:${server.port}/${roomCode}?token=${yjsToken}`);
 
     await new Promise<void>((resolve, reject) => {
       ws.on("open", () => resolve());

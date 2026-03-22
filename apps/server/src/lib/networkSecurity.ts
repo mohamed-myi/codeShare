@@ -27,7 +27,9 @@ export function extractClientIp(opts: {
   trustedProxyIps: readonly string[];
 }): string {
   const remoteAddress = normalizeIp(opts.remoteAddress);
-  const trustedProxyIps = new Set(opts.trustedProxyIps.map((ip) => normalizeIp(ip)).filter(Boolean));
+  const trustedProxyIps = new Set(
+    opts.trustedProxyIps.map((ip) => normalizeIp(ip)).filter(Boolean),
+  );
 
   if (remoteAddress && trustedProxyIps.has(remoteAddress)) {
     const header = Array.isArray(opts.forwardedForHeader)

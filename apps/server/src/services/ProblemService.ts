@@ -1,11 +1,8 @@
-import type { ProblemListItem, ProblemDetail } from "@codeshare/shared";
-import { problemRepository, testCaseRepository, boilerplateRepository } from "@codeshare/db";
+import { boilerplateRepository, problemRepository, testCaseRepository } from "@codeshare/db";
+import type { ProblemDetail, ProblemListItem } from "@codeshare/shared";
 
 export const problemService = {
-  async list(filters?: {
-    category?: string;
-    difficulty?: string;
-  }): Promise<ProblemListItem[]> {
+  async list(filters?: { category?: string; difficulty?: string }): Promise<ProblemListItem[]> {
     return problemRepository.findAll(filters);
   },
 
@@ -14,10 +11,7 @@ export const problemService = {
     if (!problem) return null;
 
     const visibleTestCases = await testCaseRepository.findVisible(id);
-    const boilerplate = await boilerplateRepository.findByProblemAndLanguage(
-      id,
-      "python",
-    );
+    const boilerplate = await boilerplateRepository.findByProblemAndLanguage(id, "python");
 
     return { ...problem, visibleTestCases, boilerplate };
   },

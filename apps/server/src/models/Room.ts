@@ -1,15 +1,15 @@
+import crypto from "node:crypto";
 import type {
-  RoomMode,
-  UserRole,
-  RoomUser,
-  PendingHintRequest,
   CustomTestCase,
+  PendingHintRequest,
+  RoomMode,
   RoomState,
+  RoomUser,
   SupportedLanguage,
+  UserRole,
 } from "@codeshare/shared";
 import { ROOM_LIMITS } from "@codeshare/shared";
 import { generateReconnectToken } from "../lib/reconnectToken.js";
-import crypto from "node:crypto";
 
 interface RoomUserInternal extends RoomUser {
   reconnectToken: string;
@@ -79,22 +79,21 @@ export class Room {
   }
 
   findBySocketId(socketId: string): RoomUserInternal | null {
-    return this.users.find(
-      (user) => user.socketId === socketId && user.connected,
-    ) ?? null;
+    return this.users.find((user) => user.socketId === socketId && user.connected) ?? null;
   }
 
   findByReconnectToken(token: string): RoomUserInternal | null {
-    return this.users.find(
-      (u) => !u.connected && u.reconnectToken === token,
-    ) ?? null;
+    return this.users.find((u) => !u.connected && u.reconnectToken === token) ?? null;
   }
 
   startGracePeriod(userId: string, onExpire: () => void): void {
-    const timer = setTimeout(() => {
-      this.gracePeriodTimers.delete(userId);
-      onExpire();
-    }, 5 * 60 * 1000);
+    const timer = setTimeout(
+      () => {
+        this.gracePeriodTimers.delete(userId);
+        onExpire();
+      },
+      5 * 60 * 1000,
+    );
     this.gracePeriodTimers.set(userId, timer);
   }
 
@@ -114,7 +113,10 @@ export class Room {
       return { allowed: false, reason: "Execution already in progress." };
     }
     if (this.submissionsUsed >= this.submissionLimit) {
-      return { allowed: false, reason: `Session execution limit reached (${this.submissionLimit}/${this.submissionLimit}).` };
+      return {
+        allowed: false,
+        reason: `Session execution limit reached (${this.submissionLimit}/${this.submissionLimit}).`,
+      };
     }
     return { allowed: true };
   }

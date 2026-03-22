@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Room } from "../Room.js";
 
 describe("Room", () => {
@@ -76,9 +76,9 @@ describe("Room", () => {
       const reconnected = room.reconnectUser(user.id, "s2");
 
       expect(reconnected).not.toBeNull();
-      expect(reconnected!.connected).toBe(true);
-      expect(reconnected!.socketId).toBe("s2");
-      expect(reconnected!.reconnectToken).not.toBe(oldToken);
+      expect(reconnected?.connected).toBe(true);
+      expect(reconnected?.socketId).toBe("s2");
+      expect(reconnected?.reconnectToken).not.toBe(oldToken);
       expect(room.gracePeriodTimers.has(user.id)).toBe(false);
     });
 
@@ -95,7 +95,7 @@ describe("Room", () => {
 
       const found = room.findByReconnectToken(user.reconnectToken);
       expect(found).not.toBeNull();
-      expect(found!.id).toBe(user.id);
+      expect(found?.id).toBe(user.id);
     });
 
     it("returns null for connected user (token exists but user is not disconnected)", () => {
@@ -261,7 +261,7 @@ describe("Room", () => {
       const alice = room.addUser("Alice", "peer", "s1");
       const found = room.findBySocketId("s1");
       expect(found).not.toBeNull();
-      expect(found!.id).toBe(alice.id);
+      expect(found?.id).toBe(alice.id);
     });
 
     it("returns null when user is disconnected", () => {

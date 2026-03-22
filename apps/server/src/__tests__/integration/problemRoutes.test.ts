@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import Fastify from "fastify";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { problemRoutes } from "../../routes/problems.js";
 
 const mockList = vi.fn();

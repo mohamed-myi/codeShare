@@ -1,6 +1,6 @@
 import type { BoilerplateTemplate } from "@codeshare/shared";
 import { pool } from "../pool.js";
-import { toBoilerplate, type BoilerplateRow } from "../types.js";
+import { type BoilerplateRow, toBoilerplate } from "../types.js";
 
 export const boilerplateRepository = {
   async findByProblemAndLanguage(
@@ -26,13 +26,7 @@ export const boilerplateRepository = {
       `INSERT INTO boilerplate_templates (problem_id, language, template, method_name, parameter_names)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [
-        data.problemId,
-        data.language,
-        data.template,
-        data.methodName,
-        data.parameterNames,
-      ],
+      [data.problemId, data.language, data.template, data.methodName, data.parameterNames],
     );
     return toBoilerplate(rows[0]);
   },

@@ -1,5 +1,5 @@
-import type { Socket } from "socket.io";
 import { SocketEvents } from "@codeshare/shared";
+import type { Socket } from "socket.io";
 import type { Room } from "../models/Room.js";
 
 interface RoomLookup {
@@ -20,20 +20,14 @@ const INTERVIEWER_ONLY_EVENTS = new Set<string>([
 const BLOCKED_IN_INTERVIEW = new Set<string>([SocketEvents.HINT_REQUEST]);
 
 // Events that require no execution in progress
-const REQUIRES_NO_EXECUTION = new Set<string>([
-  SocketEvents.CODE_RUN,
-  SocketEvents.CODE_SUBMIT,
-]);
+const REQUIRES_NO_EXECUTION = new Set<string>([SocketEvents.CODE_RUN, SocketEvents.CODE_SUBMIT]);
 
 const REQUIRES_SWITCHABLE_PROBLEM = new Set<string>([
   SocketEvents.PROBLEM_SELECT,
   SocketEvents.PROBLEM_IMPORT,
 ]);
 
-const HINT_RESPONSE_EVENTS = new Set<string>([
-  SocketEvents.HINT_APPROVE,
-  SocketEvents.HINT_DENY,
-]);
+const HINT_RESPONSE_EVENTS = new Set<string>([SocketEvents.HINT_APPROVE, SocketEvents.HINT_DENY]);
 
 /**
  * Creates a per-event middleware factory.
@@ -64,10 +58,7 @@ export function createAuthMiddleware(roomLookup: RoomLookup) {
       }
 
       // Role-based checks for interview mode
-      if (
-        eventName === SocketEvents.SOLUTION_REVEAL &&
-        room.mode !== "interview"
-      ) {
+      if (eventName === SocketEvents.SOLUTION_REVEAL && room.mode !== "interview") {
         socket.emit(SocketEvents.EVENT_REJECTED, {
           event: eventName,
           reason: "Solutions can only be revealed in interview mode.",

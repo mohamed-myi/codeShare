@@ -1,8 +1,8 @@
-import type { Socket, Server } from "socket.io";
-import type { Logger } from "pino";
-import type * as Y from "yjs";
-import { SocketEvents, TIMEOUTS } from "@codeshare/shared";
 import type { Hint, HintDonePayload, HintPendingPayload, Problem } from "@codeshare/shared";
+import { SocketEvents, TIMEOUTS } from "@codeshare/shared";
+import type { Logger } from "pino";
+import type { Server, Socket } from "socket.io";
+import type * as Y from "yjs";
 import type { Room } from "../models/Room.js";
 import { hintService } from "../services/HintService.js";
 
@@ -38,11 +38,7 @@ function clearConsentTimer(roomCode: string): void {
   }
 }
 
-function clearPendingHintRequest(
-  io: Server,
-  roomCode: string,
-  room: Room,
-): string | null {
+function clearPendingHintRequest(io: Server, roomCode: string, room: Room): string | null {
   const requesterId = room.pendingHintRequest?.requestedBy ?? null;
   room.pendingHintRequest = null;
   io.to(roomCode).emit(SocketEvents.ROOM_SYNC, room.toSyncPayload());
@@ -119,9 +115,7 @@ export function registerHintHandler(
     };
     io.to(roomCode).emit(SocketEvents.ROOM_SYNC, room.toSyncPayload());
 
-    const otherUser = room.users.find(
-      (u) => u.connected && u.socketId !== socket.id,
-    );
+    const otherUser = room.users.find((u) => u.connected && u.socketId !== socket.id);
     if (!otherUser?.socketId) return;
 
     io.to(otherUser.socketId).emit(SocketEvents.HINT_PENDING, {
@@ -137,10 +131,7 @@ export function registerHintHandler(
       consentTimers.delete(roomCode);
       if (!room.pendingHintRequest) return;
 
-      const requester = findRequester(
-        room,
-        clearPendingHintRequest(io, roomCode, room),
-      );
+      const requester = findRequester(room, clearPendingHintRequest(io, roomCode, room));
 
       if (requester?.socketId) {
         io.to(requester.socketId).emit(SocketEvents.HINT_DENIED);
@@ -167,10 +158,7 @@ export function registerHintHandler(
     if (!room.pendingHintRequest) return;
 
     clearConsentTimer(roomCode);
-    const requester = findRequester(
-      room,
-      clearPendingHintRequest(io, roomCode, room),
-    );
+    const requester = findRequester(room, clearPendingHintRequest(io, roomCode, room));
 
     if (requester?.socketId) {
       io.to(requester.socketId).emit(SocketEvents.HINT_DENIED);
@@ -184,9 +172,7 @@ export function registerHintHandler(
 
     // Room handler clears socketId before this runs, so match by
     // checking if the requester is now disconnected.
-    const requester = room.users.find(
-      (u) => u.id === room.pendingHintRequest!.requestedBy,
-    );
+    const requester = room.users.find((u) => u.id === room.pendingHintRequest?.requestedBy);
     if (requester && !requester.connected) {
       clearConsentTimer(roomCode);
       clearPendingHintRequest(io, roomCode, room);
@@ -233,8 +219,7 @@ async function deliverHint(
 
     if (!deps.groqClient) {
       socket.emit(SocketEvents.HINT_ERROR, {
-        message:
-          "AI hint fallback is unavailable because Groq is not configured.",
+        message: "AI hint fallback is unavailable because Groq is not configured.",
       });
       return;
     }
@@ -247,10 +232,7 @@ async function deliverHint(
       return;
     }
 
-    if (
-      problem.source === "user_submitted" &&
-      !deps.enableImportedProblemHints
-    ) {
+    if (problem.source === "user_submitted" && !deps.enableImportedProblemHints) {
       socket.emit(SocketEvents.HINT_ERROR, {
         message: "AI hints for imported problems are disabled.",
       });
@@ -281,10 +263,7 @@ async function deliverHint(
         if (generatedHint.length > maxAccumulateChars) break;
       }
 
-      const fullHint = hintService.sanitizeLLMHint(
-        generatedHint,
-        deps.maxLLMHintChars,
-      );
+      const fullHint = hintService.sanitizeLLMHint(generatedHint, deps.maxLLMHintChars);
       room.hintsUsed += 1;
       room.llmCallsUsed += 1;
       room.hintHistory.push(fullHint);
@@ -297,8 +276,7 @@ async function deliverHint(
       logger.error({ err: streamErr, roomCode }, "LLM hint streaming failed");
       socket.emit(SocketEvents.HINT_ERROR, {
         message:
-          streamErr instanceof Error &&
-            /empty|code|solution/i.test(streamErr.message)
+          streamErr instanceof Error && /empty|code|solution/i.test(streamErr.message)
             ? "Generated hint was blocked by the output policy."
             : "Failed to generate hint. Please try again.",
       });

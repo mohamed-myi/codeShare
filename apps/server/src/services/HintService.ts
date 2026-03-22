@@ -29,8 +29,9 @@ function truncate(value: string, maxChars: number): string {
 
 // Escape bracket-delimited tags so user content can't break out of delimited blocks
 function escapeDelimiters(value: string): string {
-  return value.replace(/\[\/?(PROBLEM_DESCRIPTION|CONSTRAINTS|CURRENT_CODE|PREVIOUS_HINTS|LAST_FAILURE|SYSTEM)\]/gi, (match) =>
-    match.replace(/\[/g, "\uFF3B").replace(/\]/g, "\uFF3D"),
+  return value.replace(
+    /\[\/?(PROBLEM_DESCRIPTION|CONSTRAINTS|CURRENT_CODE|PREVIOUS_HINTS|LAST_FAILURE|SYSTEM)\]/gi,
+    (match) => match.replace(/\[/g, "\uFF3B").replace(/\]/g, "\uFF3D"),
   );
 }
 
@@ -96,10 +97,7 @@ export const hintService = {
 
     const userSections = [
       `Hint level: ${opts.hintLevel} (1=concept, 2=approach, 3=pseudocode-level guidance without code).`,
-      buildDelimitedBlock(
-        "PROBLEM_DESCRIPTION",
-        truncate(opts.description, budgets.description),
-      ),
+      buildDelimitedBlock("PROBLEM_DESCRIPTION", truncate(opts.description, budgets.description)),
       opts.constraints.length > 0
         ? buildDelimitedBlock(
             "CONSTRAINTS",
@@ -119,10 +117,7 @@ export const hintService = {
           )
         : "",
       opts.lastFailure
-        ? buildDelimitedBlock(
-            "LAST_FAILURE",
-            truncate(opts.lastFailure, budgets.lastFailure),
-          )
+        ? buildDelimitedBlock("LAST_FAILURE", truncate(opts.lastFailure, budgets.lastFailure))
         : "",
     ]
       .filter(Boolean)
@@ -134,8 +129,7 @@ export const hintService = {
     ];
 
     while (
-      messages.reduce((total, message) => total + message.content.length, 0) >
-      maxPromptChars
+      messages.reduce((total, message) => total + message.content.length, 0) > maxPromptChars
     ) {
       const userMessage = messages[1];
       if (!userMessage) {

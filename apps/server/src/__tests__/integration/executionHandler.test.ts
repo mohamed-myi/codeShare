@@ -1,24 +1,20 @@
-import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
-import type { Socket as ClientSocket } from "socket.io-client";
-import * as Y from "yjs";
-import { SocketEvents } from "@codeshare/shared";
 import type {
+  BoilerplateTemplate,
+  ExecutionError,
+  Problem,
   RunResult,
   SubmitResult,
-  ExecutionError,
   TestCase,
-  BoilerplateTemplate,
-  Problem,
 } from "@codeshare/shared";
-import {
-  createTestServer,
-  createTestClient,
-  waitForEvent,
-} from "../helpers/socketTestHelper.js";
-import { setupSocketIO } from "../../ws/socketio.js";
-import { roomManager } from "../../models/RoomManager.js";
+import { SocketEvents } from "@codeshare/shared";
+import type { Socket as ClientSocket } from "socket.io-client";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import * as Y from "yjs";
 import { createLogger } from "../../lib/logger.js";
 import { globalCounters } from "../../lib/rateLimitCounters.js";
+import { roomManager } from "../../models/RoomManager.js";
+import { setupSocketIO } from "../../ws/socketio.js";
+import { createTestClient, createTestServer, waitForEvent } from "../helpers/socketTestHelper.js";
 
 const VALID_UUID = "00000000-0000-4000-8000-000000000001";
 
@@ -146,7 +142,9 @@ describe("Execution handler", () => {
 
     const doc = new Y.Doc();
     yjsDocs.set(room.roomCode, doc);
-    doc.getText("monaco").insert(0, "class Solution:\n    def twoSum(self, nums, target):\n        return [0, 1]");
+    doc
+      .getText("monaco")
+      .insert(0, "class Solution:\n    def twoSum(self, nums, target):\n        return [0, 1]");
 
     const server = await createTestServer();
     cleanup = server.cleanup;
@@ -214,9 +212,7 @@ describe("Execution handler", () => {
     it("run includes visible + custom test cases", async () => {
       const { server, room } = await setup();
       room.problemId = VALID_UUID;
-      room.customTestCases = [
-        { input: { nums: [1, 3], target: 4 }, expectedOutput: [0, 1] },
-      ];
+      room.customTestCases = [{ input: { nums: [1, 3], target: 4 }, expectedOutput: [0, 1] }];
 
       mockSubmit.mockResolvedValue({
         stdout: makeSuccessStdout([
@@ -244,8 +240,10 @@ describe("Execution handler", () => {
       const { server, room } = await setup();
       room.problemId = VALID_UUID;
 
-      let resolveSubmit: (value: unknown) => void;
-      const submitPromise = new Promise((resolve) => { resolveSubmit = resolve; });
+      let resolveSubmit!: (value: unknown) => void;
+      const submitPromise = new Promise((resolve) => {
+        resolveSubmit = resolve;
+      });
       mockSubmit.mockReturnValue(submitPromise);
 
       const alice = connectClient(server.port, room.roomCode);
@@ -256,7 +254,7 @@ describe("Execution handler", () => {
       await waitForEvent(alice, SocketEvents.EXECUTION_STARTED);
       expect(room.executionInProgress).toBe(true);
 
-      resolveSubmit!({
+      resolveSubmit({
         stdout: makeSuccessStdout([
           { index: 0, passed: true, elapsed_ms: 10, got: null, expected: null },
         ]),
@@ -291,10 +289,7 @@ describe("Execution handler", () => {
       await waitForEvent(alice, "connect");
       await joinUser(alice, "Alice");
 
-      const resultPromise = waitForEvent<SubmitResult>(
-        alice,
-        SocketEvents.EXECUTION_RESULT,
-      );
+      const resultPromise = waitForEvent<SubmitResult>(alice, SocketEvents.EXECUTION_RESULT);
       alice.emit(SocketEvents.CODE_SUBMIT);
       const result = await resultPromise;
 
@@ -341,9 +336,7 @@ describe("Execution handler", () => {
     it("custom test cases NOT included in submit", async () => {
       const { server, room } = await setup();
       room.problemId = VALID_UUID;
-      room.customTestCases = [
-        { input: { nums: [99], target: 99 }, expectedOutput: 99 },
-      ];
+      room.customTestCases = [{ input: { nums: [99], target: 99 }, expectedOutput: 99 }];
 
       mockSubmit.mockResolvedValue({
         stdout: makeSuccessStdout([

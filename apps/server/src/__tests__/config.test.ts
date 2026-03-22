@@ -72,11 +72,9 @@ describe("loadConfig", () => {
     setEnv({ JUDGE0_API_KEY: undefined });
 
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    const exitSpy = vi
-      .spyOn(process, "exit")
-      .mockImplementation(((code?: number) => {
-        throw new Error(`process.exit:${code}`);
-      }) as never);
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation(((code?: number) => {
+      throw new Error(`process.exit:${code}`);
+    }) as never);
 
     expect(() => loadConfig()).toThrow("process.exit:1");
     expect(exitSpy).toHaveBeenCalledWith(1);
@@ -87,11 +85,9 @@ describe("loadConfig", () => {
     setEnv({ JUDGE0_API_KEY: "" });
 
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    const exitSpy = vi
-      .spyOn(process, "exit")
-      .mockImplementation(((code?: number) => {
-        throw new Error(`process.exit:${code}`);
-      }) as never);
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation(((code?: number) => {
+      throw new Error(`process.exit:${code}`);
+    }) as never);
 
     expect(() => loadConfig()).toThrow("process.exit:1");
     expect(exitSpy).toHaveBeenCalledWith(1);

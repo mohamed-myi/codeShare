@@ -1,15 +1,15 @@
-import { describe, it, expect, afterEach } from "vitest";
 import http from "node:http";
-import WebSocket from "ws";
-import { io as ioClient, type Socket as ClientSocket } from "socket.io-client";
 import { Server as SocketIOServer } from "socket.io";
-import * as Y from "yjs";
+import { type Socket as ClientSocket, io as ioClient } from "socket.io-client";
+import { afterEach, describe, expect, it } from "vitest";
+import WebSocket from "ws";
 import { WebsocketProvider } from "y-websocket";
-import { registerUpgradeHandler } from "../../ws/upgrade.js";
-import { setupSocketIO } from "../../ws/socketio.js";
-import { setupYjsServer } from "../../ws/yjs.js";
+import * as Y from "yjs";
 import { createLogger } from "../../lib/logger.js";
 import { roomManager } from "../../models/RoomManager.js";
+import { setupSocketIO } from "../../ws/socketio.js";
+import { registerUpgradeHandler } from "../../ws/upgrade.js";
+import { setupYjsServer } from "../../ws/yjs.js";
 import { listenOnLocalhost, TEST_HOST } from "../helpers/networkTestHelper.js";
 
 const logger = createLogger("silent");
@@ -83,15 +83,10 @@ describe("HTTP upgrade routing", () => {
     const { roomCode, yjsToken } = createTestRoom();
 
     const doc = new Y.Doc();
-    const provider = new WebsocketProvider(
-      `ws://${TEST_HOST}:${env.port}/ws/yjs`,
-      roomCode,
-      doc,
-      {
-        WebSocketPolyfill: WebSocket as unknown as typeof globalThis.WebSocket,
-        params: { token: yjsToken },
-      },
-    );
+    const provider = new WebsocketProvider(`ws://${TEST_HOST}:${env.port}/ws/yjs`, roomCode, doc, {
+      WebSocketPolyfill: WebSocket as unknown as typeof globalThis.WebSocket,
+      params: { token: yjsToken },
+    });
     cleanups.push(() => {
       provider.destroy();
       doc.destroy();
@@ -115,15 +110,10 @@ describe("HTTP upgrade routing", () => {
     const { roomCode, yjsToken } = createTestRoom();
 
     const doc = new Y.Doc();
-    const provider = new WebsocketProvider(
-      `ws://${TEST_HOST}:${env.port}/ws/yjs`,
-      roomCode,
-      doc,
-      {
-        WebSocketPolyfill: WebSocket as unknown as typeof globalThis.WebSocket,
-        params: { token: yjsToken },
-      },
-    );
+    const provider = new WebsocketProvider(`ws://${TEST_HOST}:${env.port}/ws/yjs`, roomCode, doc, {
+      WebSocketPolyfill: WebSocket as unknown as typeof globalThis.WebSocket,
+      params: { token: yjsToken },
+    });
     cleanups.push(() => {
       provider.destroy();
       doc.destroy();
@@ -139,9 +129,7 @@ describe("HTTP upgrade routing", () => {
     doc.getText("monaco").insert(0, "server-readable");
     await new Promise((r) => setTimeout(r, 100));
 
-    expect(env.getDoc(roomCode)?.getText("monaco").toString()).toBe(
-      "server-readable",
-    );
+    expect(env.getDoc(roomCode)?.getText("monaco").toString()).toBe("server-readable");
     expect(env.getDoc("ws")).toBeUndefined();
   });
 

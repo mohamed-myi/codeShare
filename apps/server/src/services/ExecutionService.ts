@@ -1,4 +1,4 @@
-import type { TestCase, RunResult, SubmitResult, CaseResult } from "@codeshare/shared";
+import type { CaseResult, RunResult, SubmitResult, TestCase } from "@codeshare/shared";
 import { TIMEOUTS } from "@codeshare/shared";
 
 export interface HarnessCase {
@@ -51,19 +51,14 @@ _real_stdout.write("\\n===END_HARNESS_RESULT===\\n")
 _real_stdout.flush()`;
 
 export const executionService = {
-  buildHarness(
-    userCode: string,
-    testCases: TestCase[],
-    methodName: string,
-  ): string {
+  buildHarness(userCode: string, testCases: TestCase[], methodName: string): string {
     const testCasesJson = JSON.stringify(
       testCases.map((tc) => ({
         input: tc.input,
         expectedOutput: tc.expectedOutput,
       })),
     );
-    return HARNESS_TEMPLATE
-      .replace("{user_code}", userCode)
+    return HARNESS_TEMPLATE.replace("{user_code}", userCode)
       .replace("{test_cases_json}", testCasesJson)
       .replace("{method_name}", methodName);
   },
@@ -72,9 +67,7 @@ export const executionService = {
     const startMarker = "===HARNESS_RESULT===\n";
     const endMarker = "\n===END_HARNESS_RESULT===";
     const startIdx = stdout.lastIndexOf(startMarker);
-    const endIdx = startIdx === -1
-      ? -1
-      : stdout.indexOf(endMarker, startIdx + startMarker.length);
+    const endIdx = startIdx === -1 ? -1 : stdout.indexOf(endMarker, startIdx + startMarker.length);
     if (startIdx === -1 || endIdx === -1) return null;
 
     const jsonStr = stdout.slice(startIdx + startMarker.length, endIdx).trim();
@@ -142,8 +135,8 @@ export const executionService = {
         input: hiddenFailure ? "" : tc ? JSON.stringify(tc.input) : "",
         got: hiddenFailure
           ? "Output did not match a hidden test case."
-          : firstFailed.got ?? firstFailed.error ?? "",
-        expected: hiddenFailure ? "Hidden test case expectation." : firstFailed.expected ?? "",
+          : (firstFailed.got ?? firstFailed.error ?? ""),
+        expected: hiddenFailure ? "Hidden test case expectation." : (firstFailed.expected ?? ""),
       };
     }
 

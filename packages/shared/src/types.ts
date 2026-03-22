@@ -1,13 +1,12 @@
+import type { SupportedLanguage } from "./constants.js";
 import type {
   Difficulty,
   ExecutionErrorType,
-  ExecutionType,
   ImportStatus,
   ProblemSource,
   RoomMode,
   UserRole,
 } from "./enums.js";
-import type { SupportedLanguage } from "./constants.js";
 
 // --- Problem Domain ---
 

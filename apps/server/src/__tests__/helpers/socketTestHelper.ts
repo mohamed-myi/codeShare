@@ -1,6 +1,6 @@
 import http from "node:http";
 import { Server, type ServerOptions } from "socket.io";
-import { io as ioClient, type Socket as ClientSocket } from "socket.io-client";
+import { type Socket as ClientSocket, io as ioClient } from "socket.io-client";
 import { listenOnLocalhost, TEST_HOST } from "./networkTestHelper.js";
 
 interface TestServer {
@@ -10,9 +10,7 @@ interface TestServer {
   cleanup: () => Promise<void>;
 }
 
-export async function createTestServer(
-  opts?: Partial<ServerOptions>,
-): Promise<TestServer> {
+export async function createTestServer(opts?: Partial<ServerOptions>): Promise<TestServer> {
   const httpServer = http.createServer();
   const io = new Server(httpServer, {
     path: "/ws/socket",

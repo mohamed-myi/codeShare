@@ -1,10 +1,6 @@
-import {
-  boilerplateRepository,
-  problemRepository,
-  testCaseRepository,
-} from "@codeshare/db";
+import { boilerplateRepository, problemRepository, testCaseRepository } from "@codeshare/db";
+import type { Problem } from "@codeshare/shared";
 import { DEFAULT_TIME_LIMIT_MS } from "@codeshare/shared";
-import type { BoilerplateTemplate, Problem } from "@codeshare/shared";
 
 const LEETCODE_URL_PATTERN = /^https:\/\/leetcode\.com\/problems\/([\w-]+)\/?$/;
 const LEETCODE_GRAPHQL_URL = "https://leetcode.com/graphql";
@@ -66,7 +62,10 @@ function htmlToProblemText(html: string): string {
     html
       .replace(/<sup>(.*?)<\/sup>/gi, "^$1")
       .replace(/<code>([\s\S]*?)<\/code>/gi, (_match, code: string) => `\`${stripTags(code)}\``)
-      .replace(/<pre>([\s\S]*?)<\/pre>/gi, (_match, block: string) => `\n\n${stripTags(block).trim()}\n\n`)
+      .replace(
+        /<pre>([\s\S]*?)<\/pre>/gi,
+        (_match, block: string) => `\n\n${stripTags(block).trim()}\n\n`,
+      )
       .replace(/<li>([\s\S]*?)<\/li>/gi, (_match, item: string) => `- ${stripTags(item).trim()}\n`)
       .replace(/<\/p>/gi, "\n\n")
       .replace(/<br\s*\/?>/gi, "\n")
@@ -89,10 +88,7 @@ function extractConstraints(content: string): string[] {
 }
 
 function stripConstraintsSection(content: string): string {
-  return content.replace(
-    /<p><strong>Constraints:<\/strong><\/p>\s*<ul>[\s\S]*?<\/ul>/i,
-    "",
-  );
+  return content.replace(/<p><strong>Constraints:<\/strong><\/p>\s*<ul>[\s\S]*?<\/ul>/i, "");
 }
 
 function extractExampleBlocks(content: string): ExampleBlock[] {
@@ -102,9 +98,7 @@ function extractExampleBlocks(content: string): ExampleBlock[] {
 
   return blocks.map((block) => {
     const cleaned = block.replace(/\r/g, "").trim();
-    const match = cleaned.match(
-      /Input:\s*([\s\S]*?)\s*Output:\s*([\s\S]*?)(?:\s*Explanation:|$)/i,
-    );
+    const match = cleaned.match(/Input:\s*([\s\S]*?)\s*Output:\s*([\s\S]*?)(?:\s*Explanation:|$)/i);
 
     if (!match) {
       throw new Error("Failed to parse imported example test cases.");
@@ -152,12 +146,7 @@ function splitTopLevel(source: string, delimiter: string): string[] {
     else if (char === "(") parenDepth += 1;
     else if (char === ")") parenDepth -= 1;
 
-    if (
-      char === delimiter &&
-      squareDepth === 0 &&
-      curlyDepth === 0 &&
-      parenDepth === 0
-    ) {
+    if (char === delimiter && squareDepth === 0 && curlyDepth === 0 && parenDepth === 0) {
       parts.push(current.slice(0, -1).trim());
       current = "";
     }
@@ -203,10 +192,7 @@ function parseLeetCodeValue(raw: string): unknown {
   return parseScalarValue(trimmed);
 }
 
-function parseInputAssignments(
-  input: string,
-  parameterNames: string[],
-): Record<string, unknown> {
+function parseInputAssignments(input: string, parameterNames: string[]): Record<string, unknown> {
   const normalized = input.replace(/\s+/g, " ").trim();
   const assignments = splitTopLevel(normalized, ",");
   const parsed = assignments.map((assignment) => {
@@ -238,9 +224,10 @@ function parseMetadata(metaData: string): { methodName: string; parameterNames: 
   };
 
   const methodName = parsed.name?.trim();
-  const parameterNames = parsed.params
-    ?.map((param) => param.name?.trim())
-    .filter((name): name is string => Boolean(name)) ?? [];
+  const parameterNames =
+    parsed.params
+      ?.map((param) => param.name?.trim())
+      .filter((name): name is string => Boolean(name)) ?? [];
 
   if (!methodName || parameterNames.length === 0) {
     throw new Error("Imported problem is missing callable metadata.");
@@ -309,25 +296,25 @@ async function fetchQuestionData(
   return question;
 }
 
-export function createScraperService(
-  deps: Partial<ScraperServiceDeps> = {},
-) {
+export function createScraperService(deps: Partial<ScraperServiceDeps> = {}) {
   const resolvedDeps: ScraperServiceDeps = {
     fetchImpl: deps.fetchImpl ?? fetch,
     findBySourceUrl:
       deps.findBySourceUrl ?? ((url) => problemRepository.findBySourceUrlIncludingDeleted(url)),
-    findBySlug:
-      deps.findBySlug ?? ((slug) => problemRepository.findBySlugIncludingDeleted(slug)),
+    findBySlug: deps.findBySlug ?? ((slug) => problemRepository.findBySlugIncludingDeleted(slug)),
     restoreProblem:
-      deps.restoreProblem ?? (async (problemId) => {
+      deps.restoreProblem ??
+      (async (problemId) => {
         await problemRepository.restoreById(problemId);
       }),
     createProblem: deps.createProblem ?? ((data) => problemRepository.create(data)),
     createTestCase: deps.createTestCase ?? ((data) => testCaseRepository.create(data)),
     createBoilerplate: deps.createBoilerplate ?? ((data) => boilerplateRepository.create(data)),
-    deleteProblem: deps.deleteProblem ?? (async (problemId) => {
-      await problemRepository.deleteById(problemId);
-    }),
+    deleteProblem:
+      deps.deleteProblem ??
+      (async (problemId) => {
+        await problemRepository.deleteById(problemId);
+      }),
   };
 
   return {
@@ -335,8 +322,7 @@ export function createScraperService(
       const { slug, canonicalUrl } = normalizeLeetCodeUrl(url);
 
       const existing =
-        (await resolvedDeps.findBySourceUrl(canonicalUrl)) ??
-        (await resolvedDeps.findBySlug(slug));
+        (await resolvedDeps.findBySourceUrl(canonicalUrl)) ?? (await resolvedDeps.findBySlug(slug));
       if (existing) {
         if (existing.deletedAt) {
           await resolvedDeps.restoreProblem(existing.id);

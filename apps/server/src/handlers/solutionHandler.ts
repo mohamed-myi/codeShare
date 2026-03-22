@@ -1,7 +1,7 @@
-import type { Socket, Server } from "socket.io";
-import type { Logger } from "pino";
-import { SocketEvents } from "@codeshare/shared";
 import type { Problem } from "@codeshare/shared";
+import { SocketEvents } from "@codeshare/shared";
+import type { Logger } from "pino";
+import type { Server, Socket } from "socket.io";
 import type { Room } from "../models/Room.js";
 
 interface RoomLookup {
@@ -59,10 +59,7 @@ export function registerSolutionHandler(
         return;
       }
 
-      logger.info(
-        { roomCode, problemId: room.problemId },
-        "Solution revealed",
-      );
+      logger.info({ roomCode, problemId: room.problemId }, "Solution revealed");
 
       io.to(roomCode).emit(SocketEvents.SOLUTION_REVEALED, {
         solution: problem.solution,

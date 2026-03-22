@@ -1,10 +1,10 @@
-import { describe, it, expect, afterEach } from "vitest";
 import Fastify from "fastify";
-import { roomRoutes } from "../../routes/rooms.js";
-import { healthRoutes } from "../../routes/health.js";
+import { afterEach, describe, expect, it } from "vitest";
+import type { Config } from "../../config.js";
 import { roomManager } from "../../models/RoomManager.js";
 import { registerRateLimit } from "../../plugins/rateLimit.js";
-import type { Config } from "../../config.js";
+import { healthRoutes } from "../../routes/health.js";
+import { roomRoutes } from "../../routes/rooms.js";
 
 function buildConfig(overrides?: Partial<Config>): Config {
   return {
@@ -53,7 +53,7 @@ async function buildApp(configOverrides?: Partial<Config>) {
   return app;
 }
 
-function destroyAllRooms() {
+function _destroyAllRooms() {
   // getRoomCount tells us how many exist; iterate via creating/checking codes
   // Simpler: we track codes ourselves in each test
 }
@@ -83,7 +83,7 @@ describe("POST /api/rooms", () => {
 
     const room = roomManager.getRoom(body.roomCode);
     expect(room).toBeDefined();
-    expect(room!.mode).toBe("collaboration");
+    expect(room?.mode).toBe("collaboration");
   });
 
   it("returns 201 with roomCode for interview mode", async () => {
@@ -101,7 +101,7 @@ describe("POST /api/rooms", () => {
 
     const room = roomManager.getRoom(body.roomCode);
     expect(room).toBeDefined();
-    expect(room!.mode).toBe("interview");
+    expect(room?.mode).toBe("interview");
   });
 
   it("returns 400 when mode is missing", async () => {

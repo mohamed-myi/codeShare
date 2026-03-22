@@ -1,16 +1,12 @@
-import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
-import type { Socket as ClientSocket } from "socket.io-client";
-import * as Y from "yjs";
-import { SocketEvents, TIMEOUTS } from "@codeshare/shared";
 import type { HintDonePayload, HintPendingPayload } from "@codeshare/shared";
-import {
-  createTestServer,
-  createTestClient,
-  waitForEvent,
-} from "../helpers/socketTestHelper.js";
-import { setupSocketIO } from "../../ws/socketio.js";
-import { roomManager } from "../../models/RoomManager.js";
+import { SocketEvents, TIMEOUTS } from "@codeshare/shared";
+import type { Socket as ClientSocket } from "socket.io-client";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import * as Y from "yjs";
 import { createLogger } from "../../lib/logger.js";
+import { roomManager } from "../../models/RoomManager.js";
+import { setupSocketIO } from "../../ws/socketio.js";
+import { createTestClient, createTestServer, waitForEvent } from "../helpers/socketTestHelper.js";
 
 const mockFindHintsByProblemId = vi.hoisted(() => vi.fn().mockResolvedValue([]));
 const mockFindProblemById = vi.hoisted(() => vi.fn().mockResolvedValue(null));
@@ -92,10 +88,7 @@ describe("Hint handler guards", () => {
   it("rejects hint request when no problem is selected", async () => {
     const { client } = await setup();
 
-    const error = waitForEvent<{ message: string }>(
-      client,
-      SocketEvents.HINT_ERROR,
-    );
+    const error = waitForEvent<{ message: string }>(client, SocketEvents.HINT_ERROR);
     client.emit(SocketEvents.HINT_REQUEST);
     const payload = await error;
 
@@ -108,10 +101,7 @@ describe("Hint handler guards", () => {
     room.hintsUsed = 2;
     room.hintLimit = 2;
 
-    const error = waitForEvent<{ message: string }>(
-      client,
-      SocketEvents.HINT_ERROR,
-    );
+    const error = waitForEvent<{ message: string }>(client, SocketEvents.HINT_ERROR);
     client.emit(SocketEvents.HINT_REQUEST);
     const payload = await error;
 
@@ -124,16 +114,11 @@ describe("Hint handler guards", () => {
     room.hintLimit = 3;
     room.executionInProgress = true;
 
-    const error = waitForEvent<{ message: string }>(
-      client,
-      SocketEvents.HINT_ERROR,
-    );
+    const error = waitForEvent<{ message: string }>(client, SocketEvents.HINT_ERROR);
     client.emit(SocketEvents.HINT_REQUEST);
     const payload = await error;
 
-    expect(payload.message).toBe(
-      "Cannot request hints while code is executing.",
-    );
+    expect(payload.message).toBe("Cannot request hints while code is executing.");
   });
 
   it("rejects hint request when a pending request exists", async () => {
@@ -145,10 +130,7 @@ describe("Hint handler guards", () => {
       requestedAt: new Date().toISOString(),
     };
 
-    const error = waitForEvent<{ message: string }>(
-      client,
-      SocketEvents.HINT_ERROR,
-    );
+    const error = waitForEvent<{ message: string }>(client, SocketEvents.HINT_ERROR);
     client.emit(SocketEvents.HINT_REQUEST);
     const payload = await error;
 
@@ -161,10 +143,7 @@ describe("Hint handler guards", () => {
     room.hintLimit = 3;
     room.hintStreaming = true;
 
-    const error = waitForEvent<{ message: string }>(
-      client,
-      SocketEvents.HINT_ERROR,
-    );
+    const error = waitForEvent<{ message: string }>(client, SocketEvents.HINT_ERROR);
     client.emit(SocketEvents.HINT_REQUEST);
     const payload = await error;
 
@@ -393,9 +372,7 @@ describe("Hint handler - single user LLM streaming fallback", () => {
     client.emit(SocketEvents.HINT_REQUEST);
     const payload = await errorP;
 
-    expect(payload.message).toBe(
-      "AI hint fallback is unavailable because Groq is not configured.",
-    );
+    expect(payload.message).toBe("AI hint fallback is unavailable because Groq is not configured.");
     expect(room.hintsUsed).toBe(0);
     expect(room.hintStreaming).toBe(false);
   });
@@ -558,7 +535,7 @@ describe("Hint handler - two-user mutual consent flow", () => {
     expect(payload.hintLimit).toBe(2);
 
     expect(room.pendingHintRequest).not.toBeNull();
-    expect(room.pendingHintRequest!.requestedBy).toBe(aliceId);
+    expect(room.pendingHintRequest?.requestedBy).toBe(aliceId);
 
     // Give a small window for any stray events
     await new Promise((r) => setTimeout(r, 100));
@@ -723,7 +700,11 @@ describe("Hint handler - 30s consent timeout and disconnect", () => {
 
     // Register denied listener with timeout longer than HINT_CONSENT_MS,
     // since fake timers control both waitForEvent's timeout and the consent timer.
-    const deniedP = waitForEvent(clientA, SocketEvents.HINT_DENIED, TIMEOUTS.HINT_CONSENT_MS + 5000);
+    const deniedP = waitForEvent(
+      clientA,
+      SocketEvents.HINT_DENIED,
+      TIMEOUTS.HINT_CONSENT_MS + 5000,
+    );
 
     // Advance past the 30s consent timeout
     await vi.advanceTimersByTimeAsync(TIMEOUTS.HINT_CONSENT_MS);

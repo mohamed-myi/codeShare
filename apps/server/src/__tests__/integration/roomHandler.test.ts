@@ -1,15 +1,11 @@
-import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
-import type { Socket as ClientSocket } from "socket.io-client";
+import type { ProblemDetail, RoomState, UserJoinedPayload } from "@codeshare/shared";
 import { SocketEvents } from "@codeshare/shared";
-import type { ProblemDetail, UserJoinedPayload, RoomState } from "@codeshare/shared";
-import {
-  createTestServer,
-  createTestClient,
-  waitForEvent,
-} from "../helpers/socketTestHelper.js";
-import { setupSocketIO } from "../../ws/socketio.js";
-import { roomManager } from "../../models/RoomManager.js";
+import type { Socket as ClientSocket } from "socket.io-client";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLogger } from "../../lib/logger.js";
+import { roomManager } from "../../models/RoomManager.js";
+import { setupSocketIO } from "../../ws/socketio.js";
+import { createTestClient, createTestServer, waitForEvent } from "../helpers/socketTestHelper.js";
 
 const mockGetById = vi.hoisted(() => vi.fn());
 
@@ -105,10 +101,7 @@ describe("Room handler", () => {
 
       client.emit(SocketEvents.USER_JOIN, { displayName: "Alice" });
 
-      const payload = await waitForEvent<UserJoinedPayload>(
-        client,
-        SocketEvents.USER_JOINED,
-      );
+      const payload = await waitForEvent<UserJoinedPayload>(client, SocketEvents.USER_JOINED);
 
       expect(payload.userId).toBeDefined();
       expect(payload.displayName).toBe("Alice");
@@ -122,28 +115,19 @@ describe("Room handler", () => {
 
       const alice = connectClient(server.port, room.roomCode);
       const bob = connectClient(server.port, room.roomCode);
-      await Promise.all([
-        waitForEvent(alice, "connect"),
-        waitForEvent(bob, "connect"),
-      ]);
+      await Promise.all([waitForEvent(alice, "connect"), waitForEvent(bob, "connect")]);
 
       alice.emit(SocketEvents.USER_JOIN, { displayName: "Alice" });
       await waitForEvent<UserJoinedPayload>(alice, SocketEvents.USER_JOINED);
 
       // Bob joins, should receive his own user:joined
       bob.emit(SocketEvents.USER_JOIN, { displayName: "Bob" });
-      const bobPayload = await waitForEvent<UserJoinedPayload>(
-        bob,
-        SocketEvents.USER_JOINED,
-      );
+      const bobPayload = await waitForEvent<UserJoinedPayload>(bob, SocketEvents.USER_JOINED);
       expect(bobPayload.displayName).toBe("Bob");
       expect(bobPayload.role).toBe("peer");
 
       // Alice should receive broadcast about Bob joining
-      const aliceBroadcast = await waitForEvent<UserJoinedPayload>(
-        alice,
-        SocketEvents.USER_JOINED,
-      );
+      const aliceBroadcast = await waitForEvent<UserJoinedPayload>(alice, SocketEvents.USER_JOINED);
       expect(aliceBroadcast.displayName).toBe("Bob");
     });
 
@@ -153,10 +137,7 @@ describe("Room handler", () => {
       await waitForEvent(client, "connect");
 
       client.emit(SocketEvents.USER_JOIN, { displayName: "Alice" });
-      const payload = await waitForEvent<UserJoinedPayload>(
-        client,
-        SocketEvents.USER_JOINED,
-      );
+      const payload = await waitForEvent<UserJoinedPayload>(client, SocketEvents.USER_JOINED);
 
       expect(payload.displayName).toBe("Alice");
       expect(room.users).toHaveLength(1);
@@ -168,16 +149,10 @@ describe("Room handler", () => {
 
       const alice = connectClient(server.port, room.roomCode);
       const bob = connectClient(server.port, room.roomCode);
-      await Promise.all([
-        waitForEvent(alice, "connect"),
-        waitForEvent(bob, "connect"),
-      ]);
+      await Promise.all([waitForEvent(alice, "connect"), waitForEvent(bob, "connect")]);
 
       alice.emit(SocketEvents.USER_JOIN, { displayName: "Alice" });
-      const firstJoin = await waitForEvent<UserJoinedPayload>(
-        alice,
-        SocketEvents.USER_JOINED,
-      );
+      const firstJoin = await waitForEvent<UserJoinedPayload>(alice, SocketEvents.USER_JOINED);
 
       bob.emit(SocketEvents.USER_JOIN, { displayName: "Bob" });
       await waitForEvent<UserJoinedPayload>(bob, SocketEvents.USER_JOINED);
@@ -190,10 +165,7 @@ describe("Room handler", () => {
       );
 
       alice.emit(SocketEvents.USER_JOIN, { displayName: "Alice" });
-      const secondJoin = await waitForEvent<UserJoinedPayload>(
-        alice,
-        SocketEvents.USER_JOINED,
-      );
+      const secondJoin = await waitForEvent<UserJoinedPayload>(alice, SocketEvents.USER_JOINED);
 
       expect(secondJoin.userId).toBe(firstJoin.userId);
       expect(secondJoin.displayName).toBe("Alice");
@@ -218,10 +190,7 @@ describe("Room handler", () => {
 
       const alice = connectClient(server.port, room.roomCode);
       const bob = connectClient(server.port, room.roomCode);
-      await Promise.all([
-        waitForEvent(alice, "connect"),
-        waitForEvent(bob, "connect"),
-      ]);
+      await Promise.all([waitForEvent(alice, "connect"), waitForEvent(bob, "connect")]);
 
       alice.emit(SocketEvents.USER_JOIN, { displayName: "Alice" });
       await waitForEvent<UserJoinedPayload>(alice, SocketEvents.USER_JOINED);
@@ -247,23 +216,14 @@ describe("Room handler", () => {
 
       const interviewer = connectClient(server.port, room.roomCode);
       const candidate = connectClient(server.port, room.roomCode);
-      await Promise.all([
-        waitForEvent(interviewer, "connect"),
-        waitForEvent(candidate, "connect"),
-      ]);
+      await Promise.all([waitForEvent(interviewer, "connect"), waitForEvent(candidate, "connect")]);
 
       interviewer.emit(SocketEvents.USER_JOIN, { displayName: "Interviewer" });
-      const iPayload = await waitForEvent<UserJoinedPayload>(
-        interviewer,
-        SocketEvents.USER_JOINED,
-      );
+      const iPayload = await waitForEvent<UserJoinedPayload>(interviewer, SocketEvents.USER_JOINED);
       expect(iPayload.role).toBe("interviewer");
 
       candidate.emit(SocketEvents.USER_JOIN, { displayName: "Candidate" });
-      const cPayload = await waitForEvent<UserJoinedPayload>(
-        candidate,
-        SocketEvents.USER_JOINED,
-      );
+      const cPayload = await waitForEvent<UserJoinedPayload>(candidate, SocketEvents.USER_JOINED);
       expect(cPayload.role).toBe("candidate");
     });
   });
@@ -303,10 +263,7 @@ describe("Room handler", () => {
 
       const alice = connectClient(server.port, room.roomCode);
       const bob = connectClient(server.port, room.roomCode);
-      await Promise.all([
-        waitForEvent(alice, "connect"),
-        waitForEvent(bob, "connect"),
-      ]);
+      await Promise.all([waitForEvent(alice, "connect"), waitForEvent(bob, "connect")]);
 
       alice.emit(SocketEvents.USER_JOIN, { displayName: "Alice" });
       const aliceJoined = await waitForEvent<UserJoinedPayload>(alice, SocketEvents.USER_JOINED);
@@ -325,15 +282,9 @@ describe("Room handler", () => {
       await waitForEvent(alice2, "connect");
 
       // Set up listeners BEFORE emitting to avoid race condition
-      const reconnectedPromise = waitForEvent<UserJoinedPayload>(
-        alice2,
-        SocketEvents.USER_JOINED,
-      );
+      const reconnectedPromise = waitForEvent<UserJoinedPayload>(alice2, SocketEvents.USER_JOINED);
       const syncPromise = waitForEvent<RoomState>(alice2, SocketEvents.ROOM_SYNC);
-      const bobBroadcastPromise = waitForEvent<UserJoinedPayload>(
-        bob,
-        SocketEvents.USER_JOINED,
-      );
+      const bobBroadcastPromise = waitForEvent<UserJoinedPayload>(bob, SocketEvents.USER_JOINED);
 
       alice2.emit(SocketEvents.USER_JOIN, {
         displayName: "Alice",
@@ -359,10 +310,7 @@ describe("Room handler", () => {
 
       const alice = connectClient(server.port, room.roomCode);
       const bob = connectClient(server.port, room.roomCode);
-      await Promise.all([
-        waitForEvent(alice, "connect"),
-        waitForEvent(bob, "connect"),
-      ]);
+      await Promise.all([waitForEvent(alice, "connect"), waitForEvent(bob, "connect")]);
 
       alice.emit(SocketEvents.USER_JOIN, { displayName: "Alice" });
       const aliceJoined = await waitForEvent<UserJoinedPayload>(alice, SocketEvents.USER_JOINED);
@@ -402,10 +350,7 @@ describe("Room handler", () => {
 
       const alice = connectClient(server.port, room.roomCode);
       const bob = connectClient(server.port, room.roomCode);
-      await Promise.all([
-        waitForEvent(alice, "connect"),
-        waitForEvent(bob, "connect"),
-      ]);
+      await Promise.all([waitForEvent(alice, "connect"), waitForEvent(bob, "connect")]);
 
       alice.emit(SocketEvents.USER_JOIN, { displayName: "Alice" });
       await waitForEvent<UserJoinedPayload>(alice, SocketEvents.USER_JOINED);
@@ -433,16 +378,10 @@ describe("Room handler", () => {
 
       const alice = connectClient(server.port, room.roomCode);
       const bob = connectClient(server.port, room.roomCode);
-      await Promise.all([
-        waitForEvent(alice, "connect"),
-        waitForEvent(bob, "connect"),
-      ]);
+      await Promise.all([waitForEvent(alice, "connect"), waitForEvent(bob, "connect")]);
 
       alice.emit(SocketEvents.USER_JOIN, { displayName: "Alice" });
-      const alicePayload = await waitForEvent<UserJoinedPayload>(
-        alice,
-        SocketEvents.USER_JOINED,
-      );
+      const alicePayload = await waitForEvent<UserJoinedPayload>(alice, SocketEvents.USER_JOINED);
 
       bob.emit(SocketEvents.USER_JOIN, { displayName: "Bob" });
       await waitForEvent<UserJoinedPayload>(bob, SocketEvents.USER_JOINED);
@@ -450,10 +389,7 @@ describe("Room handler", () => {
 
       alice.disconnect();
 
-      const leftPayload = await waitForEvent<{ userId: string }>(
-        bob,
-        SocketEvents.USER_LEFT,
-      );
+      const leftPayload = await waitForEvent<{ userId: string }>(bob, SocketEvents.USER_LEFT);
       expect(leftPayload.userId).toBe(alicePayload.userId);
     });
 

@@ -1,8 +1,5 @@
-import { describe, it, expect } from "vitest";
-import {
-  extractClientIp,
-  isOriginAllowed,
-} from "../networkSecurity.js";
+import { describe, expect, it } from "vitest";
+import { extractClientIp, isOriginAllowed } from "../networkSecurity.js";
 
 describe("networkSecurity", () => {
   it("uses the remote address when the proxy is not trusted", () => {
@@ -30,15 +27,11 @@ describe("networkSecurity", () => {
   });
 
   it("accepts matching origins from the allowlist", () => {
-    expect(
-      isOriginAllowed("http://localhost:5173", ["http://localhost:5173"]),
-    ).toBe(true);
+    expect(isOriginAllowed("http://localhost:5173", ["http://localhost:5173"])).toBe(true);
   });
 
   it("returns 'unknown' when remoteAddress is undefined and no proxy", () => {
-    expect(
-      extractClientIp({ remoteAddress: undefined, trustedProxyIps: [] }),
-    ).toBe("unknown");
+    expect(extractClientIp({ remoteAddress: undefined, trustedProxyIps: [] })).toBe("unknown");
   });
 
   it("falls back to remote address when trusted proxy has no forwarded header", () => {

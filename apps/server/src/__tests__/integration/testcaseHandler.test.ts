@@ -1,15 +1,11 @@
-import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
-import type { Socket as ClientSocket } from "socket.io-client";
+import type { BoilerplateTemplate, CustomTestCase } from "@codeshare/shared";
 import { SocketEvents } from "@codeshare/shared";
-import type { CustomTestCase, BoilerplateTemplate } from "@codeshare/shared";
-import {
-  createTestServer,
-  createTestClient,
-  waitForEvent,
-} from "../helpers/socketTestHelper.js";
-import { setupSocketIO } from "../../ws/socketio.js";
-import { roomManager } from "../../models/RoomManager.js";
+import type { Socket as ClientSocket } from "socket.io-client";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLogger } from "../../lib/logger.js";
+import { roomManager } from "../../models/RoomManager.js";
+import { setupSocketIO } from "../../ws/socketio.js";
+import { createTestClient, createTestServer, waitForEvent } from "../helpers/socketTestHelper.js";
 
 const VALID_UUID = "00000000-0000-4000-8000-000000000001";
 
@@ -31,7 +27,10 @@ vi.mock("../../services/ProblemService.js", () => ({
 
 vi.mock("@codeshare/db", () => ({
   boilerplateRepository: { findByProblemAndLanguage: mockFindByProblemAndLanguage },
-  testCaseRepository: { findVisible: vi.fn().mockResolvedValue([]), findByProblemId: vi.fn().mockResolvedValue([]) },
+  testCaseRepository: {
+    findVisible: vi.fn().mockResolvedValue([]),
+    findByProblemId: vi.fn().mockResolvedValue([]),
+  },
   problemRepository: { findAll: vi.fn().mockResolvedValue([]) },
 }));
 
@@ -89,10 +88,7 @@ describe("Testcase handler", () => {
 
       const alice = connectClient(server.port, room.roomCode);
       const bob = connectClient(server.port, room.roomCode);
-      await Promise.all([
-        waitForEvent(alice, "connect"),
-        waitForEvent(bob, "connect"),
-      ]);
+      await Promise.all([waitForEvent(alice, "connect"), waitForEvent(bob, "connect")]);
       await joinUser(alice, "Alice");
       await joinUser(bob, "Bob");
       await waitForEvent(alice, SocketEvents.USER_JOINED);
@@ -101,10 +97,7 @@ describe("Testcase handler", () => {
         alice,
         SocketEvents.TESTCASE_ADDED,
       );
-      const bobAdded = waitForEvent<{ testCase: CustomTestCase }>(
-        bob,
-        SocketEvents.TESTCASE_ADDED,
-      );
+      const bobAdded = waitForEvent<{ testCase: CustomTestCase }>(bob, SocketEvents.TESTCASE_ADDED);
 
       alice.emit(SocketEvents.TESTCASE_ADD, {
         input: { nums: [1, 2], target: 3 },
@@ -134,10 +127,7 @@ describe("Testcase handler", () => {
         expectedOutput: [0, 1],
       });
 
-      const error = await waitForEvent<{ message: string }>(
-        alice,
-        SocketEvents.TESTCASE_ERROR,
-      );
+      const error = await waitForEvent<{ message: string }>(alice, SocketEvents.TESTCASE_ERROR);
       expect(error.message).toMatch(/input keys/i);
     });
   });
@@ -160,10 +150,7 @@ describe("Testcase handler", () => {
         expectedOutput: 99,
       });
 
-      const error = await waitForEvent<{ message: string }>(
-        alice,
-        SocketEvents.TESTCASE_ERROR,
-      );
+      const error = await waitForEvent<{ message: string }>(alice, SocketEvents.TESTCASE_ERROR);
       expect(error.message).toMatch(/limit/i);
     });
   });
@@ -183,10 +170,7 @@ describe("Testcase handler", () => {
         expectedOutput: 1,
       });
 
-      const error = await waitForEvent<{ message: string }>(
-        alice,
-        SocketEvents.TESTCASE_ERROR,
-      );
+      const error = await waitForEvent<{ message: string }>(alice, SocketEvents.TESTCASE_ERROR);
       expect(error.message).toMatch(/size/i);
     });
   });
@@ -205,10 +189,7 @@ describe("Testcase handler", () => {
         expectedOutput: 1,
       });
 
-      const error = await waitForEvent<{ message: string }>(
-        alice,
-        SocketEvents.TESTCASE_ERROR,
-      );
+      const error = await waitForEvent<{ message: string }>(alice, SocketEvents.TESTCASE_ERROR);
       expect(error.message).toMatch(/problem/i);
     });
   });
@@ -224,10 +205,7 @@ describe("Testcase handler", () => {
 
       alice.emit(SocketEvents.TESTCASE_ADD, { badField: true });
 
-      const error = await waitForEvent<{ message: string }>(
-        alice,
-        SocketEvents.TESTCASE_ERROR,
-      );
+      const error = await waitForEvent<{ message: string }>(alice, SocketEvents.TESTCASE_ERROR);
       expect(error.message).toMatch(/invalid/i);
     });
   });

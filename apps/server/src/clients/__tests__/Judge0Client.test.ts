@@ -1,6 +1,6 @@
-import { describe, expect, it, vi, afterEach } from "vitest";
-import { createJudge0Client } from "../Judge0Client.js";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Config } from "../../config.js";
+import { createJudge0Client } from "../Judge0Client.js";
 
 const baseConfig: Config = {
   DATABASE_URL: "https://db.example.com/codeshare",
@@ -61,8 +61,6 @@ describe("createJudge0Client", () => {
 
     const client = createJudge0Client(baseConfig);
 
-    await expect(client.submit("print('hello')", 5_000)).rejects.toThrow(
-      /response/i,
-    );
+    await expect(client.submit("print('hello')", 5_000)).rejects.toThrow(/response/i);
   });
 });

@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Problem } from "@codeshare/shared";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createScraperService } from "../ScraperService.js";
 
 const createdProblem: Problem = {
@@ -114,10 +114,7 @@ describe("ScraperService", () => {
         difficulty: "easy",
         source: "user_submitted",
         sourceUrl: "https://leetcode.com/problems/two-sum/",
-        constraints: [
-          "2 <= nums.length <= 10^4",
-          "-10^9 <= target <= 10^9",
-        ],
+        constraints: ["2 <= nums.length <= 10^4", "-10^9 <= target <= 10^9"],
       }),
     );
     expect(createTestCase).toHaveBeenNthCalledWith(
@@ -179,9 +176,9 @@ describe("ScraperService", () => {
       deleteProblem,
     });
 
-    await expect(
-      service.importFromUrl("https://example.com/problems/two-sum/"),
-    ).rejects.toThrow("URL must match https://leetcode.com/problems/<slug>/");
+    await expect(service.importFromUrl("https://example.com/problems/two-sum/")).rejects.toThrow(
+      "URL must match https://leetcode.com/problems/<slug>/",
+    );
   });
 
   it("fails when example inputs cannot be transformed into canonical test cases", async () => {
@@ -213,9 +210,9 @@ describe("ScraperService", () => {
       deleteProblem,
     });
 
-    await expect(
-      service.importFromUrl("https://leetcode.com/problems/two-sum/"),
-    ).rejects.toThrow("Failed to parse imported example inputs.");
+    await expect(service.importFromUrl("https://leetcode.com/problems/two-sum/")).rejects.toThrow(
+      "Failed to parse imported example inputs.",
+    );
     expect(createProblem).not.toHaveBeenCalled();
     expect(createTestCase).not.toHaveBeenCalled();
   });
@@ -239,9 +236,9 @@ describe("ScraperService", () => {
       deleteProblem,
     });
 
-    await expect(
-      service.importFromUrl("https://leetcode.com/problems/two-sum/"),
-    ).rejects.toThrow("insert test case failed");
+    await expect(service.importFromUrl("https://leetcode.com/problems/two-sum/")).rejects.toThrow(
+      "insert test case failed",
+    );
 
     expect(deleteProblem).toHaveBeenCalledWith(createdProblem.id);
   });

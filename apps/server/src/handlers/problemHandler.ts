@@ -1,20 +1,20 @@
-import type { Socket, Server } from "socket.io";
-import type { Logger } from "pino";
-import type * as Y from "yjs";
+import type { ProblemDetail, ProblemLoadedPayload } from "@codeshare/shared";
 import {
   GLOBAL_LIMITS,
   HINT_LIMIT_BY_DIFFICULTY,
-  ROOM_LIMITS,
-  SocketEvents,
   problemImportSchema,
   problemSelectSchema,
+  ROOM_LIMITS,
+  SocketEvents,
 } from "@codeshare/shared";
-import type { ProblemDetail, ProblemLoadedPayload } from "@codeshare/shared";
+import type { Logger } from "pino";
+import type { Server, Socket } from "socket.io";
+import type * as Y from "yjs";
+import type { IpRateLimiter } from "../lib/ipRateLimiter.js";
+import { globalCounters } from "../lib/rateLimitCounters.js";
+import type { Room } from "../models/Room.js";
 import { problemService } from "../services/ProblemService.js";
 import { scraperService } from "../services/ScraperService.js";
-import type { Room } from "../models/Room.js";
-import { globalCounters } from "../lib/rateLimitCounters.js";
-import type { IpRateLimiter } from "../lib/ipRateLimiter.js";
 
 interface RoomLookup {
   getRoom(roomCode: string): Room | undefined;
@@ -87,10 +87,7 @@ export function registerProblemHandler(
 
       await loadProblemIntoRoom(room, roomCode, detail);
 
-      logger.info(
-        { roomCode, problemId, title: detail.title },
-        "Problem loaded for room",
-      );
+      logger.info({ roomCode, problemId, title: detail.title }, "Problem loaded for room");
     } catch (err) {
       logger.error({ err, roomCode, problemId }, "Failed to load problem");
       socket.emit(SocketEvents.PROBLEM_ERROR, {
@@ -186,8 +183,7 @@ export function registerProblemHandler(
       logger.error({ err, roomCode }, "Failed to import problem");
       io.to(roomCode).emit(SocketEvents.PROBLEM_IMPORT_STATUS, {
         status: "failed",
-        message:
-          err instanceof Error ? err.message : "Failed to import problem.",
+        message: err instanceof Error ? err.message : "Failed to import problem.",
       });
     }
   });

@@ -1,7 +1,7 @@
-import { describe, it, expect } from "vitest";
 import Fastify from "fastify";
-import { registerSecurityHeaders } from "../../plugins/securityHeaders.js";
+import { describe, expect, it } from "vitest";
 import type { Config } from "../../config.js";
+import { registerSecurityHeaders } from "../../plugins/securityHeaders.js";
 
 function buildConfig(overrides?: Partial<Config>): Config {
   return {

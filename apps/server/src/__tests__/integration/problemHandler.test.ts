@@ -1,17 +1,13 @@
-import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
-import type { Socket as ClientSocket } from "socket.io-client";
-import * as Y from "yjs";
+import type { ProblemDetail, ProblemLoadedPayload } from "@codeshare/shared";
 import { ROOM_LIMITS, SocketEvents } from "@codeshare/shared";
-import type { ProblemLoadedPayload, ProblemDetail } from "@codeshare/shared";
-import {
-  createTestServer,
-  createTestClient,
-  waitForEvent,
-} from "../helpers/socketTestHelper.js";
-import { setupSocketIO } from "../../ws/socketio.js";
-import { roomManager } from "../../models/RoomManager.js";
+import type { Socket as ClientSocket } from "socket.io-client";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import * as Y from "yjs";
 import { createLogger } from "../../lib/logger.js";
 import { globalCounters } from "../../lib/rateLimitCounters.js";
+import { roomManager } from "../../models/RoomManager.js";
+import { setupSocketIO } from "../../ws/socketio.js";
+import { createTestClient, createTestServer, waitForEvent } from "../helpers/socketTestHelper.js";
 
 const VALID_UUID = "00000000-0000-4000-8000-000000000001";
 const UNKNOWN_UUID = "00000000-0000-4000-8000-000000000099";
@@ -168,10 +164,7 @@ describe("Problem handler", () => {
 
       const alice = connectClient(server.port, room.roomCode);
       const bob = connectClient(server.port, room.roomCode);
-      await Promise.all([
-        waitForEvent(alice, "connect"),
-        waitForEvent(bob, "connect"),
-      ]);
+      await Promise.all([waitForEvent(alice, "connect"), waitForEvent(bob, "connect")]);
 
       await joinUser(alice, "Alice");
       await joinUser(bob, "Bob");
@@ -182,17 +175,11 @@ describe("Problem handler", () => {
         alice,
         SocketEvents.PROBLEM_LOADED,
       );
-      const bobLoadedPromise = waitForEvent<ProblemLoadedPayload>(
-        bob,
-        SocketEvents.PROBLEM_LOADED,
-      );
+      const bobLoadedPromise = waitForEvent<ProblemLoadedPayload>(bob, SocketEvents.PROBLEM_LOADED);
 
       alice.emit(SocketEvents.PROBLEM_SELECT, { problemId: VALID_UUID });
 
-      const [alicePayload, bobPayload] = await Promise.all([
-        aliceLoadedPromise,
-        bobLoadedPromise,
-      ]);
+      const [alicePayload, bobPayload] = await Promise.all([aliceLoadedPromise, bobLoadedPromise]);
 
       expect(alicePayload.problem.id).toBe(VALID_UUID);
       expect(alicePayload.problem.title).toBe("Two Sum");
@@ -217,10 +204,7 @@ describe("Problem handler", () => {
 
       alice.emit(SocketEvents.PROBLEM_SELECT, { problemId: UNKNOWN_UUID });
 
-      const error = await waitForEvent<{ message: string }>(
-        alice,
-        SocketEvents.PROBLEM_ERROR,
-      );
+      const error = await waitForEvent<{ message: string }>(alice, SocketEvents.PROBLEM_ERROR);
       expect(error.message).toBe("Problem not found.");
     });
   });
@@ -237,10 +221,7 @@ describe("Problem handler", () => {
 
       alice.emit(SocketEvents.PROBLEM_SELECT, { wrong: "field" });
 
-      const error = await waitForEvent<{ message: string }>(
-        alice,
-        SocketEvents.PROBLEM_ERROR,
-      );
+      const error = await waitForEvent<{ message: string }>(alice, SocketEvents.PROBLEM_ERROR);
       expect(error.message).toBe("Invalid problem selection payload.");
     });
 
@@ -253,10 +234,7 @@ describe("Problem handler", () => {
 
       alice.emit(SocketEvents.PROBLEM_SELECT, { problemId: "not-a-uuid" });
 
-      const error = await waitForEvent<{ message: string }>(
-        alice,
-        SocketEvents.PROBLEM_ERROR,
-      );
+      const error = await waitForEvent<{ message: string }>(alice, SocketEvents.PROBLEM_ERROR);
       expect(error.message).toBe("Invalid problem selection payload.");
     });
   });
@@ -342,10 +320,7 @@ describe("Problem handler", () => {
 
       alice.emit(SocketEvents.PROBLEM_SELECT, { problemId: VALID_UUID });
 
-      const error = await waitForEvent<{ message: string }>(
-        alice,
-        SocketEvents.PROBLEM_ERROR,
-      );
+      const error = await waitForEvent<{ message: string }>(alice, SocketEvents.PROBLEM_ERROR);
       expect(error.message).toBe("Failed to load problem. Please try again.");
     });
   });
@@ -416,14 +391,8 @@ describe("Problem handler", () => {
       bob.on(SocketEvents.PROBLEM_IMPORT_STATUS, (payload: { status: string }) => {
         bobStatuses.push(payload.status);
       });
-      const aliceLoaded = waitForEvent<ProblemLoadedPayload>(
-        alice,
-        SocketEvents.PROBLEM_LOADED,
-      );
-      const bobLoaded = waitForEvent<ProblemLoadedPayload>(
-        bob,
-        SocketEvents.PROBLEM_LOADED,
-      );
+      const aliceLoaded = waitForEvent<ProblemLoadedPayload>(alice, SocketEvents.PROBLEM_LOADED);
+      const bobLoaded = waitForEvent<ProblemLoadedPayload>(bob, SocketEvents.PROBLEM_LOADED);
 
       alice.emit(SocketEvents.PROBLEM_IMPORT, {
         leetcodeUrl: "https://leetcode.com/problems/two-sum/",
@@ -546,11 +515,7 @@ describe("Problem handler", () => {
       }> = [];
       alice.on(
         SocketEvents.PROBLEM_IMPORT_STATUS,
-        (payload: {
-          status: string;
-          message?: string;
-          retryAfterSeconds?: number;
-        }) => {
+        (payload: { status: string; message?: string; retryAfterSeconds?: number }) => {
           importStatuses.push(payload);
         },
       );

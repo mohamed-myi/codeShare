@@ -1,9 +1,4 @@
-import type {
-  Problem,
-  TestCase,
-  BoilerplateTemplate,
-  Hint,
-} from "@codeshare/shared";
+import type { BoilerplateTemplate, Hint, Problem, TestCase } from "@codeshare/shared";
 
 // --- Database Row Types (snake_case) ---
 
