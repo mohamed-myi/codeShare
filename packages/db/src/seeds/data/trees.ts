@@ -13,29 +13,60 @@ export const treesProblems: ProblemFixture[] = [
         "The number of nodes in the tree is in the range [0, 100].",
         "-100 <= Node.val <= 100",
       ],
-      solution: "Recursively swap the left and right children of every node. Base case: if the node is null, return null.",
+      solution:
+        "Recursively swap the left and right children of every node. Base case: if the node is null, return null.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/invert-binary-tree/",
     },
     testCases: [
-      { input: { root: [4, 2, 7, 1, 3, 6, 9] }, expectedOutput: [4, 7, 2, 9, 6, 3, 1], isVisible: true, orderIndex: 0 },
+      {
+        input: { root: [4, 2, 7, 1, 3, 6, 9] },
+        expectedOutput: [4, 7, 2, 9, 6, 3, 1],
+        isVisible: true,
+        orderIndex: 0,
+      },
       { input: { root: [2, 1, 3] }, expectedOutput: [2, 3, 1], isVisible: true, orderIndex: 1 },
       { input: { root: [] }, expectedOutput: [], isVisible: true, orderIndex: 2 },
       { input: { root: [1] }, expectedOutput: [1], isVisible: false, orderIndex: 3 },
-      { input: { root: [1, 2, null] }, expectedOutput: [1, null, 2], isVisible: false, orderIndex: 4 },
-      { input: { root: [1, null, 2] }, expectedOutput: [1, 2, null], isVisible: false, orderIndex: 5 },
-      { input: { root: [1, 2, 3, 4, 5, 6, 7] }, expectedOutput: [1, 3, 2, 7, 6, 5, 4], isVisible: false, orderIndex: 6 },
-      { input: { root: [5, 3, 8, 1, 4, 7, 9] }, expectedOutput: [5, 8, 3, 9, 7, 4, 1], isVisible: false, orderIndex: 7 },
+      {
+        input: { root: [1, 2, null] },
+        expectedOutput: [1, null, 2],
+        isVisible: false,
+        orderIndex: 4,
+      },
+      {
+        input: { root: [1, null, 2] },
+        expectedOutput: [1, 2, null],
+        isVisible: false,
+        orderIndex: 5,
+      },
+      {
+        input: { root: [1, 2, 3, 4, 5, 6, 7] },
+        expectedOutput: [1, 3, 2, 7, 6, 5, 4],
+        isVisible: false,
+        orderIndex: 6,
+      },
+      {
+        input: { root: [5, 3, 8, 1, 4, 7, 9] },
+        expectedOutput: [5, 8, 3, 9, 7, 4, 1],
+        isVisible: false,
+        orderIndex: 7,
+      },
     ],
     boilerplate: {
       language: "python",
-      template: "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\nclass Solution:\n    def invertTree(self, root: Optional[TreeNode]) -> Optional[TreeNode]:\n        pass",
+      template:
+        "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\nclass Solution:\n    def invertTree(self, root: Optional[TreeNode]) -> Optional[TreeNode]:\n        pass",
       methodName: "invertTree",
       parameterNames: ["root"],
     },
     hints: [
-      { hintText: "At each node, swap its left and right children, then recursively do the same for both subtrees.", orderIndex: 0 },
+      {
+        hintText:
+          "At each node, swap its left and right children, then recursively do the same for both subtrees.",
+        orderIndex: 0,
+      },
     ],
   },
   {
@@ -50,29 +81,55 @@ export const treesProblems: ProblemFixture[] = [
         "The number of nodes in the tree is in the range [0, 10^4].",
         "-100 <= Node.val <= 100",
       ],
-      solution: "Recursively compute the depth: return 0 for null, otherwise return 1 + max(depth(left), depth(right)).",
+      solution:
+        "Recursively compute the depth: return 0 for null, otherwise return 1 + max(depth(left), depth(right)).",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/maximum-depth-of-binary-tree/",
     },
     testCases: [
-      { input: { root: [3, 9, 20, null, null, 15, 7] }, expectedOutput: 3, isVisible: true, orderIndex: 0 },
+      {
+        input: { root: [3, 9, 20, null, null, 15, 7] },
+        expectedOutput: 3,
+        isVisible: true,
+        orderIndex: 0,
+      },
       { input: { root: [1, null, 2] }, expectedOutput: 2, isVisible: true, orderIndex: 1 },
       { input: { root: [] }, expectedOutput: 0, isVisible: true, orderIndex: 2 },
       { input: { root: [1] }, expectedOutput: 1, isVisible: false, orderIndex: 3 },
-      { input: { root: [1, 2, 3, 4, null, null, 5] }, expectedOutput: 3, isVisible: false, orderIndex: 4 },
-      { input: { root: [1, 2, null, 3, null, 4, null] }, expectedOutput: 4, isVisible: false, orderIndex: 5 },
+      {
+        input: { root: [1, 2, 3, 4, null, null, 5] },
+        expectedOutput: 3,
+        isVisible: false,
+        orderIndex: 4,
+      },
+      {
+        input: { root: [1, 2, null, 3, null, 4, null] },
+        expectedOutput: 4,
+        isVisible: false,
+        orderIndex: 5,
+      },
       { input: { root: [1, 2, 3] }, expectedOutput: 2, isVisible: false, orderIndex: 6 },
-      { input: { root: [0, 0, 0, 0, 0, 0, 0] }, expectedOutput: 3, isVisible: false, orderIndex: 7 },
+      {
+        input: { root: [0, 0, 0, 0, 0, 0, 0] },
+        expectedOutput: 3,
+        isVisible: false,
+        orderIndex: 7,
+      },
     ],
     boilerplate: {
       language: "python",
-      template: "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\nclass Solution:\n    def maxDepth(self, root: Optional[TreeNode]) -> int:\n        pass",
+      template:
+        "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\nclass Solution:\n    def maxDepth(self, root: Optional[TreeNode]) -> int:\n        pass",
       methodName: "maxDepth",
       parameterNames: ["root"],
     },
     hints: [
-      { hintText: "The depth of a tree is 1 + the maximum depth of its subtrees. What is the depth of an empty tree?", orderIndex: 0 },
+      {
+        hintText:
+          "The depth of a tree is 1 + the maximum depth of its subtrees. What is the depth of an empty tree?",
+        orderIndex: 0,
+      },
     ],
   },
   {
@@ -87,7 +144,8 @@ export const treesProblems: ProblemFixture[] = [
         "The number of nodes in the tree is in the range [1, 10^4].",
         "-100 <= Node.val <= 100",
       ],
-      solution: "For each node, the diameter through it is left_height + right_height. Compute heights recursively while tracking the maximum diameter seen.",
+      solution:
+        "For each node, the diameter through it is left_height + right_height. Compute heights recursively while tracking the maximum diameter seen.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/diameter-of-binary-tree/",
@@ -96,20 +154,45 @@ export const treesProblems: ProblemFixture[] = [
       { input: { root: [1, 2, 3, 4, 5] }, expectedOutput: 3, isVisible: true, orderIndex: 0 },
       { input: { root: [1, 2] }, expectedOutput: 1, isVisible: true, orderIndex: 1 },
       { input: { root: [1] }, expectedOutput: 0, isVisible: true, orderIndex: 2 },
-      { input: { root: [1, 2, 3, 4, 5, null, null, 6] }, expectedOutput: 4, isVisible: false, orderIndex: 3 },
-      { input: { root: [1, 2, null, 3, null, 4, null] }, expectedOutput: 3, isVisible: false, orderIndex: 4 },
+      {
+        input: { root: [1, 2, 3, 4, 5, null, null, 6] },
+        expectedOutput: 4,
+        isVisible: false,
+        orderIndex: 3,
+      },
+      {
+        input: { root: [1, 2, null, 3, null, 4, null] },
+        expectedOutput: 3,
+        isVisible: false,
+        orderIndex: 4,
+      },
       { input: { root: [1, 2, 3] }, expectedOutput: 2, isVisible: false, orderIndex: 5 },
-      { input: { root: [1, null, 2, null, 3] }, expectedOutput: 2, isVisible: false, orderIndex: 6 },
-      { input: { root: [4, 2, 6, 1, 3, 5, 7] }, expectedOutput: 4, isVisible: false, orderIndex: 7 },
+      {
+        input: { root: [1, null, 2, null, 3] },
+        expectedOutput: 2,
+        isVisible: false,
+        orderIndex: 6,
+      },
+      {
+        input: { root: [4, 2, 6, 1, 3, 5, 7] },
+        expectedOutput: 4,
+        isVisible: false,
+        orderIndex: 7,
+      },
     ],
     boilerplate: {
       language: "python",
-      template: "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\nclass Solution:\n    def diameterOfBinaryTree(self, root: Optional[TreeNode]) -> int:\n        pass",
+      template:
+        "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\nclass Solution:\n    def diameterOfBinaryTree(self, root: Optional[TreeNode]) -> int:\n        pass",
       methodName: "diameterOfBinaryTree",
       parameterNames: ["root"],
     },
     hints: [
-      { hintText: "The diameter passing through a node equals the sum of the heights of its left and right subtrees. Compute heights recursively and track the maximum diameter.", orderIndex: 0 },
+      {
+        hintText:
+          "The diameter passing through a node equals the sum of the heights of its left and right subtrees. Compute heights recursively and track the maximum diameter.",
+        orderIndex: 0,
+      },
     ],
   },
   {
@@ -124,29 +207,65 @@ export const treesProblems: ProblemFixture[] = [
         "The number of nodes in the tree is in the range [0, 5000].",
         "-10^4 <= Node.val <= 10^4",
       ],
-      solution: "Recursively compute the height of each subtree. At each node, if the height difference between left and right exceeds 1, the tree is not balanced. Use -1 as a sentinel to propagate imbalance upward.",
+      solution:
+        "Recursively compute the height of each subtree. At each node, if the height difference between left and right exceeds 1, the tree is not balanced. Use -1 as a sentinel to propagate imbalance upward.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/balanced-binary-tree/",
     },
     testCases: [
-      { input: { root: [3, 9, 20, null, null, 15, 7] }, expectedOutput: true, isVisible: true, orderIndex: 0 },
-      { input: { root: [1, 2, 2, 3, 3, null, null, 4, 4] }, expectedOutput: false, isVisible: true, orderIndex: 1 },
+      {
+        input: { root: [3, 9, 20, null, null, 15, 7] },
+        expectedOutput: true,
+        isVisible: true,
+        orderIndex: 0,
+      },
+      {
+        input: { root: [1, 2, 2, 3, 3, null, null, 4, 4] },
+        expectedOutput: false,
+        isVisible: true,
+        orderIndex: 1,
+      },
       { input: { root: [] }, expectedOutput: true, isVisible: true, orderIndex: 2 },
       { input: { root: [1] }, expectedOutput: true, isVisible: false, orderIndex: 3 },
-      { input: { root: [1, 2, 3, 4, 5, 6, 7] }, expectedOutput: true, isVisible: false, orderIndex: 4 },
-      { input: { root: [1, 2, null, 3, null, 4, null] }, expectedOutput: false, isVisible: false, orderIndex: 5 },
-      { input: { root: [1, 2, 3, 4, null, null, 5] }, expectedOutput: true, isVisible: false, orderIndex: 6 },
-      { input: { root: [1, null, 2, null, 3] }, expectedOutput: false, isVisible: false, orderIndex: 7 },
+      {
+        input: { root: [1, 2, 3, 4, 5, 6, 7] },
+        expectedOutput: true,
+        isVisible: false,
+        orderIndex: 4,
+      },
+      {
+        input: { root: [1, 2, null, 3, null, 4, null] },
+        expectedOutput: false,
+        isVisible: false,
+        orderIndex: 5,
+      },
+      {
+        input: { root: [1, 2, 3, 4, null, null, 5] },
+        expectedOutput: true,
+        isVisible: false,
+        orderIndex: 6,
+      },
+      {
+        input: { root: [1, null, 2, null, 3] },
+        expectedOutput: false,
+        isVisible: false,
+        orderIndex: 7,
+      },
     ],
     boilerplate: {
       language: "python",
-      template: "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\nclass Solution:\n    def isBalanced(self, root: Optional[TreeNode]) -> bool:\n        pass",
+      template:
+        "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\nclass Solution:\n    def isBalanced(self, root: Optional[TreeNode]) -> bool:\n        pass",
       methodName: "isBalanced",
       parameterNames: ["root"],
     },
     hints: [
-      { hintText: "Compute the height of each subtree recursively. If at any node the left and right heights differ by more than 1, the tree is unbalanced. Return -1 as a sentinel to short-circuit.", orderIndex: 0 },
+      {
+        hintText:
+          "Compute the height of each subtree recursively. If at any node the left and right heights differ by more than 1, the tree is unbalanced. Return -1 as a sentinel to short-circuit.",
+        orderIndex: 0,
+      },
     ],
   },
   {
@@ -161,29 +280,60 @@ export const treesProblems: ProblemFixture[] = [
         "The number of nodes in both trees is in the range [0, 100].",
         "-10^4 <= Node.val <= 10^4",
       ],
-      solution: "Recursively compare both trees. Two trees are the same if both are null, or both are non-null with equal values and their left and right subtrees are the same.",
+      solution:
+        "Recursively compare both trees. Two trees are the same if both are null, or both are non-null with equal values and their left and right subtrees are the same.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/same-tree/",
     },
     testCases: [
-      { input: { p: [1, 2, 3], q: [1, 2, 3] }, expectedOutput: true, isVisible: true, orderIndex: 0 },
-      { input: { p: [1, 2], q: [1, null, 2] }, expectedOutput: false, isVisible: true, orderIndex: 1 },
-      { input: { p: [1, 2, 1], q: [1, 1, 2] }, expectedOutput: false, isVisible: true, orderIndex: 2 },
+      {
+        input: { p: [1, 2, 3], q: [1, 2, 3] },
+        expectedOutput: true,
+        isVisible: true,
+        orderIndex: 0,
+      },
+      {
+        input: { p: [1, 2], q: [1, null, 2] },
+        expectedOutput: false,
+        isVisible: true,
+        orderIndex: 1,
+      },
+      {
+        input: { p: [1, 2, 1], q: [1, 1, 2] },
+        expectedOutput: false,
+        isVisible: true,
+        orderIndex: 2,
+      },
       { input: { p: [], q: [] }, expectedOutput: true, isVisible: false, orderIndex: 3 },
       { input: { p: [1], q: [1] }, expectedOutput: true, isVisible: false, orderIndex: 4 },
       { input: { p: [1], q: [] }, expectedOutput: false, isVisible: false, orderIndex: 5 },
-      { input: { p: [1, 2, 3, 4, 5], q: [1, 2, 3, 4, 5] }, expectedOutput: true, isVisible: false, orderIndex: 6 },
-      { input: { p: [1, 2, 3, 4, 5], q: [1, 2, 3, 4, 6] }, expectedOutput: false, isVisible: false, orderIndex: 7 },
+      {
+        input: { p: [1, 2, 3, 4, 5], q: [1, 2, 3, 4, 5] },
+        expectedOutput: true,
+        isVisible: false,
+        orderIndex: 6,
+      },
+      {
+        input: { p: [1, 2, 3, 4, 5], q: [1, 2, 3, 4, 6] },
+        expectedOutput: false,
+        isVisible: false,
+        orderIndex: 7,
+      },
     ],
     boilerplate: {
       language: "python",
-      template: "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\nclass Solution:\n    def isSameTree(self, p: Optional[TreeNode], q: Optional[TreeNode]) -> bool:\n        pass",
+      template:
+        "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\nclass Solution:\n    def isSameTree(self, p: Optional[TreeNode], q: Optional[TreeNode]) -> bool:\n        pass",
       methodName: "isSameTree",
       parameterNames: ["p", "q"],
     },
     hints: [
-      { hintText: "Two trees are the same if both roots are null, or both are non-null with equal values and recursively identical left and right subtrees.", orderIndex: 0 },
+      {
+        hintText:
+          "Two trees are the same if both roots are null, or both are non-null with equal values and recursively identical left and right subtrees.",
+        orderIndex: 0,
+      },
     ],
   },
   {
@@ -200,29 +350,70 @@ export const treesProblems: ProblemFixture[] = [
         "-10^4 <= root.val <= 10^4",
         "-10^4 <= subRoot.val <= 10^4",
       ],
-      solution: "For each node in root, check if the subtree rooted there is identical to subRoot using the same-tree check. Traverse the entire tree recursively.",
+      solution:
+        "For each node in root, check if the subtree rooted there is identical to subRoot using the same-tree check. Traverse the entire tree recursively.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/subtree-of-another-tree/",
     },
     testCases: [
-      { input: { root: [3, 4, 5, 1, 2], subRoot: [4, 1, 2] }, expectedOutput: true, isVisible: true, orderIndex: 0 },
-      { input: { root: [3, 4, 5, 1, 2, null, null, null, null, 0], subRoot: [4, 1, 2] }, expectedOutput: false, isVisible: true, orderIndex: 1 },
-      { input: { root: [1, 1], subRoot: [1] }, expectedOutput: true, isVisible: true, orderIndex: 2 },
+      {
+        input: { root: [3, 4, 5, 1, 2], subRoot: [4, 1, 2] },
+        expectedOutput: true,
+        isVisible: true,
+        orderIndex: 0,
+      },
+      {
+        input: { root: [3, 4, 5, 1, 2, null, null, null, null, 0], subRoot: [4, 1, 2] },
+        expectedOutput: false,
+        isVisible: true,
+        orderIndex: 1,
+      },
+      {
+        input: { root: [1, 1], subRoot: [1] },
+        expectedOutput: true,
+        isVisible: true,
+        orderIndex: 2,
+      },
       { input: { root: [1], subRoot: [1] }, expectedOutput: true, isVisible: false, orderIndex: 3 },
-      { input: { root: [1, 2, 3], subRoot: [2] }, expectedOutput: true, isVisible: false, orderIndex: 4 },
-      { input: { root: [1, 2, 3], subRoot: [1, 2, 3] }, expectedOutput: true, isVisible: false, orderIndex: 5 },
-      { input: { root: [1, null, 2], subRoot: [1, 2] }, expectedOutput: false, isVisible: false, orderIndex: 6 },
-      { input: { root: [3, 4, 5, 1, null, 2], subRoot: [3, 1, 2] }, expectedOutput: false, isVisible: false, orderIndex: 7 },
+      {
+        input: { root: [1, 2, 3], subRoot: [2] },
+        expectedOutput: true,
+        isVisible: false,
+        orderIndex: 4,
+      },
+      {
+        input: { root: [1, 2, 3], subRoot: [1, 2, 3] },
+        expectedOutput: true,
+        isVisible: false,
+        orderIndex: 5,
+      },
+      {
+        input: { root: [1, null, 2], subRoot: [1, 2] },
+        expectedOutput: false,
+        isVisible: false,
+        orderIndex: 6,
+      },
+      {
+        input: { root: [3, 4, 5, 1, null, 2], subRoot: [3, 1, 2] },
+        expectedOutput: false,
+        isVisible: false,
+        orderIndex: 7,
+      },
     ],
     boilerplate: {
       language: "python",
-      template: "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\nclass Solution:\n    def isSubtree(self, root: Optional[TreeNode], subRoot: Optional[TreeNode]) -> bool:\n        pass",
+      template:
+        "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\nclass Solution:\n    def isSubtree(self, root: Optional[TreeNode], subRoot: Optional[TreeNode]) -> bool:\n        pass",
       methodName: "isSubtree",
       parameterNames: ["root", "subRoot"],
     },
     hints: [
-      { hintText: "For each node in the main tree, check if the subtree rooted at that node is identical to subRoot. Reuse same-tree comparison logic.", orderIndex: 0 },
+      {
+        hintText:
+          "For each node in the main tree, check if the subtree rooted at that node is identical to subRoot. Reuse same-tree comparison logic.",
+        orderIndex: 0,
+      },
     ],
   },
   {
@@ -232,7 +423,7 @@ export const treesProblems: ProblemFixture[] = [
       difficulty: "medium",
       category: "Trees",
       description:
-        "Given a binary search tree (BST), find the lowest common ancestor (LCA) node of two given nodes in the BST.\n\nAccording to the definition of LCA on Wikipedia: \"The lowest common ancestor is defined between two nodes `p` and `q` as the lowest node in `T` that has both `p` and `q` as descendants (where we allow a node to be a descendant of itself).\"",
+        'Given a binary search tree (BST), find the lowest common ancestor (LCA) node of two given nodes in the BST.\n\nAccording to the definition of LCA on Wikipedia: "The lowest common ancestor is defined between two nodes `p` and `q` as the lowest node in `T` that has both `p` and `q` as descendants (where we allow a node to be a descendant of itself)."',
       constraints: [
         "The number of nodes in the tree is in the range [2, 10^5].",
         "-10^9 <= Node.val <= 10^9",
@@ -240,30 +431,75 @@ export const treesProblems: ProblemFixture[] = [
         "p != q",
         "p and q will exist in the BST.",
       ],
-      solution: "Exploit BST properties. If both p and q are smaller than the current node, go left. If both are larger, go right. Otherwise, the current node is the LCA.",
+      solution:
+        "Exploit BST properties. If both p and q are smaller than the current node, go left. If both are larger, go right. Otherwise, the current node is the LCA.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/lowest-common-ancestor-of-a-binary-search-tree/",
     },
     testCases: [
-      { input: { root: [6, 2, 8, 0, 4, 7, 9, null, null, 3, 5], p: 2, q: 8 }, expectedOutput: 6, isVisible: true, orderIndex: 0 },
-      { input: { root: [6, 2, 8, 0, 4, 7, 9, null, null, 3, 5], p: 2, q: 4 }, expectedOutput: 2, isVisible: true, orderIndex: 1 },
+      {
+        input: { root: [6, 2, 8, 0, 4, 7, 9, null, null, 3, 5], p: 2, q: 8 },
+        expectedOutput: 6,
+        isVisible: true,
+        orderIndex: 0,
+      },
+      {
+        input: { root: [6, 2, 8, 0, 4, 7, 9, null, null, 3, 5], p: 2, q: 4 },
+        expectedOutput: 2,
+        isVisible: true,
+        orderIndex: 1,
+      },
       { input: { root: [2, 1], p: 2, q: 1 }, expectedOutput: 2, isVisible: true, orderIndex: 2 },
-      { input: { root: [6, 2, 8, 0, 4, 7, 9, null, null, 3, 5], p: 0, q: 5 }, expectedOutput: 2, isVisible: false, orderIndex: 3 },
-      { input: { root: [6, 2, 8, 0, 4, 7, 9, null, null, 3, 5], p: 7, q: 9 }, expectedOutput: 8, isVisible: false, orderIndex: 4 },
-      { input: { root: [6, 2, 8, 0, 4, 7, 9, null, null, 3, 5], p: 3, q: 5 }, expectedOutput: 4, isVisible: false, orderIndex: 5 },
-      { input: { root: [6, 2, 8, 0, 4, 7, 9, null, null, 3, 5], p: 0, q: 9 }, expectedOutput: 6, isVisible: false, orderIndex: 6 },
-      { input: { root: [3, 1, 5, 0, 2, 4, 6], p: 0, q: 2 }, expectedOutput: 1, isVisible: false, orderIndex: 7 },
+      {
+        input: { root: [6, 2, 8, 0, 4, 7, 9, null, null, 3, 5], p: 0, q: 5 },
+        expectedOutput: 2,
+        isVisible: false,
+        orderIndex: 3,
+      },
+      {
+        input: { root: [6, 2, 8, 0, 4, 7, 9, null, null, 3, 5], p: 7, q: 9 },
+        expectedOutput: 8,
+        isVisible: false,
+        orderIndex: 4,
+      },
+      {
+        input: { root: [6, 2, 8, 0, 4, 7, 9, null, null, 3, 5], p: 3, q: 5 },
+        expectedOutput: 4,
+        isVisible: false,
+        orderIndex: 5,
+      },
+      {
+        input: { root: [6, 2, 8, 0, 4, 7, 9, null, null, 3, 5], p: 0, q: 9 },
+        expectedOutput: 6,
+        isVisible: false,
+        orderIndex: 6,
+      },
+      {
+        input: { root: [3, 1, 5, 0, 2, 4, 6], p: 0, q: 2 },
+        expectedOutput: 1,
+        isVisible: false,
+        orderIndex: 7,
+      },
     ],
     boilerplate: {
       language: "python",
-      template: "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, x):\n#         self.val = x\n#         self.left = None\n#         self.right = None\nclass Solution:\n    def lowestCommonAncestor(self, root: 'TreeNode', p: 'TreeNode', q: 'TreeNode') -> 'TreeNode':\n        pass",
+      template:
+        "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, x):\n#         self.val = x\n#         self.left = None\n#         self.right = None\nclass Solution:\n    def lowestCommonAncestor(self, root: 'TreeNode', p: 'TreeNode', q: 'TreeNode') -> 'TreeNode':\n        pass",
       methodName: "lowestCommonAncestor",
       parameterNames: ["root", "p", "q"],
     },
     hints: [
-      { hintText: "In a BST, nodes to the left are smaller and nodes to the right are larger. Use this to determine which direction to search.", orderIndex: 0 },
-      { hintText: "If both p and q are smaller than root, the LCA is in the left subtree. If both are larger, it is in the right subtree. Otherwise, root is the LCA (the split point).", orderIndex: 1 },
+      {
+        hintText:
+          "In a BST, nodes to the left are smaller and nodes to the right are larger. Use this to determine which direction to search.",
+        orderIndex: 0,
+      },
+      {
+        hintText:
+          "If both p and q are smaller than root, the LCA is in the left subtree. If both are larger, it is in the right subtree. Otherwise, root is the LCA (the split point).",
+        orderIndex: 1,
+      },
     ],
   },
   {
@@ -278,30 +514,69 @@ export const treesProblems: ProblemFixture[] = [
         "The number of nodes in the tree is in the range [0, 2000].",
         "-1000 <= Node.val <= 1000",
       ],
-      solution: "Use BFS with a queue. Process all nodes at the current level before moving to the next. For each level, collect values into a list and enqueue children.",
+      solution:
+        "Use BFS with a queue. Process all nodes at the current level before moving to the next. For each level, collect values into a list and enqueue children.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/binary-tree-level-order-traversal/",
     },
     testCases: [
-      { input: { root: [3, 9, 20, null, null, 15, 7] }, expectedOutput: [[3], [9, 20], [15, 7]], isVisible: true, orderIndex: 0 },
+      {
+        input: { root: [3, 9, 20, null, null, 15, 7] },
+        expectedOutput: [[3], [9, 20], [15, 7]],
+        isVisible: true,
+        orderIndex: 0,
+      },
       { input: { root: [1] }, expectedOutput: [[1]], isVisible: true, orderIndex: 1 },
       { input: { root: [] }, expectedOutput: [], isVisible: true, orderIndex: 2 },
-      { input: { root: [1, 2, 3, 4, 5, 6, 7] }, expectedOutput: [[1], [2, 3], [4, 5, 6, 7]], isVisible: false, orderIndex: 3 },
-      { input: { root: [1, 2, null, 3, null, 4] }, expectedOutput: [[1], [2], [3], [4]], isVisible: false, orderIndex: 4 },
-      { input: { root: [1, null, 2, null, 3] }, expectedOutput: [[1], [2], [3]], isVisible: false, orderIndex: 5 },
-      { input: { root: [1, 2, 3] }, expectedOutput: [[1], [2, 3]], isVisible: false, orderIndex: 6 },
-      { input: { root: [0, -1, 1] }, expectedOutput: [[0], [-1, 1]], isVisible: false, orderIndex: 7 },
+      {
+        input: { root: [1, 2, 3, 4, 5, 6, 7] },
+        expectedOutput: [[1], [2, 3], [4, 5, 6, 7]],
+        isVisible: false,
+        orderIndex: 3,
+      },
+      {
+        input: { root: [1, 2, null, 3, null, 4] },
+        expectedOutput: [[1], [2], [3], [4]],
+        isVisible: false,
+        orderIndex: 4,
+      },
+      {
+        input: { root: [1, null, 2, null, 3] },
+        expectedOutput: [[1], [2], [3]],
+        isVisible: false,
+        orderIndex: 5,
+      },
+      {
+        input: { root: [1, 2, 3] },
+        expectedOutput: [[1], [2, 3]],
+        isVisible: false,
+        orderIndex: 6,
+      },
+      {
+        input: { root: [0, -1, 1] },
+        expectedOutput: [[0], [-1, 1]],
+        isVisible: false,
+        orderIndex: 7,
+      },
     ],
     boilerplate: {
       language: "python",
-      template: "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\nclass Solution:\n    def levelOrder(self, root: Optional[TreeNode]) -> List[List[int]]:\n        pass",
+      template:
+        "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\nclass Solution:\n    def levelOrder(self, root: Optional[TreeNode]) -> List[List[int]]:\n        pass",
       methodName: "levelOrder",
       parameterNames: ["root"],
     },
     hints: [
-      { hintText: "Use a queue for BFS. How do you know when one level ends and the next begins?", orderIndex: 0 },
-      { hintText: "At each step, record the current queue size (that is the number of nodes at this level). Process exactly that many nodes, adding their children to the queue for the next level.", orderIndex: 1 },
+      {
+        hintText: "Use a queue for BFS. How do you know when one level ends and the next begins?",
+        orderIndex: 0,
+      },
+      {
+        hintText:
+          "At each step, record the current queue size (that is the number of nodes at this level). Process exactly that many nodes, adding their children to the queue for the next level.",
+        orderIndex: 1,
+      },
     ],
   },
   {
@@ -316,30 +591,55 @@ export const treesProblems: ProblemFixture[] = [
         "The number of nodes in the tree is in the range [0, 100].",
         "-100 <= Node.val <= 100",
       ],
-      solution: "Use BFS level-order traversal. For each level, the last node processed is the rightmost visible node. Alternatively, use DFS visiting right subtree first and recording the first node seen at each depth.",
+      solution:
+        "Use BFS level-order traversal. For each level, the last node processed is the rightmost visible node. Alternatively, use DFS visiting right subtree first and recording the first node seen at each depth.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/binary-tree-right-side-view/",
     },
     testCases: [
-      { input: { root: [1, 2, 3, null, 5, null, 4] }, expectedOutput: [1, 3, 4], isVisible: true, orderIndex: 0 },
+      {
+        input: { root: [1, 2, 3, null, 5, null, 4] },
+        expectedOutput: [1, 3, 4],
+        isVisible: true,
+        orderIndex: 0,
+      },
       { input: { root: [1, null, 3] }, expectedOutput: [1, 3], isVisible: true, orderIndex: 1 },
       { input: { root: [] }, expectedOutput: [], isVisible: true, orderIndex: 2 },
       { input: { root: [1] }, expectedOutput: [1], isVisible: false, orderIndex: 3 },
       { input: { root: [1, 2, 3, 4] }, expectedOutput: [1, 3, 4], isVisible: false, orderIndex: 4 },
       { input: { root: [1, 2] }, expectedOutput: [1, 2], isVisible: false, orderIndex: 5 },
-      { input: { root: [1, 2, 3, 4, 5, 6, 7] }, expectedOutput: [1, 3, 7], isVisible: false, orderIndex: 6 },
-      { input: { root: [1, 2, null, 3, null, 4] }, expectedOutput: [1, 2, 3, 4], isVisible: false, orderIndex: 7 },
+      {
+        input: { root: [1, 2, 3, 4, 5, 6, 7] },
+        expectedOutput: [1, 3, 7],
+        isVisible: false,
+        orderIndex: 6,
+      },
+      {
+        input: { root: [1, 2, null, 3, null, 4] },
+        expectedOutput: [1, 2, 3, 4],
+        isVisible: false,
+        orderIndex: 7,
+      },
     ],
     boilerplate: {
       language: "python",
-      template: "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\nclass Solution:\n    def rightSideView(self, root: Optional[TreeNode]) -> List[int]:\n        pass",
+      template:
+        "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\nclass Solution:\n    def rightSideView(self, root: Optional[TreeNode]) -> List[int]:\n        pass",
       methodName: "rightSideView",
       parameterNames: ["root"],
     },
     hints: [
-      { hintText: "The right side view consists of the last node at each level. Think about a traversal that processes nodes level by level.", orderIndex: 0 },
-      { hintText: "Use BFS. For each level, the last node in the queue for that level is the one visible from the right side.", orderIndex: 1 },
+      {
+        hintText:
+          "The right side view consists of the last node at each level. Think about a traversal that processes nodes level by level.",
+        orderIndex: 0,
+      },
+      {
+        hintText:
+          "Use BFS. For each level, the last node in the queue for that level is the one visible from the right side.",
+        orderIndex: 1,
+      },
     ],
   },
   {
@@ -354,30 +654,60 @@ export const treesProblems: ProblemFixture[] = [
         "The number of nodes in the binary tree is in the range [1, 10^5].",
         "Each node's value is between [-10^4, 10^4].",
       ],
-      solution: "DFS with the maximum value seen so far on the path from root. A node is good if its value >= max so far. Recursively count good nodes in left and right subtrees, passing the updated max.",
+      solution:
+        "DFS with the maximum value seen so far on the path from root. A node is good if its value >= max so far. Recursively count good nodes in left and right subtrees, passing the updated max.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/count-good-nodes-in-binary-tree/",
     },
     testCases: [
-      { input: { root: [3, 1, 4, 3, null, 1, 5] }, expectedOutput: 4, isVisible: true, orderIndex: 0 },
+      {
+        input: { root: [3, 1, 4, 3, null, 1, 5] },
+        expectedOutput: 4,
+        isVisible: true,
+        orderIndex: 0,
+      },
       { input: { root: [3, 3, null, 4, 2] }, expectedOutput: 3, isVisible: true, orderIndex: 1 },
       { input: { root: [1] }, expectedOutput: 1, isVisible: true, orderIndex: 2 },
-      { input: { root: [2, null, 4, 10, 8, null, null, 4] }, expectedOutput: 4, isVisible: false, orderIndex: 3 },
+      {
+        input: { root: [2, null, 4, 10, 8, null, null, 4] },
+        expectedOutput: 4,
+        isVisible: false,
+        orderIndex: 3,
+      },
       { input: { root: [9, null, 3, 6] }, expectedOutput: 1, isVisible: false, orderIndex: 4 },
-      { input: { root: [1, 2, 3, 4, 5, 6, 7] }, expectedOutput: 7, isVisible: false, orderIndex: 5 },
-      { input: { root: [5, 3, 8, 1, 4, 7, 9] }, expectedOutput: 3, isVisible: false, orderIndex: 6 },
+      {
+        input: { root: [1, 2, 3, 4, 5, 6, 7] },
+        expectedOutput: 7,
+        isVisible: false,
+        orderIndex: 5,
+      },
+      {
+        input: { root: [5, 3, 8, 1, 4, 7, 9] },
+        expectedOutput: 3,
+        isVisible: false,
+        orderIndex: 6,
+      },
       { input: { root: [-1, -2, -3] }, expectedOutput: 1, isVisible: false, orderIndex: 7 },
     ],
     boilerplate: {
       language: "python",
-      template: "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\nclass Solution:\n    def goodNodes(self, root: TreeNode) -> int:\n        pass",
+      template:
+        "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\nclass Solution:\n    def goodNodes(self, root: TreeNode) -> int:\n        pass",
       methodName: "goodNodes",
       parameterNames: ["root"],
     },
     hints: [
-      { hintText: "A node is 'good' if no ancestor has a greater value. Track the maximum value along the path from root to the current node.", orderIndex: 0 },
-      { hintText: "Use DFS passing the current max. If node.val >= max, it is a good node. Update max to the larger of current max and node.val before recursing into children.", orderIndex: 1 },
+      {
+        hintText:
+          "A node is 'good' if no ancestor has a greater value. Track the maximum value along the path from root to the current node.",
+        orderIndex: 0,
+      },
+      {
+        hintText:
+          "Use DFS passing the current max. If node.val >= max, it is a good node. Update max to the larger of current max and node.val before recursing into children.",
+        orderIndex: 1,
+      },
     ],
   },
   {
@@ -392,30 +722,60 @@ export const treesProblems: ProblemFixture[] = [
         "The number of nodes in the tree is in the range [1, 10^4].",
         "-2^31 <= Node.val <= 2^31 - 1",
       ],
-      solution: "Recursively validate each node with an allowed range (min, max). For the left child, update max to the current node's value. For the right child, update min. If any node violates its range, return false.",
+      solution:
+        "Recursively validate each node with an allowed range (min, max). For the left child, update max to the current node's value. For the right child, update min. If any node violates its range, return false.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/validate-binary-search-tree/",
     },
     testCases: [
       { input: { root: [2, 1, 3] }, expectedOutput: true, isVisible: true, orderIndex: 0 },
-      { input: { root: [5, 1, 4, null, null, 3, 6] }, expectedOutput: false, isVisible: true, orderIndex: 1 },
+      {
+        input: { root: [5, 1, 4, null, null, 3, 6] },
+        expectedOutput: false,
+        isVisible: true,
+        orderIndex: 1,
+      },
       { input: { root: [1] }, expectedOutput: true, isVisible: true, orderIndex: 2 },
-      { input: { root: [5, 4, 6, null, null, 3, 7] }, expectedOutput: false, isVisible: false, orderIndex: 3 },
+      {
+        input: { root: [5, 4, 6, null, null, 3, 7] },
+        expectedOutput: false,
+        isVisible: false,
+        orderIndex: 3,
+      },
       { input: { root: [2, 2, 2] }, expectedOutput: false, isVisible: false, orderIndex: 4 },
-      { input: { root: [10, 5, 15, null, null, 6, 20] }, expectedOutput: false, isVisible: false, orderIndex: 5 },
-      { input: { root: [3, 1, 5, 0, 2, 4, 6] }, expectedOutput: true, isVisible: false, orderIndex: 6 },
+      {
+        input: { root: [10, 5, 15, null, null, 6, 20] },
+        expectedOutput: false,
+        isVisible: false,
+        orderIndex: 5,
+      },
+      {
+        input: { root: [3, 1, 5, 0, 2, 4, 6] },
+        expectedOutput: true,
+        isVisible: false,
+        orderIndex: 6,
+      },
       { input: { root: [0, -1] }, expectedOutput: true, isVisible: false, orderIndex: 7 },
     ],
     boilerplate: {
       language: "python",
-      template: "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\nclass Solution:\n    def isValidBST(self, root: Optional[TreeNode]) -> bool:\n        pass",
+      template:
+        "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\nclass Solution:\n    def isValidBST(self, root: Optional[TreeNode]) -> bool:\n        pass",
       methodName: "isValidBST",
       parameterNames: ["root"],
     },
     hints: [
-      { hintText: "Just checking that left.val < node.val < right.val is not enough. The entire left subtree must be less than the node.", orderIndex: 0 },
-      { hintText: "Pass an allowed range (low, high) to each recursive call. For the root, the range is (-inf, +inf). Going left, update high = node.val. Going right, update low = node.val.", orderIndex: 1 },
+      {
+        hintText:
+          "Just checking that left.val < node.val < right.val is not enough. The entire left subtree must be less than the node.",
+        orderIndex: 0,
+      },
+      {
+        hintText:
+          "Pass an allowed range (low, high) to each recursive call. For the root, the range is (-inf, +inf). Going left, update high = node.val. Going right, update low = node.val.",
+        orderIndex: 1,
+      },
     ],
   },
   {
@@ -431,30 +791,70 @@ export const treesProblems: ProblemFixture[] = [
         "1 <= k <= n <= 10^4",
         "0 <= Node.val <= 10^4",
       ],
-      solution: "Perform an in-order traversal (left, root, right) of the BST, which visits nodes in ascending order. Return the k-th value encountered.",
+      solution:
+        "Perform an in-order traversal (left, root, right) of the BST, which visits nodes in ascending order. Return the k-th value encountered.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/kth-smallest-element-in-a-bst/",
     },
     testCases: [
-      { input: { root: [3, 1, 4, null, 2], k: 1 }, expectedOutput: 1, isVisible: true, orderIndex: 0 },
-      { input: { root: [5, 3, 6, 2, 4, null, null, 1], k: 3 }, expectedOutput: 3, isVisible: true, orderIndex: 1 },
+      {
+        input: { root: [3, 1, 4, null, 2], k: 1 },
+        expectedOutput: 1,
+        isVisible: true,
+        orderIndex: 0,
+      },
+      {
+        input: { root: [5, 3, 6, 2, 4, null, null, 1], k: 3 },
+        expectedOutput: 3,
+        isVisible: true,
+        orderIndex: 1,
+      },
       { input: { root: [1], k: 1 }, expectedOutput: 1, isVisible: true, orderIndex: 2 },
-      { input: { root: [3, 1, 4, null, 2], k: 2 }, expectedOutput: 2, isVisible: false, orderIndex: 3 },
-      { input: { root: [3, 1, 4, null, 2], k: 3 }, expectedOutput: 3, isVisible: false, orderIndex: 4 },
-      { input: { root: [3, 1, 4, null, 2], k: 4 }, expectedOutput: 4, isVisible: false, orderIndex: 5 },
-      { input: { root: [5, 3, 6, 2, 4, null, null, 1], k: 6 }, expectedOutput: 6, isVisible: false, orderIndex: 6 },
+      {
+        input: { root: [3, 1, 4, null, 2], k: 2 },
+        expectedOutput: 2,
+        isVisible: false,
+        orderIndex: 3,
+      },
+      {
+        input: { root: [3, 1, 4, null, 2], k: 3 },
+        expectedOutput: 3,
+        isVisible: false,
+        orderIndex: 4,
+      },
+      {
+        input: { root: [3, 1, 4, null, 2], k: 4 },
+        expectedOutput: 4,
+        isVisible: false,
+        orderIndex: 5,
+      },
+      {
+        input: { root: [5, 3, 6, 2, 4, null, null, 1], k: 6 },
+        expectedOutput: 6,
+        isVisible: false,
+        orderIndex: 6,
+      },
       { input: { root: [2, 1, 3], k: 2 }, expectedOutput: 2, isVisible: false, orderIndex: 7 },
     ],
     boilerplate: {
       language: "python",
-      template: "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\nclass Solution:\n    def kthSmallest(self, root: Optional[TreeNode], k: int) -> int:\n        pass",
+      template:
+        "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\nclass Solution:\n    def kthSmallest(self, root: Optional[TreeNode], k: int) -> int:\n        pass",
       methodName: "kthSmallest",
       parameterNames: ["root", "k"],
     },
     hints: [
-      { hintText: "In-order traversal of a BST visits nodes in ascending order. Which traversal order is that?", orderIndex: 0 },
-      { hintText: "Perform in-order traversal (left, node, right) and count nodes visited. When the count reaches k, that node's value is your answer. Use an iterative stack approach to stop early.", orderIndex: 1 },
+      {
+        hintText:
+          "In-order traversal of a BST visits nodes in ascending order. Which traversal order is that?",
+        orderIndex: 0,
+      },
+      {
+        hintText:
+          "Perform in-order traversal (left, node, right) and count nodes visited. When the count reaches k, that node's value is your answer. Use an iterative stack approach to stop early.",
+        orderIndex: 1,
+      },
     ],
   },
   {
@@ -474,30 +874,81 @@ export const treesProblems: ProblemFixture[] = [
         "preorder is guaranteed to be the preorder traversal of the tree.",
         "inorder is guaranteed to be the inorder traversal of the tree.",
       ],
-      solution: "The first element of preorder is the root. Find it in inorder to split left and right subtrees. Recursively build left and right subtrees using the corresponding slices. Use a hash map for O(1) inorder index lookup.",
+      solution:
+        "The first element of preorder is the root. Find it in inorder to split left and right subtrees. Recursively build left and right subtrees using the corresponding slices. Use a hash map for O(1) inorder index lookup.",
       timeLimitMs: 5000,
       source: "curated",
-      sourceUrl: "https://leetcode.com/problems/construct-binary-tree-from-preorder-and-inorder-traversal/",
+      sourceUrl:
+        "https://leetcode.com/problems/construct-binary-tree-from-preorder-and-inorder-traversal/",
     },
     testCases: [
-      { input: { preorder: [3, 9, 20, 15, 7], inorder: [9, 3, 15, 20, 7] }, expectedOutput: [3, 9, 20, null, null, 15, 7], isVisible: true, orderIndex: 0 },
-      { input: { preorder: [-1], inorder: [-1] }, expectedOutput: [-1], isVisible: true, orderIndex: 1 },
-      { input: { preorder: [1, 2], inorder: [2, 1] }, expectedOutput: [1, 2], isVisible: true, orderIndex: 2 },
-      { input: { preorder: [1, 2], inorder: [1, 2] }, expectedOutput: [1, null, 2], isVisible: false, orderIndex: 3 },
-      { input: { preorder: [1, 2, 3], inorder: [2, 1, 3] }, expectedOutput: [1, 2, 3], isVisible: false, orderIndex: 4 },
-      { input: { preorder: [1, 2, 4, 5, 3, 6, 7], inorder: [4, 2, 5, 1, 6, 3, 7] }, expectedOutput: [1, 2, 3, 4, 5, 6, 7], isVisible: false, orderIndex: 5 },
-      { input: { preorder: [3, 1, 2, 4], inorder: [1, 2, 3, 4] }, expectedOutput: [3, 1, 4, null, 2], isVisible: false, orderIndex: 6 },
-      { input: { preorder: [5, 3, 2, 4, 7, 6, 8], inorder: [2, 3, 4, 5, 6, 7, 8] }, expectedOutput: [5, 3, 7, 2, 4, 6, 8], isVisible: false, orderIndex: 7 },
+      {
+        input: { preorder: [3, 9, 20, 15, 7], inorder: [9, 3, 15, 20, 7] },
+        expectedOutput: [3, 9, 20, null, null, 15, 7],
+        isVisible: true,
+        orderIndex: 0,
+      },
+      {
+        input: { preorder: [-1], inorder: [-1] },
+        expectedOutput: [-1],
+        isVisible: true,
+        orderIndex: 1,
+      },
+      {
+        input: { preorder: [1, 2], inorder: [2, 1] },
+        expectedOutput: [1, 2],
+        isVisible: true,
+        orderIndex: 2,
+      },
+      {
+        input: { preorder: [1, 2], inorder: [1, 2] },
+        expectedOutput: [1, null, 2],
+        isVisible: false,
+        orderIndex: 3,
+      },
+      {
+        input: { preorder: [1, 2, 3], inorder: [2, 1, 3] },
+        expectedOutput: [1, 2, 3],
+        isVisible: false,
+        orderIndex: 4,
+      },
+      {
+        input: { preorder: [1, 2, 4, 5, 3, 6, 7], inorder: [4, 2, 5, 1, 6, 3, 7] },
+        expectedOutput: [1, 2, 3, 4, 5, 6, 7],
+        isVisible: false,
+        orderIndex: 5,
+      },
+      {
+        input: { preorder: [3, 1, 2, 4], inorder: [1, 2, 3, 4] },
+        expectedOutput: [3, 1, 4, null, 2],
+        isVisible: false,
+        orderIndex: 6,
+      },
+      {
+        input: { preorder: [5, 3, 2, 4, 7, 6, 8], inorder: [2, 3, 4, 5, 6, 7, 8] },
+        expectedOutput: [5, 3, 7, 2, 4, 6, 8],
+        isVisible: false,
+        orderIndex: 7,
+      },
     ],
     boilerplate: {
       language: "python",
-      template: "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\nclass Solution:\n    def buildTree(self, preorder: List[int], inorder: List[int]) -> Optional[TreeNode]:\n        pass",
+      template:
+        "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\nclass Solution:\n    def buildTree(self, preorder: List[int], inorder: List[int]) -> Optional[TreeNode]:\n        pass",
       methodName: "buildTree",
       parameterNames: ["preorder", "inorder"],
     },
     hints: [
-      { hintText: "The first element of preorder is always the root. In inorder, everything to the left of the root belongs to the left subtree, and everything to the right belongs to the right subtree.", orderIndex: 0 },
-      { hintText: "Build a hash map from value to index in inorder for O(1) lookup. Recursively construct the tree: take the next preorder element as root, find it in inorder, and recurse on the left and right partitions.", orderIndex: 1 },
+      {
+        hintText:
+          "The first element of preorder is always the root. In inorder, everything to the left of the root belongs to the left subtree, and everything to the right belongs to the right subtree.",
+        orderIndex: 0,
+      },
+      {
+        hintText:
+          "Build a hash map from value to index in inorder for O(1) lookup. Recursively construct the tree: take the next preorder element as root, find it in inorder, and recurse on the left and right partitions.",
+        orderIndex: 1,
+      },
     ],
   },
   {
@@ -512,31 +963,55 @@ export const treesProblems: ProblemFixture[] = [
         "The number of nodes in the tree is in the range [1, 3 * 10^4].",
         "-1000 <= Node.val <= 1000",
       ],
-      solution: "DFS returning the max gain from each subtree (node value + max of left or right gain, but not both). At each node, compute the path sum through it (node + left gain + right gain) and update the global maximum. Return the single-side max gain to the parent.",
+      solution:
+        "DFS returning the max gain from each subtree (node value + max of left or right gain, but not both). At each node, compute the path sum through it (node + left gain + right gain) and update the global maximum. Return the single-side max gain to the parent.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/binary-tree-maximum-path-sum/",
     },
     testCases: [
       { input: { root: [1, 2, 3] }, expectedOutput: 6, isVisible: true, orderIndex: 0 },
-      { input: { root: [-10, 9, 20, null, null, 15, 7] }, expectedOutput: 42, isVisible: true, orderIndex: 1 },
+      {
+        input: { root: [-10, 9, 20, null, null, 15, 7] },
+        expectedOutput: 42,
+        isVisible: true,
+        orderIndex: 1,
+      },
       { input: { root: [1] }, expectedOutput: 1, isVisible: true, orderIndex: 2 },
       { input: { root: [-3] }, expectedOutput: -3, isVisible: false, orderIndex: 3 },
       { input: { root: [2, -1] }, expectedOutput: 2, isVisible: false, orderIndex: 4 },
       { input: { root: [-2, -1] }, expectedOutput: -1, isVisible: false, orderIndex: 5 },
-      { input: { root: [5, 4, 8, 11, null, 13, 4, 7, 2, null, null, null, 1] }, expectedOutput: 48, isVisible: false, orderIndex: 6 },
+      {
+        input: { root: [5, 4, 8, 11, null, 13, 4, 7, 2, null, null, null, 1] },
+        expectedOutput: 48,
+        isVisible: false,
+        orderIndex: 6,
+      },
       { input: { root: [1, -2, 3] }, expectedOutput: 4, isVisible: false, orderIndex: 7 },
     ],
     boilerplate: {
       language: "python",
-      template: "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\nclass Solution:\n    def maxPathSum(self, root: Optional[TreeNode]) -> int:\n        pass",
+      template:
+        "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\nclass Solution:\n    def maxPathSum(self, root: Optional[TreeNode]) -> int:\n        pass",
       methodName: "maxPathSum",
       parameterNames: ["root"],
     },
     hints: [
-      { hintText: "At each node, you can either extend a path from a child or start a new path. The maximum path through a node uses at most one child path going up to its parent.", orderIndex: 0 },
-      { hintText: "A path can turn at any node (using both children). But when returning to the parent, you can only include one branch.", orderIndex: 1 },
-      { hintText: "DFS returns max(0, node.val + max(left_gain, right_gain)) to the parent. At each node, update a global max with node.val + left_gain + right_gain (the path that turns at this node). Clamp negative gains to 0.", orderIndex: 2 },
+      {
+        hintText:
+          "At each node, you can either extend a path from a child or start a new path. The maximum path through a node uses at most one child path going up to its parent.",
+        orderIndex: 0,
+      },
+      {
+        hintText:
+          "A path can turn at any node (using both children). But when returning to the parent, you can only include one branch.",
+        orderIndex: 1,
+      },
+      {
+        hintText:
+          "DFS returns max(0, node.val + max(left_gain, right_gain)) to the parent. At each node, update a global max with node.val + left_gain + right_gain (the path that turns at this node). Clamp negative gains to 0.",
+        orderIndex: 2,
+      },
     ],
   },
   {
@@ -551,31 +1026,70 @@ export const treesProblems: ProblemFixture[] = [
         "The number of nodes in the tree is in the range [0, 10^4].",
         "-1000 <= Node.val <= 1000",
       ],
-      solution: "Use preorder traversal for serialization, recording 'null' for empty nodes. For deserialization, use the same preorder sequence with an iterator, recursively building nodes and consuming 'null' markers.",
+      solution:
+        "Use preorder traversal for serialization, recording 'null' for empty nodes. For deserialization, use the same preorder sequence with an iterator, recursively building nodes and consuming 'null' markers.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/serialize-and-deserialize-binary-tree/",
     },
     testCases: [
-      { input: { root: [1, 2, 3, null, null, 4, 5] }, expectedOutput: [1, 2, 3, null, null, 4, 5], isVisible: true, orderIndex: 0 },
+      {
+        input: { root: [1, 2, 3, null, null, 4, 5] },
+        expectedOutput: [1, 2, 3, null, null, 4, 5],
+        isVisible: true,
+        orderIndex: 0,
+      },
       { input: { root: [] }, expectedOutput: [], isVisible: true, orderIndex: 1 },
       { input: { root: [1] }, expectedOutput: [1], isVisible: true, orderIndex: 2 },
       { input: { root: [1, 2] }, expectedOutput: [1, 2], isVisible: false, orderIndex: 3 },
-      { input: { root: [1, null, 2] }, expectedOutput: [1, null, 2], isVisible: false, orderIndex: 4 },
-      { input: { root: [1, 2, 3, 4, 5, 6, 7] }, expectedOutput: [1, 2, 3, 4, 5, 6, 7], isVisible: false, orderIndex: 5 },
-      { input: { root: [-1, -2, -3] }, expectedOutput: [-1, -2, -3], isVisible: false, orderIndex: 6 },
-      { input: { root: [1, 2, 3, null, null, 4, 5, 6, 7] }, expectedOutput: [1, 2, 3, null, null, 4, 5, 6, 7], isVisible: false, orderIndex: 7 },
+      {
+        input: { root: [1, null, 2] },
+        expectedOutput: [1, null, 2],
+        isVisible: false,
+        orderIndex: 4,
+      },
+      {
+        input: { root: [1, 2, 3, 4, 5, 6, 7] },
+        expectedOutput: [1, 2, 3, 4, 5, 6, 7],
+        isVisible: false,
+        orderIndex: 5,
+      },
+      {
+        input: { root: [-1, -2, -3] },
+        expectedOutput: [-1, -2, -3],
+        isVisible: false,
+        orderIndex: 6,
+      },
+      {
+        input: { root: [1, 2, 3, null, null, 4, 5, 6, 7] },
+        expectedOutput: [1, 2, 3, null, null, 4, 5, 6, 7],
+        isVisible: false,
+        orderIndex: 7,
+      },
     ],
     boilerplate: {
       language: "python",
-      template: "# Definition for a binary tree node.\n# class TreeNode(object):\n#     def __init__(self, x):\n#         self.val = x\n#         self.left = None\n#         self.right = None\nclass Codec:\n    def serialize(self, root):\n        pass\n\n    def deserialize(self, data):\n        pass",
+      template:
+        "# Definition for a binary tree node.\n# class TreeNode(object):\n#     def __init__(self, x):\n#         self.val = x\n#         self.left = None\n#         self.right = None\nclass Codec:\n    def serialize(self, root):\n        pass\n\n    def deserialize(self, data):\n        pass",
       methodName: "serialize",
       parameterNames: ["root"],
     },
     hints: [
-      { hintText: "You need a format that captures both structure and values. Consider how null markers can help reconstruct the tree.", orderIndex: 0 },
-      { hintText: "Use preorder traversal (or BFS) and record 'null' for absent children. This gives you enough information to uniquely reconstruct the tree.", orderIndex: 1 },
-      { hintText: "Serialize: preorder DFS, appending node values and 'null' for None. Deserialize: iterate through the serialized list, recursively creating nodes. When you see 'null', return None.", orderIndex: 2 },
+      {
+        hintText:
+          "You need a format that captures both structure and values. Consider how null markers can help reconstruct the tree.",
+        orderIndex: 0,
+      },
+      {
+        hintText:
+          "Use preorder traversal (or BFS) and record 'null' for absent children. This gives you enough information to uniquely reconstruct the tree.",
+        orderIndex: 1,
+      },
+      {
+        hintText:
+          "Serialize: preorder DFS, appending node values and 'null' for None. Deserialize: iterate through the serialized list, recursively creating nodes. When you see 'null', return None.",
+        orderIndex: 2,
+      },
     ],
   },
 ];

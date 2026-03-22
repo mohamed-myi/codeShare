@@ -9,11 +9,9 @@ export const slidingWindowProblems: ProblemFixture[] = [
       category: "Sliding Window",
       description:
         "You are given an array `prices` where `prices[i]` is the price of a given stock on the `ith` day.\n\nYou want to maximize your profit by choosing a single day to buy one stock and choosing a different day in the future to sell that stock.\n\nReturn the maximum profit you can achieve from this transaction. If you cannot achieve any profit, return `0`.",
-      constraints: [
-        "1 <= prices.length <= 10^5",
-        "0 <= prices[i] <= 10^4",
-      ],
-      solution: "Track the minimum price seen so far. For each day, calculate the profit if selling on that day (current price - min price so far). Track the maximum profit.",
+      constraints: ["1 <= prices.length <= 10^5", "0 <= prices[i] <= 10^4"],
+      solution:
+        "Track the minimum price seen so far. For each day, calculate the profit if selling on that day (current price - min price so far). Track the maximum profit.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/best-time-to-buy-and-sell-stock/",
@@ -35,7 +33,11 @@ export const slidingWindowProblems: ProblemFixture[] = [
       parameterNames: ["prices"],
     },
     hints: [
-      { hintText: "Keep track of the minimum price you've seen so far. At each step, the maximum profit is the current price minus that minimum.", orderIndex: 0 },
+      {
+        hintText:
+          "Keep track of the minimum price you've seen so far. At each step, the maximum profit is the current price minus that minimum.",
+        orderIndex: 0,
+      },
     ],
   },
   {
@@ -50,7 +52,8 @@ export const slidingWindowProblems: ProblemFixture[] = [
         "0 <= s.length <= 5 * 10^4",
         "s consists of English letters, digits, symbols and spaces.",
       ],
-      solution: "Use a sliding window with a hash set. Expand the right pointer adding characters. When a duplicate is found, shrink from the left until the duplicate is removed. Track the maximum window size.",
+      solution:
+        "Use a sliding window with a hash set. Expand the right pointer adding characters. When a duplicate is found, shrink from the left until the duplicate is removed. Track the maximum window size.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/longest-substring-without-repeating-characters/",
@@ -67,13 +70,22 @@ export const slidingWindowProblems: ProblemFixture[] = [
     ],
     boilerplate: {
       language: "python",
-      template: "class Solution:\n    def lengthOfLongestSubstring(self, s: str) -> int:\n        pass",
+      template:
+        "class Solution:\n    def lengthOfLongestSubstring(self, s: str) -> int:\n        pass",
       methodName: "lengthOfLongestSubstring",
       parameterNames: ["s"],
     },
     hints: [
-      { hintText: "Use a sliding window approach. Maintain a set of characters in the current window.", orderIndex: 0 },
-      { hintText: "When you encounter a duplicate character, shrink the window from the left by removing characters until the duplicate is gone.", orderIndex: 1 },
+      {
+        hintText:
+          "Use a sliding window approach. Maintain a set of characters in the current window.",
+        orderIndex: 0,
+      },
+      {
+        hintText:
+          "When you encounter a duplicate character, shrink the window from the left by removing characters until the duplicate is gone.",
+        orderIndex: 1,
+      },
     ],
   },
   {
@@ -89,7 +101,8 @@ export const slidingWindowProblems: ProblemFixture[] = [
         "s consists of only uppercase English letters.",
         "0 <= k <= s.length",
       ],
-      solution: "Use a sliding window with a frequency map. Track the count of the most frequent character in the window. If window_size - max_freq > k, shrink the window from the left. The answer is the maximum valid window size.",
+      solution:
+        "Use a sliding window with a frequency map. Track the count of the most frequent character in the window. If window_size - max_freq > k, shrink the window from the left. The answer is the maximum valid window size.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/longest-repeating-character-replacement/",
@@ -106,13 +119,22 @@ export const slidingWindowProblems: ProblemFixture[] = [
     ],
     boilerplate: {
       language: "python",
-      template: "class Solution:\n    def characterReplacement(self, s: str, k: int) -> int:\n        pass",
+      template:
+        "class Solution:\n    def characterReplacement(self, s: str, k: int) -> int:\n        pass",
       methodName: "characterReplacement",
       parameterNames: ["s", "k"],
     },
     hints: [
-      { hintText: "Use a sliding window. The key insight is: in any valid window, the number of characters that need to be replaced equals window_length - count_of_most_frequent_char.", orderIndex: 0 },
-      { hintText: "If the replacements needed exceed k, shrink the window from the left. Track the maximum count of any single character in the window.", orderIndex: 1 },
+      {
+        hintText:
+          "Use a sliding window. The key insight is: in any valid window, the number of characters that need to be replaced equals window_length - count_of_most_frequent_char.",
+        orderIndex: 0,
+      },
+      {
+        hintText:
+          "If the replacements needed exceed k, shrink the window from the left. Track the maximum count of any single character in the window.",
+        orderIndex: 1,
+      },
     ],
   },
   {
@@ -127,30 +149,50 @@ export const slidingWindowProblems: ProblemFixture[] = [
         "1 <= s1.length, s2.length <= 10^4",
         "s1 and s2 consist of lowercase English letters.",
       ],
-      solution: "Use a fixed-size sliding window of length len(s1) over s2. Maintain character frequency counts for the window and compare with s1's frequency counts. Slide the window by adding the new character and removing the old one.",
+      solution:
+        "Use a fixed-size sliding window of length len(s1) over s2. Maintain character frequency counts for the window and compare with s1's frequency counts. Slide the window by adding the new character and removing the old one.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/permutation-in-string/",
     },
     testCases: [
       { input: { s1: "ab", s2: "eidbaooo" }, expectedOutput: true, isVisible: true, orderIndex: 0 },
-      { input: { s1: "ab", s2: "eidboaoo" }, expectedOutput: false, isVisible: true, orderIndex: 1 },
+      {
+        input: { s1: "ab", s2: "eidboaoo" },
+        expectedOutput: false,
+        isVisible: true,
+        orderIndex: 1,
+      },
       { input: { s1: "a", s2: "a" }, expectedOutput: true, isVisible: true, orderIndex: 2 },
       { input: { s1: "abc", s2: "bbbca" }, expectedOutput: true, isVisible: false, orderIndex: 3 },
       { input: { s1: "abc", s2: "ab" }, expectedOutput: false, isVisible: false, orderIndex: 4 },
       { input: { s1: "adc", s2: "dcda" }, expectedOutput: true, isVisible: false, orderIndex: 5 },
       { input: { s1: "ab", s2: "a" }, expectedOutput: false, isVisible: false, orderIndex: 6 },
-      { input: { s1: "hello", s2: "ooolleoooleh" }, expectedOutput: false, isVisible: false, orderIndex: 7 },
+      {
+        input: { s1: "hello", s2: "ooolleoooleh" },
+        expectedOutput: false,
+        isVisible: false,
+        orderIndex: 7,
+      },
     ],
     boilerplate: {
       language: "python",
-      template: "class Solution:\n    def checkInclusion(self, s1: str, s2: str) -> bool:\n        pass",
+      template:
+        "class Solution:\n    def checkInclusion(self, s1: str, s2: str) -> bool:\n        pass",
       methodName: "checkInclusion",
       parameterNames: ["s1", "s2"],
     },
     hints: [
-      { hintText: "A permutation of s1 has the same character frequencies as s1. Use a sliding window of size len(s1) over s2.", orderIndex: 0 },
-      { hintText: "Maintain a frequency count of the current window. Compare it with the frequency count of s1. Slide the window by adding the new right character and removing the old left character.", orderIndex: 1 },
+      {
+        hintText:
+          "A permutation of s1 has the same character frequencies as s1. Use a sliding window of size len(s1) over s2.",
+        orderIndex: 0,
+      },
+      {
+        hintText:
+          "Maintain a frequency count of the current window. Compare it with the frequency count of s1. Slide the window by adding the new right character and removing the old left character.",
+        orderIndex: 1,
+      },
     ],
   },
   {
@@ -160,27 +202,43 @@ export const slidingWindowProblems: ProblemFixture[] = [
       difficulty: "hard",
       category: "Sliding Window",
       description:
-        "Given two strings `s` and `t` of lengths `m` and `n` respectively, return the minimum window substring of `s` such that every character in `t` (including duplicates) is included in the window. If there is no such substring, return the empty string `\"\"`.\n\nThe testcases will be generated such that the answer is unique.",
+        'Given two strings `s` and `t` of lengths `m` and `n` respectively, return the minimum window substring of `s` such that every character in `t` (including duplicates) is included in the window. If there is no such substring, return the empty string `""`.\n\nThe testcases will be generated such that the answer is unique.',
       constraints: [
         "m == s.length",
         "n == t.length",
         "1 <= m, n <= 10^5",
         "s and t consist of uppercase and lowercase English letters.",
       ],
-      solution: "Use a sliding window with two pointers. Maintain a frequency map for characters needed from t. Expand the right pointer to include characters, and once all characters are satisfied, shrink from the left to find the minimum window. Track the smallest valid window seen.",
+      solution:
+        "Use a sliding window with two pointers. Maintain a frequency map for characters needed from t. Expand the right pointer to include characters, and once all characters are satisfied, shrink from the left to find the minimum window. Track the smallest valid window seen.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/minimum-window-substring/",
     },
     testCases: [
-      { input: { s: "ADOBECODEBANC", t: "ABC" }, expectedOutput: "BANC", isVisible: true, orderIndex: 0 },
+      {
+        input: { s: "ADOBECODEBANC", t: "ABC" },
+        expectedOutput: "BANC",
+        isVisible: true,
+        orderIndex: 0,
+      },
       { input: { s: "a", t: "a" }, expectedOutput: "a", isVisible: true, orderIndex: 1 },
       { input: { s: "a", t: "aa" }, expectedOutput: "", isVisible: true, orderIndex: 2 },
       { input: { s: "aa", t: "aa" }, expectedOutput: "aa", isVisible: false, orderIndex: 3 },
       { input: { s: "abc", t: "b" }, expectedOutput: "b", isVisible: false, orderIndex: 4 },
       { input: { s: "bba", t: "ab" }, expectedOutput: "ba", isVisible: false, orderIndex: 5 },
-      { input: { s: "cabwefgewcwaefgcf", t: "cae" }, expectedOutput: "cwae", isVisible: false, orderIndex: 6 },
-      { input: { s: "aaflslflsldkalskaaa", t: "aaa" }, expectedOutput: "aaa", isVisible: false, orderIndex: 7 },
+      {
+        input: { s: "cabwefgewcwaefgcf", t: "cae" },
+        expectedOutput: "cwae",
+        isVisible: false,
+        orderIndex: 6,
+      },
+      {
+        input: { s: "aaflslflsldkalskaaa", t: "aaa" },
+        expectedOutput: "aaa",
+        isVisible: false,
+        orderIndex: 7,
+      },
     ],
     boilerplate: {
       language: "python",
@@ -189,9 +247,21 @@ export const slidingWindowProblems: ProblemFixture[] = [
       parameterNames: ["s", "t"],
     },
     hints: [
-      { hintText: "Use a sliding window approach. Keep a count of characters from t that you still need to find.", orderIndex: 0 },
-      { hintText: "Expand the window to the right to include more characters. Once the window contains all needed characters, try to shrink it from the left.", orderIndex: 1 },
-      { hintText: "Maintain a 'have' counter and a 'need' counter. When have equals need (all characters satisfied), try to shrink the window while updating the minimum.", orderIndex: 2 },
+      {
+        hintText:
+          "Use a sliding window approach. Keep a count of characters from t that you still need to find.",
+        orderIndex: 0,
+      },
+      {
+        hintText:
+          "Expand the window to the right to include more characters. Once the window contains all needed characters, try to shrink it from the left.",
+        orderIndex: 1,
+      },
+      {
+        hintText:
+          "Maintain a 'have' counter and a 'need' counter. When have equals need (all characters satisfied), try to shrink the window while updating the minimum.",
+        orderIndex: 2,
+      },
     ],
   },
   {
@@ -207,31 +277,65 @@ export const slidingWindowProblems: ProblemFixture[] = [
         "-10^4 <= nums[i] <= 10^4",
         "1 <= k <= nums.length",
       ],
-      solution: "Use a monotonic decreasing deque. For each new element, remove smaller elements from the back of the deque (they can never be the max). Remove the front element if it's outside the window. The front of the deque always holds the index of the current maximum.",
+      solution:
+        "Use a monotonic decreasing deque. For each new element, remove smaller elements from the back of the deque (they can never be the max). Remove the front element if it's outside the window. The front of the deque always holds the index of the current maximum.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/sliding-window-maximum/",
     },
     testCases: [
-      { input: { nums: [1, 3, -1, -3, 5, 3, 6, 7], k: 3 }, expectedOutput: [3, 3, 5, 5, 6, 7], isVisible: true, orderIndex: 0 },
+      {
+        input: { nums: [1, 3, -1, -3, 5, 3, 6, 7], k: 3 },
+        expectedOutput: [3, 3, 5, 5, 6, 7],
+        isVisible: true,
+        orderIndex: 0,
+      },
       { input: { nums: [1], k: 1 }, expectedOutput: [1], isVisible: true, orderIndex: 1 },
       { input: { nums: [1, -1], k: 1 }, expectedOutput: [1, -1], isVisible: true, orderIndex: 2 },
       { input: { nums: [7, 2, 4], k: 2 }, expectedOutput: [7, 4], isVisible: false, orderIndex: 3 },
-      { input: { nums: [1, 2, 3, 4, 5], k: 3 }, expectedOutput: [3, 4, 5], isVisible: false, orderIndex: 4 },
-      { input: { nums: [5, 4, 3, 2, 1], k: 3 }, expectedOutput: [5, 4, 3], isVisible: false, orderIndex: 5 },
-      { input: { nums: [1, 1, 1, 1], k: 2 }, expectedOutput: [1, 1, 1], isVisible: false, orderIndex: 6 },
+      {
+        input: { nums: [1, 2, 3, 4, 5], k: 3 },
+        expectedOutput: [3, 4, 5],
+        isVisible: false,
+        orderIndex: 4,
+      },
+      {
+        input: { nums: [5, 4, 3, 2, 1], k: 3 },
+        expectedOutput: [5, 4, 3],
+        isVisible: false,
+        orderIndex: 5,
+      },
+      {
+        input: { nums: [1, 1, 1, 1], k: 2 },
+        expectedOutput: [1, 1, 1],
+        isVisible: false,
+        orderIndex: 6,
+      },
       { input: { nums: [9, 11], k: 2 }, expectedOutput: [11], isVisible: false, orderIndex: 7 },
     ],
     boilerplate: {
       language: "python",
-      template: "class Solution:\n    def maxSlidingWindow(self, nums: List[int], k: int) -> List[int]:\n        pass",
+      template:
+        "class Solution:\n    def maxSlidingWindow(self, nums: List[int], k: int) -> List[int]:\n        pass",
       methodName: "maxSlidingWindow",
       parameterNames: ["nums", "k"],
     },
     hints: [
-      { hintText: "A brute-force approach checks all k elements for each window. Can you maintain a data structure that gives you the max in O(1)?", orderIndex: 0 },
-      { hintText: "Use a deque (double-ended queue) to maintain indices of useful elements. Keep the deque monotonically decreasing.", orderIndex: 1 },
-      { hintText: "For each new element: remove indices from the back that point to smaller elements, remove the front if it's outside the window. The front always holds the current max.", orderIndex: 2 },
+      {
+        hintText:
+          "A brute-force approach checks all k elements for each window. Can you maintain a data structure that gives you the max in O(1)?",
+        orderIndex: 0,
+      },
+      {
+        hintText:
+          "Use a deque (double-ended queue) to maintain indices of useful elements. Keep the deque monotonically decreasing.",
+        orderIndex: 1,
+      },
+      {
+        hintText:
+          "For each new element: remove indices from the back that point to smaller elements, remove the front if it's outside the window. The front always holds the current max.",
+        orderIndex: 2,
+      },
     ],
   },
 ];

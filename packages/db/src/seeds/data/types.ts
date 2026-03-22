@@ -1,8 +1,4 @@
-import type {
-  Difficulty,
-  ProblemSource,
-  SupportedLanguage,
-} from "@codeshare/shared";
+import type { Difficulty, ProblemSource, SupportedLanguage } from "@codeshare/shared";
 
 export interface TestCaseFixture {
   input: Record<string, unknown>;

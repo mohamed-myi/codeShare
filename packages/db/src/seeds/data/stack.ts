@@ -9,11 +9,9 @@ export const stackProblems: ProblemFixture[] = [
       category: "Stack",
       description:
         "Given a string `s` containing just the characters `'('`, `')'`, `'{'`, `'}'`, `'['` and `']'`, determine if the input string is valid.\n\nAn input string is valid if:\n\n1. Open brackets must be closed by the same type of brackets.\n2. Open brackets must be closed in the correct order.\n3. Every close bracket has a corresponding open bracket of the same type.",
-      constraints: [
-        "1 <= s.length <= 10^4",
-        "s consists of parentheses only '()[]{}'.",
-      ],
-      solution: "Use a stack. Push opening brackets onto the stack. When encountering a closing bracket, check if the top of the stack is the matching opening bracket. If the stack is empty at the end, the string is valid.",
+      constraints: ["1 <= s.length <= 10^4", "s consists of parentheses only '()[]{}'."],
+      solution:
+        "Use a stack. Push opening brackets onto the stack. When encountering a closing bracket, check if the top of the stack is the matching opening bracket. If the stack is empty at the end, the string is valid.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/valid-parentheses/",
@@ -35,7 +33,11 @@ export const stackProblems: ProblemFixture[] = [
       parameterNames: ["s"],
     },
     hints: [
-      { hintText: "Use a stack to keep track of opening brackets. When you encounter a closing bracket, check if it matches the most recent opening bracket on the stack.", orderIndex: 0 },
+      {
+        hintText:
+          "Use a stack to keep track of opening brackets. When you encounter a closing bracket, check if it matches the most recent opening bracket on the stack.",
+        orderIndex: 0,
+      },
     ],
   },
   {
@@ -51,30 +53,111 @@ export const stackProblems: ProblemFixture[] = [
         "Methods pop, top and getMin operations will always be called on non-empty stacks.",
         "At most 3 * 10^4 calls will be made to push, pop, top, and getMin.",
       ],
-      solution: "Use two stacks: one for the actual values and one to track the current minimum. On each push, push to the min stack only if the value is less than or equal to the current minimum. On pop, pop from the min stack if the popped value equals the current minimum.",
+      solution:
+        "Use two stacks: one for the actual values and one to track the current minimum. On each push, push to the min stack only if the value is less than or equal to the current minimum. On pop, pop from the min stack if the popped value equals the current minimum.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/min-stack/",
     },
     testCases: [
-      { input: { operations: ["MinStack", "push", "push", "push", "getMin", "pop", "top", "getMin"], args: [[], [-2], [0], [-3], [], [], [], []] }, expectedOutput: [null, null, null, null, -3, null, 0, -2], isVisible: true, orderIndex: 0 },
-      { input: { operations: ["MinStack", "push", "push", "getMin", "pop", "getMin"], args: [[], [1], [2], [], [], []] }, expectedOutput: [null, null, null, 1, null, 1], isVisible: true, orderIndex: 1 },
-      { input: { operations: ["MinStack", "push", "getMin", "top"], args: [[], [5], [], []] }, expectedOutput: [null, null, 5, 5], isVisible: true, orderIndex: 2 },
-      { input: { operations: ["MinStack", "push", "push", "push", "getMin", "pop", "getMin", "pop", "getMin"], args: [[], [3], [1], [2], [], [], [], [], []] }, expectedOutput: [null, null, null, null, 1, null, 1, null, 3], isVisible: false, orderIndex: 3 },
-      { input: { operations: ["MinStack", "push", "push", "push", "pop", "getMin"], args: [[], [0], [1], [0], [], []] }, expectedOutput: [null, null, null, null, null, 0], isVisible: false, orderIndex: 4 },
-      { input: { operations: ["MinStack", "push", "push", "getMin", "pop", "top", "getMin"], args: [[], [-1], [-2], [], [], [], []] }, expectedOutput: [null, null, null, -2, null, -1, -1], isVisible: false, orderIndex: 5 },
-      { input: { operations: ["MinStack", "push", "push", "push", "push", "getMin"], args: [[], [2], [2], [2], [2], []] }, expectedOutput: [null, null, null, null, null, 2], isVisible: false, orderIndex: 6 },
-      { input: { operations: ["MinStack", "push", "push", "top", "getMin", "pop", "top"], args: [[], [10], [-10], [], [], [], []] }, expectedOutput: [null, null, null, -10, -10, null, 10], isVisible: false, orderIndex: 7 },
+      {
+        input: {
+          operations: ["MinStack", "push", "push", "push", "getMin", "pop", "top", "getMin"],
+          args: [[], [-2], [0], [-3], [], [], [], []],
+        },
+        expectedOutput: [null, null, null, null, -3, null, 0, -2],
+        isVisible: true,
+        orderIndex: 0,
+      },
+      {
+        input: {
+          operations: ["MinStack", "push", "push", "getMin", "pop", "getMin"],
+          args: [[], [1], [2], [], [], []],
+        },
+        expectedOutput: [null, null, null, 1, null, 1],
+        isVisible: true,
+        orderIndex: 1,
+      },
+      {
+        input: { operations: ["MinStack", "push", "getMin", "top"], args: [[], [5], [], []] },
+        expectedOutput: [null, null, 5, 5],
+        isVisible: true,
+        orderIndex: 2,
+      },
+      {
+        input: {
+          operations: [
+            "MinStack",
+            "push",
+            "push",
+            "push",
+            "getMin",
+            "pop",
+            "getMin",
+            "pop",
+            "getMin",
+          ],
+          args: [[], [3], [1], [2], [], [], [], [], []],
+        },
+        expectedOutput: [null, null, null, null, 1, null, 1, null, 3],
+        isVisible: false,
+        orderIndex: 3,
+      },
+      {
+        input: {
+          operations: ["MinStack", "push", "push", "push", "pop", "getMin"],
+          args: [[], [0], [1], [0], [], []],
+        },
+        expectedOutput: [null, null, null, null, null, 0],
+        isVisible: false,
+        orderIndex: 4,
+      },
+      {
+        input: {
+          operations: ["MinStack", "push", "push", "getMin", "pop", "top", "getMin"],
+          args: [[], [-1], [-2], [], [], [], []],
+        },
+        expectedOutput: [null, null, null, -2, null, -1, -1],
+        isVisible: false,
+        orderIndex: 5,
+      },
+      {
+        input: {
+          operations: ["MinStack", "push", "push", "push", "push", "getMin"],
+          args: [[], [2], [2], [2], [2], []],
+        },
+        expectedOutput: [null, null, null, null, null, 2],
+        isVisible: false,
+        orderIndex: 6,
+      },
+      {
+        input: {
+          operations: ["MinStack", "push", "push", "top", "getMin", "pop", "top"],
+          args: [[], [10], [-10], [], [], [], []],
+        },
+        expectedOutput: [null, null, null, -10, -10, null, 10],
+        isVisible: false,
+        orderIndex: 7,
+      },
     ],
     boilerplate: {
       language: "python",
-      template: "class MinStack:\n    def __init__(self):\n        pass\n\n    def push(self, val: int) -> None:\n        pass\n\n    def pop(self) -> None:\n        pass\n\n    def top(self) -> int:\n        pass\n\n    def getMin(self) -> int:\n        pass",
+      template:
+        "class MinStack:\n    def __init__(self):\n        pass\n\n    def push(self, val: int) -> None:\n        pass\n\n    def pop(self) -> None:\n        pass\n\n    def top(self) -> int:\n        pass\n\n    def getMin(self) -> int:\n        pass",
       methodName: "MinStack",
       parameterNames: [],
     },
     hints: [
-      { hintText: "Think about maintaining extra information alongside the stack to track the minimum at each state.", orderIndex: 0 },
-      { hintText: "Use a second stack that tracks the minimum value at each level. When you push a value, also push the new minimum (min of current value and previous minimum) onto the min stack.", orderIndex: 1 },
+      {
+        hintText:
+          "Think about maintaining extra information alongside the stack to track the minimum at each state.",
+        orderIndex: 0,
+      },
+      {
+        hintText:
+          "Use a second stack that tracks the minimum value at each level. When you push a value, also push the new minimum (min of current value and previous minimum) onto the min stack.",
+        orderIndex: 1,
+      },
     ],
   },
   {
@@ -89,15 +172,31 @@ export const stackProblems: ProblemFixture[] = [
         "1 <= tokens.length <= 10^4",
         "tokens[i] is either an operator: '+', '-', '*', or '/', or an integer in the range [-200, 200].",
       ],
-      solution: "Use a stack. Iterate through tokens: push numbers onto the stack. When encountering an operator, pop two operands, apply the operator, and push the result back. The final value on the stack is the answer.",
+      solution:
+        "Use a stack. Iterate through tokens: push numbers onto the stack. When encountering an operator, pop two operands, apply the operator, and push the result back. The final value on the stack is the answer.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/evaluate-reverse-polish-notation/",
     },
     testCases: [
-      { input: { tokens: ["2", "1", "+", "3", "*"] }, expectedOutput: 9, isVisible: true, orderIndex: 0 },
-      { input: { tokens: ["4", "13", "5", "/", "+"] }, expectedOutput: 6, isVisible: true, orderIndex: 1 },
-      { input: { tokens: ["10", "6", "9", "3", "+", "-11", "*", "/", "*", "17", "+", "5", "+"] }, expectedOutput: 22, isVisible: true, orderIndex: 2 },
+      {
+        input: { tokens: ["2", "1", "+", "3", "*"] },
+        expectedOutput: 9,
+        isVisible: true,
+        orderIndex: 0,
+      },
+      {
+        input: { tokens: ["4", "13", "5", "/", "+"] },
+        expectedOutput: 6,
+        isVisible: true,
+        orderIndex: 1,
+      },
+      {
+        input: { tokens: ["10", "6", "9", "3", "+", "-11", "*", "/", "*", "17", "+", "5", "+"] },
+        expectedOutput: 22,
+        isVisible: true,
+        orderIndex: 2,
+      },
       { input: { tokens: ["3"] }, expectedOutput: 3, isVisible: false, orderIndex: 3 },
       { input: { tokens: ["1", "2", "+"] }, expectedOutput: 3, isVisible: false, orderIndex: 4 },
       { input: { tokens: ["5", "3", "-"] }, expectedOutput: 2, isVisible: false, orderIndex: 5 },
@@ -111,8 +210,16 @@ export const stackProblems: ProblemFixture[] = [
       parameterNames: ["tokens"],
     },
     hints: [
-      { hintText: "Process tokens from left to right. When you see a number, store it. When you see an operator, you need the two most recent numbers.", orderIndex: 0 },
-      { hintText: "Use a stack. Push numbers onto the stack. When you encounter an operator, pop two numbers, apply the operator (second popped is the left operand), and push the result.", orderIndex: 1 },
+      {
+        hintText:
+          "Process tokens from left to right. When you see a number, store it. When you see an operator, you need the two most recent numbers.",
+        orderIndex: 0,
+      },
+      {
+        hintText:
+          "Use a stack. Push numbers onto the stack. When you encounter an operator, pop two numbers, apply the operator (second popped is the left operand), and push the result.",
+        orderIndex: 1,
+      },
     ],
   },
   {
@@ -123,33 +230,139 @@ export const stackProblems: ProblemFixture[] = [
       category: "Stack",
       description:
         "Given `n` pairs of parentheses, write a function to generate all combinations of well-formed parentheses.",
-      constraints: [
-        "1 <= n <= 8",
-      ],
-      solution: "Use backtracking. Track the count of open and close parentheses used so far. Add an open parenthesis if open < n, and a close parenthesis if close < open. When both counts equal n, the current string is a valid combination.",
+      constraints: ["1 <= n <= 8"],
+      solution:
+        "Use backtracking. Track the count of open and close parentheses used so far. Add an open parenthesis if open < n, and a close parenthesis if close < open. When both counts equal n, the current string is a valid combination.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/generate-parentheses/",
     },
     testCases: [
-      { input: { n: 3 }, expectedOutput: ["((()))", "(()())", "(())()", "()(())", "()()()"], isVisible: true, orderIndex: 0 },
+      {
+        input: { n: 3 },
+        expectedOutput: ["((()))", "(()())", "(())()", "()(())", "()()()"],
+        isVisible: true,
+        orderIndex: 0,
+      },
       { input: { n: 1 }, expectedOutput: ["()"], isVisible: true, orderIndex: 1 },
       { input: { n: 2 }, expectedOutput: ["(())", "()()"], isVisible: true, orderIndex: 2 },
-      { input: { n: 4 }, expectedOutput: ["(((())))", "((()()))", "((())())", "((()))()", "(()(()))", "(()()())", "(()())()", "(())(())", "(())()()", "()((()))", "()(()())", "()(())()", "()()(())", "()()()()"], isVisible: false, orderIndex: 3 },
-      { input: { n: 5 }, expectedOutput: ["((((()))))", "(((()())))", "(((())()))", "(((()))())", "(((())))()", "((()(())))", "((()()()))", "((()())())", "((()()))()", "((())(()))", "((())()())", "((())())()", "((()))(())", "((()))()()", "(()((())))", "(()(()()))", "(()(())())", "(()(()))()", "(()()(()))", "(()()()())", "(()()())()", "(()())(())", "(()())()()", "(())((()))", "(())(()())", "(())(())()", "(())()(())", "(())()()()", "()(((())))", "()((()()))", "()((())())", "()((()))()", "()(()(()))", "()(()()())", "()(()())()", "()(())(())", "()(())()()", "()()((()))", "()()(()())", "()()(())()", "()()()(())", "()()()()()"], isVisible: false, orderIndex: 4 },
-      { input: { n: 4 }, expectedOutput: ["(((())))", "((()()))", "((())())", "((()))()", "(()(()))", "(()()())", "(()())()", "(())(())", "(())()()", "()((()))", "()(()())", "()(())()", "()()(())", "()()()()"], isVisible: false, orderIndex: 5 },
+      {
+        input: { n: 4 },
+        expectedOutput: [
+          "(((())))",
+          "((()()))",
+          "((())())",
+          "((()))()",
+          "(()(()))",
+          "(()()())",
+          "(()())()",
+          "(())(())",
+          "(())()()",
+          "()((()))",
+          "()(()())",
+          "()(())()",
+          "()()(())",
+          "()()()()",
+        ],
+        isVisible: false,
+        orderIndex: 3,
+      },
+      {
+        input: { n: 5 },
+        expectedOutput: [
+          "((((()))))",
+          "(((()())))",
+          "(((())()))",
+          "(((()))())",
+          "(((())))()",
+          "((()(())))",
+          "((()()()))",
+          "((()())())",
+          "((()()))()",
+          "((())(()))",
+          "((())()())",
+          "((())())()",
+          "((()))(())",
+          "((()))()()",
+          "(()((())))",
+          "(()(()()))",
+          "(()(())())",
+          "(()(()))()",
+          "(()()(()))",
+          "(()()()())",
+          "(()()())()",
+          "(()())(())",
+          "(()())()()",
+          "(())((()))",
+          "(())(()())",
+          "(())(())()",
+          "(())()(())",
+          "(())()()()",
+          "()(((())))",
+          "()((()()))",
+          "()((())())",
+          "()((()))()",
+          "()(()(()))",
+          "()(()()())",
+          "()(()())()",
+          "()(())(())",
+          "()(())()()",
+          "()()((()))",
+          "()()(()())",
+          "()()(())()",
+          "()()()(())",
+          "()()()()()",
+        ],
+        isVisible: false,
+        orderIndex: 4,
+      },
+      {
+        input: { n: 4 },
+        expectedOutput: [
+          "(((())))",
+          "((()()))",
+          "((())())",
+          "((()))()",
+          "(()(()))",
+          "(()()())",
+          "(()())()",
+          "(())(())",
+          "(())()()",
+          "()((()))",
+          "()(()())",
+          "()(())()",
+          "()()(())",
+          "()()()()",
+        ],
+        isVisible: false,
+        orderIndex: 5,
+      },
       { input: { n: 2 }, expectedOutput: ["(())", "()()"], isVisible: false, orderIndex: 6 },
-      { input: { n: 3 }, expectedOutput: ["((()))", "(()())", "(())()", "()(())", "()()()"], isVisible: false, orderIndex: 7 },
+      {
+        input: { n: 3 },
+        expectedOutput: ["((()))", "(()())", "(())()", "()(())", "()()()"],
+        isVisible: false,
+        orderIndex: 7,
+      },
     ],
     boilerplate: {
       language: "python",
-      template: "class Solution:\n    def generateParenthesis(self, n: int) -> List[str]:\n        pass",
+      template:
+        "class Solution:\n    def generateParenthesis(self, n: int) -> List[str]:\n        pass",
       methodName: "generateParenthesis",
       parameterNames: ["n"],
     },
     hints: [
-      { hintText: "Think about the conditions under which you can add an opening or closing parenthesis. You can only add a closing parenthesis if there are unmatched opening ones.", orderIndex: 0 },
-      { hintText: "Use backtracking with two counters: `open` and `close`. Add '(' if open < n, add ')' if close < open. When both equal n, you have a valid combination.", orderIndex: 1 },
+      {
+        hintText:
+          "Think about the conditions under which you can add an opening or closing parenthesis. You can only add a closing parenthesis if there are unmatched opening ones.",
+        orderIndex: 0,
+      },
+      {
+        hintText:
+          "Use backtracking with two counters: `open` and `close`. Add '(' if open < n, add ')' if close < open. When both equal n, you have a valid combination.",
+        orderIndex: 1,
+      },
     ],
   },
   {
@@ -160,34 +373,76 @@ export const stackProblems: ProblemFixture[] = [
       category: "Stack",
       description:
         "Given an array of integers `temperatures` represents the daily temperatures, return an array `answer` such that `answer[i]` is the number of days you have to wait after the `i`th day to get a warmer temperature. If there is no future day for which this is possible, keep `answer[i] == 0` instead.",
-      constraints: [
-        "1 <= temperatures.length <= 10^5",
-        "30 <= temperatures[i] <= 100",
-      ],
-      solution: "Use a monotonically decreasing stack of indices. Iterate through the temperatures. For each temperature, pop indices from the stack while the current temperature is greater than the temperature at the stack's top index, and set the answer for each popped index.",
+      constraints: ["1 <= temperatures.length <= 10^5", "30 <= temperatures[i] <= 100"],
+      solution:
+        "Use a monotonically decreasing stack of indices. Iterate through the temperatures. For each temperature, pop indices from the stack while the current temperature is greater than the temperature at the stack's top index, and set the answer for each popped index.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/daily-temperatures/",
     },
     testCases: [
-      { input: { temperatures: [73, 74, 75, 71, 69, 72, 76, 73] }, expectedOutput: [1, 1, 4, 2, 1, 1, 0, 0], isVisible: true, orderIndex: 0 },
-      { input: { temperatures: [30, 40, 50, 60] }, expectedOutput: [1, 1, 1, 0], isVisible: true, orderIndex: 1 },
-      { input: { temperatures: [30, 60, 90] }, expectedOutput: [1, 1, 0], isVisible: true, orderIndex: 2 },
-      { input: { temperatures: [90, 80, 70, 60] }, expectedOutput: [0, 0, 0, 0], isVisible: false, orderIndex: 3 },
+      {
+        input: { temperatures: [73, 74, 75, 71, 69, 72, 76, 73] },
+        expectedOutput: [1, 1, 4, 2, 1, 1, 0, 0],
+        isVisible: true,
+        orderIndex: 0,
+      },
+      {
+        input: { temperatures: [30, 40, 50, 60] },
+        expectedOutput: [1, 1, 1, 0],
+        isVisible: true,
+        orderIndex: 1,
+      },
+      {
+        input: { temperatures: [30, 60, 90] },
+        expectedOutput: [1, 1, 0],
+        isVisible: true,
+        orderIndex: 2,
+      },
+      {
+        input: { temperatures: [90, 80, 70, 60] },
+        expectedOutput: [0, 0, 0, 0],
+        isVisible: false,
+        orderIndex: 3,
+      },
       { input: { temperatures: [50] }, expectedOutput: [0], isVisible: false, orderIndex: 4 },
-      { input: { temperatures: [70, 70, 70, 70] }, expectedOutput: [0, 0, 0, 0], isVisible: false, orderIndex: 5 },
-      { input: { temperatures: [55, 38, 53, 81, 61, 93, 97, 32, 43, 78] }, expectedOutput: [3, 1, 1, 2, 1, 1, 0, 1, 1, 0], isVisible: false, orderIndex: 6 },
-      { input: { temperatures: [34, 80, 80, 34, 34, 80, 80, 80, 80, 34] }, expectedOutput: [1, 0, 0, 2, 1, 0, 0, 0, 0, 0], isVisible: false, orderIndex: 7 },
+      {
+        input: { temperatures: [70, 70, 70, 70] },
+        expectedOutput: [0, 0, 0, 0],
+        isVisible: false,
+        orderIndex: 5,
+      },
+      {
+        input: { temperatures: [55, 38, 53, 81, 61, 93, 97, 32, 43, 78] },
+        expectedOutput: [3, 1, 1, 2, 1, 1, 0, 1, 1, 0],
+        isVisible: false,
+        orderIndex: 6,
+      },
+      {
+        input: { temperatures: [34, 80, 80, 34, 34, 80, 80, 80, 80, 34] },
+        expectedOutput: [1, 0, 0, 2, 1, 0, 0, 0, 0, 0],
+        isVisible: false,
+        orderIndex: 7,
+      },
     ],
     boilerplate: {
       language: "python",
-      template: "class Solution:\n    def dailyTemperatures(self, temperatures: List[int]) -> List[int]:\n        pass",
+      template:
+        "class Solution:\n    def dailyTemperatures(self, temperatures: List[int]) -> List[int]:\n        pass",
       methodName: "dailyTemperatures",
       parameterNames: ["temperatures"],
     },
     hints: [
-      { hintText: "For each day, you need to find the next day with a higher temperature. Brute force is O(n^2). Think about a data structure that helps you process elements in order.", orderIndex: 0 },
-      { hintText: "Use a monotonically decreasing stack of indices. When the current temperature is warmer than the temperature at the top of the stack, pop and compute the difference in indices.", orderIndex: 1 },
+      {
+        hintText:
+          "For each day, you need to find the next day with a higher temperature. Brute force is O(n^2). Think about a data structure that helps you process elements in order.",
+        orderIndex: 0,
+      },
+      {
+        hintText:
+          "Use a monotonically decreasing stack of indices. When the current temperature is warmer than the temperature at the top of the stack, pop and compute the difference in indices.",
+        orderIndex: 1,
+      },
     ],
   },
   {
@@ -206,30 +461,80 @@ export const stackProblems: ProblemFixture[] = [
         "0 < speed[i] <= 10^6",
         "All the values of position are unique.",
       ],
-      solution: "Sort cars by position in descending order. Compute the time each car takes to reach the target. Iterate through the times: if a car's time is greater than the current fleet's time, it forms a new fleet. Otherwise, it merges with the fleet ahead.",
+      solution:
+        "Sort cars by position in descending order. Compute the time each car takes to reach the target. Iterate through the times: if a car's time is greater than the current fleet's time, it forms a new fleet. Otherwise, it merges with the fleet ahead.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/car-fleet/",
     },
     testCases: [
-      { input: { target: 12, position: [10, 8, 0, 5, 3], speed: [2, 4, 1, 1, 3] }, expectedOutput: 3, isVisible: true, orderIndex: 0 },
-      { input: { target: 10, position: [3], speed: [3] }, expectedOutput: 1, isVisible: true, orderIndex: 1 },
-      { input: { target: 100, position: [0, 2, 4], speed: [4, 2, 1] }, expectedOutput: 1, isVisible: true, orderIndex: 2 },
-      { input: { target: 10, position: [6, 8], speed: [3, 2] }, expectedOutput: 2, isVisible: false, orderIndex: 3 },
-      { input: { target: 10, position: [0, 4, 2], speed: [2, 1, 3] }, expectedOutput: 1, isVisible: false, orderIndex: 4 },
-      { input: { target: 20, position: [5, 10, 15], speed: [5, 5, 5] }, expectedOutput: 3, isVisible: false, orderIndex: 5 },
-      { input: { target: 10, position: [0, 5], speed: [10, 5] }, expectedOutput: 1, isVisible: false, orderIndex: 6 },
-      { input: { target: 10, position: [8, 3, 7, 4, 6, 5], speed: [4, 4, 4, 4, 4, 4] }, expectedOutput: 6, isVisible: false, orderIndex: 7 },
+      {
+        input: { target: 12, position: [10, 8, 0, 5, 3], speed: [2, 4, 1, 1, 3] },
+        expectedOutput: 3,
+        isVisible: true,
+        orderIndex: 0,
+      },
+      {
+        input: { target: 10, position: [3], speed: [3] },
+        expectedOutput: 1,
+        isVisible: true,
+        orderIndex: 1,
+      },
+      {
+        input: { target: 100, position: [0, 2, 4], speed: [4, 2, 1] },
+        expectedOutput: 1,
+        isVisible: true,
+        orderIndex: 2,
+      },
+      {
+        input: { target: 10, position: [6, 8], speed: [3, 2] },
+        expectedOutput: 2,
+        isVisible: false,
+        orderIndex: 3,
+      },
+      {
+        input: { target: 10, position: [0, 4, 2], speed: [2, 1, 3] },
+        expectedOutput: 1,
+        isVisible: false,
+        orderIndex: 4,
+      },
+      {
+        input: { target: 20, position: [5, 10, 15], speed: [5, 5, 5] },
+        expectedOutput: 3,
+        isVisible: false,
+        orderIndex: 5,
+      },
+      {
+        input: { target: 10, position: [0, 5], speed: [10, 5] },
+        expectedOutput: 1,
+        isVisible: false,
+        orderIndex: 6,
+      },
+      {
+        input: { target: 10, position: [8, 3, 7, 4, 6, 5], speed: [4, 4, 4, 4, 4, 4] },
+        expectedOutput: 6,
+        isVisible: false,
+        orderIndex: 7,
+      },
     ],
     boilerplate: {
       language: "python",
-      template: "class Solution:\n    def carFleet(self, target: int, position: List[int], speed: List[int]) -> int:\n        pass",
+      template:
+        "class Solution:\n    def carFleet(self, target: int, position: List[int], speed: List[int]) -> int:\n        pass",
       methodName: "carFleet",
       parameterNames: ["target", "position", "speed"],
     },
     hints: [
-      { hintText: "Calculate the time each car needs to reach the target. Cars closer to the target that are slower will block cars behind them.", orderIndex: 0 },
-      { hintText: "Sort cars by position in descending order (closest to target first). Use a stack-like approach: iterate through sorted times. If a car takes longer than the current fleet leader, it starts a new fleet.", orderIndex: 1 },
+      {
+        hintText:
+          "Calculate the time each car needs to reach the target. Cars closer to the target that are slower will block cars behind them.",
+        orderIndex: 0,
+      },
+      {
+        hintText:
+          "Sort cars by position in descending order (closest to target first). Use a stack-like approach: iterate through sorted times. If a car takes longer than the current fleet leader, it starts a new fleet.",
+        orderIndex: 1,
+      },
     ],
   },
   {
@@ -240,17 +545,20 @@ export const stackProblems: ProblemFixture[] = [
       category: "Stack",
       description:
         "Given an array of integers `heights` representing the histogram's bar height where the width of each bar is `1`, return the area of the largest rectangle in the histogram.",
-      constraints: [
-        "1 <= heights.length <= 10^5",
-        "0 <= heights[i] <= 10^4",
-      ],
-      solution: "Use a monotonically increasing stack of indices. For each bar, while the stack's top is taller, pop and compute the area using the popped height and the width determined by the current index and the new stack top. Process remaining bars after iteration.",
+      constraints: ["1 <= heights.length <= 10^5", "0 <= heights[i] <= 10^4"],
+      solution:
+        "Use a monotonically increasing stack of indices. For each bar, while the stack's top is taller, pop and compute the area using the popped height and the width determined by the current index and the new stack top. Process remaining bars after iteration.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/largest-rectangle-in-histogram/",
     },
     testCases: [
-      { input: { heights: [2, 1, 5, 6, 2, 3] }, expectedOutput: 10, isVisible: true, orderIndex: 0 },
+      {
+        input: { heights: [2, 1, 5, 6, 2, 3] },
+        expectedOutput: 10,
+        isVisible: true,
+        orderIndex: 0,
+      },
       { input: { heights: [2, 4] }, expectedOutput: 4, isVisible: true, orderIndex: 1 },
       { input: { heights: [1] }, expectedOutput: 1, isVisible: true, orderIndex: 2 },
       { input: { heights: [2, 1, 2] }, expectedOutput: 3, isVisible: false, orderIndex: 3 },
@@ -261,14 +569,27 @@ export const stackProblems: ProblemFixture[] = [
     ],
     boilerplate: {
       language: "python",
-      template: "class Solution:\n    def largestRectangleArea(self, heights: List[int]) -> int:\n        pass",
+      template:
+        "class Solution:\n    def largestRectangleArea(self, heights: List[int]) -> int:\n        pass",
       methodName: "largestRectangleArea",
       parameterNames: ["heights"],
     },
     hints: [
-      { hintText: "For each bar, the largest rectangle using that bar as the shortest has a width extending left and right until a shorter bar is found.", orderIndex: 0 },
-      { hintText: "Use a monotonically increasing stack of indices. When a bar shorter than the stack top is encountered, pop and calculate the area for the popped bar.", orderIndex: 1 },
-      { hintText: "When popping index `i`, the width is `current_index - stack[-1] - 1` if the stack is not empty, or `current_index` if it is. After processing all bars, pop remaining entries the same way using `len(heights)` as the right boundary.", orderIndex: 2 },
+      {
+        hintText:
+          "For each bar, the largest rectangle using that bar as the shortest has a width extending left and right until a shorter bar is found.",
+        orderIndex: 0,
+      },
+      {
+        hintText:
+          "Use a monotonically increasing stack of indices. When a bar shorter than the stack top is encountered, pop and calculate the area for the popped bar.",
+        orderIndex: 1,
+      },
+      {
+        hintText:
+          "When popping index `i`, the width is `current_index - stack[-1] - 1` if the stack is not empty, or `current_index` if it is. After processing all bars, pop remaining entries the same way using `len(heights)` as the right boundary.",
+        orderIndex: 2,
+      },
     ],
   },
 ];

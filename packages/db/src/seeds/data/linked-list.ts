@@ -13,29 +13,45 @@ export const linkedListProblems: ProblemFixture[] = [
         "The number of nodes in the list is the range [0, 5000].",
         "-5000 <= Node.val <= 5000",
       ],
-      solution: "Iterate through the list maintaining three pointers: prev, curr, and next. At each step, reverse the current node's pointer to point to prev, then advance all three pointers.",
+      solution:
+        "Iterate through the list maintaining three pointers: prev, curr, and next. At each step, reverse the current node's pointer to point to prev, then advance all three pointers.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/reverse-linked-list/",
     },
     testCases: [
-      { input: { head: [1, 2, 3, 4, 5] }, expectedOutput: [5, 4, 3, 2, 1], isVisible: true, orderIndex: 0 },
+      {
+        input: { head: [1, 2, 3, 4, 5] },
+        expectedOutput: [5, 4, 3, 2, 1],
+        isVisible: true,
+        orderIndex: 0,
+      },
       { input: { head: [1, 2] }, expectedOutput: [2, 1], isVisible: true, orderIndex: 1 },
       { input: { head: [] }, expectedOutput: [], isVisible: true, orderIndex: 2 },
       { input: { head: [1] }, expectedOutput: [1], isVisible: false, orderIndex: 3 },
       { input: { head: [1, 2, 3] }, expectedOutput: [3, 2, 1], isVisible: false, orderIndex: 4 },
       { input: { head: [0, 0, 0] }, expectedOutput: [0, 0, 0], isVisible: false, orderIndex: 5 },
       { input: { head: [-1, 0, 1] }, expectedOutput: [1, 0, -1], isVisible: false, orderIndex: 6 },
-      { input: { head: [5000, -5000] }, expectedOutput: [-5000, 5000], isVisible: false, orderIndex: 7 },
+      {
+        input: { head: [5000, -5000] },
+        expectedOutput: [-5000, 5000],
+        isVisible: false,
+        orderIndex: 7,
+      },
     ],
     boilerplate: {
       language: "python",
-      template: "# Definition for singly-linked list.\n# class ListNode:\n#     def __init__(self, val=0, next=None):\n#         self.val = val\n#         self.next = next\nclass Solution:\n    def reverseList(self, head: Optional[ListNode]) -> Optional[ListNode]:\n        pass",
+      template:
+        "# Definition for singly-linked list.\n# class ListNode:\n#     def __init__(self, val=0, next=None):\n#         self.val = val\n#         self.next = next\nclass Solution:\n    def reverseList(self, head: Optional[ListNode]) -> Optional[ListNode]:\n        pass",
       methodName: "reverseList",
       parameterNames: ["head"],
     },
     hints: [
-      { hintText: "Iterate through the list and reverse each node's pointer direction. Keep track of the previous node so you can point the current node's next to it.", orderIndex: 0 },
+      {
+        hintText:
+          "Iterate through the list and reverse each node's pointer direction. Keep track of the previous node so you can point the current node's next to it.",
+        orderIndex: 0,
+      },
     ],
   },
   {
@@ -51,29 +67,65 @@ export const linkedListProblems: ProblemFixture[] = [
         "-100 <= Node.val <= 100",
         "Both list1 and list2 are sorted in non-decreasing order.",
       ],
-      solution: "Use a dummy head node. Compare the front of both lists, append the smaller node to the merged list, and advance that list's pointer. After one list is exhausted, append the remainder of the other.",
+      solution:
+        "Use a dummy head node. Compare the front of both lists, append the smaller node to the merged list, and advance that list's pointer. After one list is exhausted, append the remainder of the other.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/merge-two-sorted-lists/",
     },
     testCases: [
-      { input: { list1: [1, 2, 4], list2: [1, 3, 4] }, expectedOutput: [1, 1, 2, 3, 4, 4], isVisible: true, orderIndex: 0 },
+      {
+        input: { list1: [1, 2, 4], list2: [1, 3, 4] },
+        expectedOutput: [1, 1, 2, 3, 4, 4],
+        isVisible: true,
+        orderIndex: 0,
+      },
       { input: { list1: [], list2: [] }, expectedOutput: [], isVisible: true, orderIndex: 1 },
       { input: { list1: [], list2: [0] }, expectedOutput: [0], isVisible: true, orderIndex: 2 },
-      { input: { list1: [1], list2: [2] }, expectedOutput: [1, 2], isVisible: false, orderIndex: 3 },
-      { input: { list1: [5], list2: [1, 2, 3] }, expectedOutput: [1, 2, 3, 5], isVisible: false, orderIndex: 4 },
-      { input: { list1: [1, 3, 5], list2: [2, 4, 6] }, expectedOutput: [1, 2, 3, 4, 5, 6], isVisible: false, orderIndex: 5 },
-      { input: { list1: [-1, 0, 1], list2: [-2, 0, 2] }, expectedOutput: [-2, -1, 0, 0, 1, 2], isVisible: false, orderIndex: 6 },
-      { input: { list1: [1, 1, 1], list2: [1, 1, 1] }, expectedOutput: [1, 1, 1, 1, 1, 1], isVisible: false, orderIndex: 7 },
+      {
+        input: { list1: [1], list2: [2] },
+        expectedOutput: [1, 2],
+        isVisible: false,
+        orderIndex: 3,
+      },
+      {
+        input: { list1: [5], list2: [1, 2, 3] },
+        expectedOutput: [1, 2, 3, 5],
+        isVisible: false,
+        orderIndex: 4,
+      },
+      {
+        input: { list1: [1, 3, 5], list2: [2, 4, 6] },
+        expectedOutput: [1, 2, 3, 4, 5, 6],
+        isVisible: false,
+        orderIndex: 5,
+      },
+      {
+        input: { list1: [-1, 0, 1], list2: [-2, 0, 2] },
+        expectedOutput: [-2, -1, 0, 0, 1, 2],
+        isVisible: false,
+        orderIndex: 6,
+      },
+      {
+        input: { list1: [1, 1, 1], list2: [1, 1, 1] },
+        expectedOutput: [1, 1, 1, 1, 1, 1],
+        isVisible: false,
+        orderIndex: 7,
+      },
     ],
     boilerplate: {
       language: "python",
-      template: "# Definition for singly-linked list.\n# class ListNode:\n#     def __init__(self, val=0, next=None):\n#         self.val = val\n#         self.next = next\nclass Solution:\n    def mergeTwoLists(self, list1: Optional[ListNode], list2: Optional[ListNode]) -> Optional[ListNode]:\n        pass",
+      template:
+        "# Definition for singly-linked list.\n# class ListNode:\n#     def __init__(self, val=0, next=None):\n#         self.val = val\n#         self.next = next\nclass Solution:\n    def mergeTwoLists(self, list1: Optional[ListNode], list2: Optional[ListNode]) -> Optional[ListNode]:\n        pass",
       methodName: "mergeTwoLists",
       parameterNames: ["list1", "list2"],
     },
     hints: [
-      { hintText: "Create a dummy head node and a pointer to build the merged list. At each step, compare the current nodes of both lists and append the smaller one.", orderIndex: 0 },
+      {
+        hintText:
+          "Create a dummy head node and a pointer to build the merged list. At each step, compare the current nodes of both lists and append the smaller one.",
+        orderIndex: 0,
+      },
     ],
   },
   {
@@ -89,29 +141,55 @@ export const linkedListProblems: ProblemFixture[] = [
         "-10^5 <= Node.val <= 10^5",
         "pos is -1 or a valid index in the linked-list.",
       ],
-      solution: "Use Floyd's cycle detection (tortoise and hare). Move slow pointer one step and fast pointer two steps. If they meet, there is a cycle. If fast reaches null, there is no cycle.",
+      solution:
+        "Use Floyd's cycle detection (tortoise and hare). Move slow pointer one step and fast pointer two steps. If they meet, there is a cycle. If fast reaches null, there is no cycle.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/linked-list-cycle/",
     },
     testCases: [
-      { input: { head: [3, 2, 0, -4], pos: 1 }, expectedOutput: true, isVisible: true, orderIndex: 0 },
+      {
+        input: { head: [3, 2, 0, -4], pos: 1 },
+        expectedOutput: true,
+        isVisible: true,
+        orderIndex: 0,
+      },
       { input: { head: [1, 2], pos: 0 }, expectedOutput: true, isVisible: true, orderIndex: 1 },
       { input: { head: [1], pos: -1 }, expectedOutput: false, isVisible: true, orderIndex: 2 },
       { input: { head: [], pos: -1 }, expectedOutput: false, isVisible: false, orderIndex: 3 },
-      { input: { head: [1, 2, 3, 4, 5], pos: -1 }, expectedOutput: false, isVisible: false, orderIndex: 4 },
-      { input: { head: [1, 2, 3, 4, 5], pos: 4 }, expectedOutput: true, isVisible: false, orderIndex: 5 },
-      { input: { head: [1, 2, 3, 4, 5], pos: 0 }, expectedOutput: true, isVisible: false, orderIndex: 6 },
+      {
+        input: { head: [1, 2, 3, 4, 5], pos: -1 },
+        expectedOutput: false,
+        isVisible: false,
+        orderIndex: 4,
+      },
+      {
+        input: { head: [1, 2, 3, 4, 5], pos: 4 },
+        expectedOutput: true,
+        isVisible: false,
+        orderIndex: 5,
+      },
+      {
+        input: { head: [1, 2, 3, 4, 5], pos: 0 },
+        expectedOutput: true,
+        isVisible: false,
+        orderIndex: 6,
+      },
       { input: { head: [1], pos: 0 }, expectedOutput: true, isVisible: false, orderIndex: 7 },
     ],
     boilerplate: {
       language: "python",
-      template: "# Definition for singly-linked list.\n# class ListNode:\n#     def __init__(self, x):\n#         self.val = x\n#         self.next = None\nclass Solution:\n    def hasCycle(self, head: Optional[ListNode]) -> bool:\n        pass",
+      template:
+        "# Definition for singly-linked list.\n# class ListNode:\n#     def __init__(self, x):\n#         self.val = x\n#         self.next = None\nclass Solution:\n    def hasCycle(self, head: Optional[ListNode]) -> bool:\n        pass",
       methodName: "hasCycle",
       parameterNames: ["head"],
     },
     hints: [
-      { hintText: "Use two pointers moving at different speeds (slow moves 1 step, fast moves 2 steps). If there is a cycle, the fast pointer will eventually catch up to the slow pointer.", orderIndex: 0 },
+      {
+        hintText:
+          "Use two pointers moving at different speeds (slow moves 1 step, fast moves 2 steps). If there is a cycle, the fast pointer will eventually catch up to the slow pointer.",
+        orderIndex: 0,
+      },
     ],
   },
   {
@@ -126,30 +204,65 @@ export const linkedListProblems: ProblemFixture[] = [
         "The number of nodes in the list is in the range [1, 5 * 10^4].",
         "1 <= Node.val <= 1000",
       ],
-      solution: "Three steps: (1) Find the middle using slow/fast pointers. (2) Reverse the second half of the list. (3) Merge the two halves by alternating nodes.",
+      solution:
+        "Three steps: (1) Find the middle using slow/fast pointers. (2) Reverse the second half of the list. (3) Merge the two halves by alternating nodes.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/reorder-list/",
     },
     testCases: [
-      { input: { head: [1, 2, 3, 4] }, expectedOutput: [1, 4, 2, 3], isVisible: true, orderIndex: 0 },
-      { input: { head: [1, 2, 3, 4, 5] }, expectedOutput: [1, 5, 2, 4, 3], isVisible: true, orderIndex: 1 },
+      {
+        input: { head: [1, 2, 3, 4] },
+        expectedOutput: [1, 4, 2, 3],
+        isVisible: true,
+        orderIndex: 0,
+      },
+      {
+        input: { head: [1, 2, 3, 4, 5] },
+        expectedOutput: [1, 5, 2, 4, 3],
+        isVisible: true,
+        orderIndex: 1,
+      },
       { input: { head: [1] }, expectedOutput: [1], isVisible: true, orderIndex: 2 },
       { input: { head: [1, 2] }, expectedOutput: [1, 2], isVisible: false, orderIndex: 3 },
       { input: { head: [1, 2, 3] }, expectedOutput: [1, 3, 2], isVisible: false, orderIndex: 4 },
-      { input: { head: [1, 2, 3, 4, 5, 6] }, expectedOutput: [1, 6, 2, 5, 3, 4], isVisible: false, orderIndex: 5 },
-      { input: { head: [1, 2, 3, 4, 5, 6, 7] }, expectedOutput: [1, 7, 2, 6, 3, 5, 4], isVisible: false, orderIndex: 6 },
-      { input: { head: [1, 1, 1, 1] }, expectedOutput: [1, 1, 1, 1], isVisible: false, orderIndex: 7 },
+      {
+        input: { head: [1, 2, 3, 4, 5, 6] },
+        expectedOutput: [1, 6, 2, 5, 3, 4],
+        isVisible: false,
+        orderIndex: 5,
+      },
+      {
+        input: { head: [1, 2, 3, 4, 5, 6, 7] },
+        expectedOutput: [1, 7, 2, 6, 3, 5, 4],
+        isVisible: false,
+        orderIndex: 6,
+      },
+      {
+        input: { head: [1, 1, 1, 1] },
+        expectedOutput: [1, 1, 1, 1],
+        isVisible: false,
+        orderIndex: 7,
+      },
     ],
     boilerplate: {
       language: "python",
-      template: "# Definition for singly-linked list.\n# class ListNode:\n#     def __init__(self, val=0, next=None):\n#         self.val = val\n#         self.next = next\nclass Solution:\n    def reorderList(self, head: Optional[ListNode]) -> None:\n        pass",
+      template:
+        "# Definition for singly-linked list.\n# class ListNode:\n#     def __init__(self, val=0, next=None):\n#         self.val = val\n#         self.next = next\nclass Solution:\n    def reorderList(self, head: Optional[ListNode]) -> None:\n        pass",
       methodName: "reorderList",
       parameterNames: ["head"],
     },
     hints: [
-      { hintText: "The reordered list interleaves nodes from the beginning and end. Think about how you can access nodes from the end efficiently.", orderIndex: 0 },
-      { hintText: "Split the list into two halves using slow/fast pointers. Reverse the second half, then merge the two halves by alternating nodes from each.", orderIndex: 1 },
+      {
+        hintText:
+          "The reordered list interleaves nodes from the beginning and end. Think about how you can access nodes from the end efficiently.",
+        orderIndex: 0,
+      },
+      {
+        hintText:
+          "Split the list into two halves using slow/fast pointers. Reverse the second half, then merge the two halves by alternating nodes from each.",
+        orderIndex: 1,
+      },
     ],
   },
   {
@@ -166,30 +279,55 @@ export const linkedListProblems: ProblemFixture[] = [
         "0 <= Node.val <= 100",
         "1 <= n <= sz",
       ],
-      solution: "Use two pointers separated by n nodes. Advance both until the fast pointer reaches the end. The slow pointer will be just before the node to remove. Use a dummy head to handle edge cases.",
+      solution:
+        "Use two pointers separated by n nodes. Advance both until the fast pointer reaches the end. The slow pointer will be just before the node to remove. Use a dummy head to handle edge cases.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/remove-nth-node-from-end-of-list/",
     },
     testCases: [
-      { input: { head: [1, 2, 3, 4, 5], n: 2 }, expectedOutput: [1, 2, 3, 5], isVisible: true, orderIndex: 0 },
+      {
+        input: { head: [1, 2, 3, 4, 5], n: 2 },
+        expectedOutput: [1, 2, 3, 5],
+        isVisible: true,
+        orderIndex: 0,
+      },
       { input: { head: [1], n: 1 }, expectedOutput: [], isVisible: true, orderIndex: 1 },
       { input: { head: [1, 2], n: 1 }, expectedOutput: [1], isVisible: true, orderIndex: 2 },
       { input: { head: [1, 2], n: 2 }, expectedOutput: [2], isVisible: false, orderIndex: 3 },
       { input: { head: [1, 2, 3], n: 3 }, expectedOutput: [2, 3], isVisible: false, orderIndex: 4 },
       { input: { head: [1, 2, 3], n: 1 }, expectedOutput: [1, 2], isVisible: false, orderIndex: 5 },
-      { input: { head: [1, 2, 3, 4, 5], n: 5 }, expectedOutput: [2, 3, 4, 5], isVisible: false, orderIndex: 6 },
-      { input: { head: [10, 20, 30, 40], n: 2 }, expectedOutput: [10, 20, 40], isVisible: false, orderIndex: 7 },
+      {
+        input: { head: [1, 2, 3, 4, 5], n: 5 },
+        expectedOutput: [2, 3, 4, 5],
+        isVisible: false,
+        orderIndex: 6,
+      },
+      {
+        input: { head: [10, 20, 30, 40], n: 2 },
+        expectedOutput: [10, 20, 40],
+        isVisible: false,
+        orderIndex: 7,
+      },
     ],
     boilerplate: {
       language: "python",
-      template: "# Definition for singly-linked list.\n# class ListNode:\n#     def __init__(self, val=0, next=None):\n#         self.val = val\n#         self.next = next\nclass Solution:\n    def removeNthFromEnd(self, head: Optional[ListNode], n: int) -> Optional[ListNode]:\n        pass",
+      template:
+        "# Definition for singly-linked list.\n# class ListNode:\n#     def __init__(self, val=0, next=None):\n#         self.val = val\n#         self.next = next\nclass Solution:\n    def removeNthFromEnd(self, head: Optional[ListNode], n: int) -> Optional[ListNode]:\n        pass",
       methodName: "removeNthFromEnd",
       parameterNames: ["head", "n"],
     },
     hints: [
-      { hintText: "If you knew the length of the list, you could find the node to remove easily. Can you find it in one pass instead?", orderIndex: 0 },
-      { hintText: "Use two pointers. Advance the fast pointer n steps ahead first, then move both pointers until fast reaches the end. The slow pointer will be right before the target node. Use a dummy head to handle removing the first node.", orderIndex: 1 },
+      {
+        hintText:
+          "If you knew the length of the list, you could find the node to remove easily. Can you find it in one pass instead?",
+        orderIndex: 0,
+      },
+      {
+        hintText:
+          "Use two pointers. Advance the fast pointer n steps ahead first, then move both pointers until fast reaches the end. The slow pointer will be right before the target node. Use a dummy head to handle removing the first node.",
+        orderIndex: 1,
+      },
     ],
   },
   {
@@ -205,30 +343,124 @@ export const linkedListProblems: ProblemFixture[] = [
         "-10^4 <= Node.val <= 10^4",
         "Node.random is null or is pointing to some node in the linked list.",
       ],
-      solution: "Use a hash map from original nodes to their copies. First pass: create all copy nodes and store the mapping. Second pass: assign next and random pointers using the map.",
+      solution:
+        "Use a hash map from original nodes to their copies. First pass: create all copy nodes and store the mapping. Second pass: assign next and random pointers using the map.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/copy-list-with-random-pointer/",
     },
     testCases: [
-      { input: { head: [[7, null], [13, 0], [11, 4], [10, 2], [1, 0]] }, expectedOutput: [[7, null], [13, 0], [11, 4], [10, 2], [1, 0]], isVisible: true, orderIndex: 0 },
-      { input: { head: [[1, 1], [2, 1]] }, expectedOutput: [[1, 1], [2, 1]], isVisible: true, orderIndex: 1 },
-      { input: { head: [[3, null], [3, 0], [3, null]] }, expectedOutput: [[3, null], [3, 0], [3, null]], isVisible: true, orderIndex: 2 },
+      {
+        input: {
+          head: [
+            [7, null],
+            [13, 0],
+            [11, 4],
+            [10, 2],
+            [1, 0],
+          ],
+        },
+        expectedOutput: [
+          [7, null],
+          [13, 0],
+          [11, 4],
+          [10, 2],
+          [1, 0],
+        ],
+        isVisible: true,
+        orderIndex: 0,
+      },
+      {
+        input: {
+          head: [
+            [1, 1],
+            [2, 1],
+          ],
+        },
+        expectedOutput: [
+          [1, 1],
+          [2, 1],
+        ],
+        isVisible: true,
+        orderIndex: 1,
+      },
+      {
+        input: {
+          head: [
+            [3, null],
+            [3, 0],
+            [3, null],
+          ],
+        },
+        expectedOutput: [
+          [3, null],
+          [3, 0],
+          [3, null],
+        ],
+        isVisible: true,
+        orderIndex: 2,
+      },
       { input: { head: [] }, expectedOutput: [], isVisible: false, orderIndex: 3 },
       { input: { head: [[1, 0]] }, expectedOutput: [[1, 0]], isVisible: false, orderIndex: 4 },
-      { input: { head: [[1, null]] }, expectedOutput: [[1, null]], isVisible: false, orderIndex: 5 },
-      { input: { head: [[1, 1], [2, 0]] }, expectedOutput: [[1, 1], [2, 0]], isVisible: false, orderIndex: 6 },
-      { input: { head: [[5, null], [4, null], [3, null], [2, null], [1, null]] }, expectedOutput: [[5, null], [4, null], [3, null], [2, null], [1, null]], isVisible: false, orderIndex: 7 },
+      {
+        input: { head: [[1, null]] },
+        expectedOutput: [[1, null]],
+        isVisible: false,
+        orderIndex: 5,
+      },
+      {
+        input: {
+          head: [
+            [1, 1],
+            [2, 0],
+          ],
+        },
+        expectedOutput: [
+          [1, 1],
+          [2, 0],
+        ],
+        isVisible: false,
+        orderIndex: 6,
+      },
+      {
+        input: {
+          head: [
+            [5, null],
+            [4, null],
+            [3, null],
+            [2, null],
+            [1, null],
+          ],
+        },
+        expectedOutput: [
+          [5, null],
+          [4, null],
+          [3, null],
+          [2, null],
+          [1, null],
+        ],
+        isVisible: false,
+        orderIndex: 7,
+      },
     ],
     boilerplate: {
       language: "python",
-      template: "\"\"\"\n# Definition for a Node.\nclass Node:\n    def __init__(self, x: int, next: 'Node' = None, random: 'Node' = None):\n        self.val = int(x)\n        self.next = next\n        self.random = random\n\"\"\"\nclass Solution:\n    def copyRandomList(self, head: 'Optional[Node]') -> 'Optional[Node]':\n        pass",
+      template:
+        "\"\"\"\n# Definition for a Node.\nclass Node:\n    def __init__(self, x: int, next: 'Node' = None, random: 'Node' = None):\n        self.val = int(x)\n        self.next = next\n        self.random = random\n\"\"\"\nclass Solution:\n    def copyRandomList(self, head: 'Optional[Node]') -> 'Optional[Node]':\n        pass",
       methodName: "copyRandomList",
       parameterNames: ["head"],
     },
     hints: [
-      { hintText: "You need to create new nodes and correctly wire their next and random pointers. The challenge is mapping original nodes to their copies for the random pointers.", orderIndex: 0 },
-      { hintText: "Use a hash map from original node to copy node. First pass: create all copy nodes. Second pass: for each original node, set copy.next and copy.random using the map to look up the corresponding copy nodes.", orderIndex: 1 },
+      {
+        hintText:
+          "You need to create new nodes and correctly wire their next and random pointers. The challenge is mapping original nodes to their copies for the random pointers.",
+        orderIndex: 0,
+      },
+      {
+        hintText:
+          "Use a hash map from original node to copy node. First pass: create all copy nodes. Second pass: for each original node, set copy.next and copy.random using the map to look up the corresponding copy nodes.",
+        orderIndex: 1,
+      },
     ],
   },
   {
@@ -244,30 +476,65 @@ export const linkedListProblems: ProblemFixture[] = [
         "0 <= Node.val <= 9",
         "It is guaranteed that the list represents a number that does not have leading zeros.",
       ],
-      solution: "Traverse both lists simultaneously, adding corresponding digits along with any carry. Create new nodes for each digit of the result. Continue until both lists and the carry are exhausted.",
+      solution:
+        "Traverse both lists simultaneously, adding corresponding digits along with any carry. Create new nodes for each digit of the result. Continue until both lists and the carry are exhausted.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/add-two-numbers/",
     },
     testCases: [
-      { input: { l1: [2, 4, 3], l2: [5, 6, 4] }, expectedOutput: [7, 0, 8], isVisible: true, orderIndex: 0 },
+      {
+        input: { l1: [2, 4, 3], l2: [5, 6, 4] },
+        expectedOutput: [7, 0, 8],
+        isVisible: true,
+        orderIndex: 0,
+      },
       { input: { l1: [0], l2: [0] }, expectedOutput: [0], isVisible: true, orderIndex: 1 },
-      { input: { l1: [9, 9, 9, 9, 9, 9, 9], l2: [9, 9, 9, 9] }, expectedOutput: [8, 9, 9, 9, 0, 0, 0, 1], isVisible: true, orderIndex: 2 },
-      { input: { l1: [1], l2: [9, 9] }, expectedOutput: [0, 0, 1], isVisible: false, orderIndex: 3 },
+      {
+        input: { l1: [9, 9, 9, 9, 9, 9, 9], l2: [9, 9, 9, 9] },
+        expectedOutput: [8, 9, 9, 9, 0, 0, 0, 1],
+        isVisible: true,
+        orderIndex: 2,
+      },
+      {
+        input: { l1: [1], l2: [9, 9] },
+        expectedOutput: [0, 0, 1],
+        isVisible: false,
+        orderIndex: 3,
+      },
       { input: { l1: [5], l2: [5] }, expectedOutput: [0, 1], isVisible: false, orderIndex: 4 },
-      { input: { l1: [1, 2, 3], l2: [1, 2, 3] }, expectedOutput: [2, 4, 6], isVisible: false, orderIndex: 5 },
-      { input: { l1: [0, 0, 1], l2: [0, 0, 1] }, expectedOutput: [0, 0, 2], isVisible: false, orderIndex: 6 },
+      {
+        input: { l1: [1, 2, 3], l2: [1, 2, 3] },
+        expectedOutput: [2, 4, 6],
+        isVisible: false,
+        orderIndex: 5,
+      },
+      {
+        input: { l1: [0, 0, 1], l2: [0, 0, 1] },
+        expectedOutput: [0, 0, 2],
+        isVisible: false,
+        orderIndex: 6,
+      },
       { input: { l1: [9], l2: [1] }, expectedOutput: [0, 1], isVisible: false, orderIndex: 7 },
     ],
     boilerplate: {
       language: "python",
-      template: "# Definition for singly-linked list.\n# class ListNode:\n#     def __init__(self, val=0, next=None):\n#         self.val = val\n#         self.next = next\nclass Solution:\n    def addTwoNumbers(self, l1: Optional[ListNode], l2: Optional[ListNode]) -> Optional[ListNode]:\n        pass",
+      template:
+        "# Definition for singly-linked list.\n# class ListNode:\n#     def __init__(self, val=0, next=None):\n#         self.val = val\n#         self.next = next\nclass Solution:\n    def addTwoNumbers(self, l1: Optional[ListNode], l2: Optional[ListNode]) -> Optional[ListNode]:\n        pass",
       methodName: "addTwoNumbers",
       parameterNames: ["l1", "l2"],
     },
     hints: [
-      { hintText: "Since the digits are stored in reverse order, the head of each list is the ones digit. You can add digits from head to tail, just like manual addition.", orderIndex: 0 },
-      { hintText: "Traverse both lists simultaneously, maintaining a carry variable. For each position, compute sum = l1.val + l2.val + carry. The new digit is sum % 10 and the new carry is sum // 10.", orderIndex: 1 },
+      {
+        hintText:
+          "Since the digits are stored in reverse order, the head of each list is the ones digit. You can add digits from head to tail, just like manual addition.",
+        orderIndex: 0,
+      },
+      {
+        hintText:
+          "Traverse both lists simultaneously, maintaining a carry variable. For each position, compute sum = l1.val + l2.val + carry. The new digit is sum % 10 and the new carry is sum // 10.",
+        orderIndex: 1,
+      },
     ],
   },
   {
@@ -284,7 +551,8 @@ export const linkedListProblems: ProblemFixture[] = [
         "1 <= nums[i] <= n",
         "There is only one repeated number in nums, but it could be repeated more than once.",
       ],
-      solution: "Treat the array as a linked list where index i points to nums[i]. Use Floyd's cycle detection to find the cycle entrance, which is the duplicate number.",
+      solution:
+        "Treat the array as a linked list where index i points to nums[i]. Use Floyd's cycle detection to find the cycle entrance, which is the duplicate number.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/find-the-duplicate-number/",
@@ -297,17 +565,31 @@ export const linkedListProblems: ProblemFixture[] = [
       { input: { nums: [2, 2, 2, 2, 2] }, expectedOutput: 2, isVisible: false, orderIndex: 4 },
       { input: { nums: [1, 4, 4, 2, 4] }, expectedOutput: 4, isVisible: false, orderIndex: 5 },
       { input: { nums: [1, 2, 3, 4, 5, 5] }, expectedOutput: 5, isVisible: false, orderIndex: 6 },
-      { input: { nums: [2, 5, 9, 6, 9, 3, 8, 9, 7, 1] }, expectedOutput: 9, isVisible: false, orderIndex: 7 },
+      {
+        input: { nums: [2, 5, 9, 6, 9, 3, 8, 9, 7, 1] },
+        expectedOutput: 9,
+        isVisible: false,
+        orderIndex: 7,
+      },
     ],
     boilerplate: {
       language: "python",
-      template: "class Solution:\n    def findDuplicate(self, nums: List[int]) -> int:\n        pass",
+      template:
+        "class Solution:\n    def findDuplicate(self, nums: List[int]) -> int:\n        pass",
       methodName: "findDuplicate",
       parameterNames: ["nums"],
     },
     hints: [
-      { hintText: "Think of the array as a function f(i) = nums[i]. Since values are in [1, n] and there are n+1 entries, there must be a cycle in the sequence i -> nums[i] -> nums[nums[i]] -> ...", orderIndex: 0 },
-      { hintText: "Use Floyd's cycle detection (tortoise and hare). The entrance to the cycle is the duplicate number. Phase 1: find intersection point. Phase 2: find cycle entrance.", orderIndex: 1 },
+      {
+        hintText:
+          "Think of the array as a function f(i) = nums[i]. Since values are in [1, n] and there are n+1 entries, there must be a cycle in the sequence i -> nums[i] -> nums[nums[i]] -> ...",
+        orderIndex: 0,
+      },
+      {
+        hintText:
+          "Use Floyd's cycle detection (tortoise and hare). The entrance to the cycle is the duplicate number. Phase 1: find intersection point. Phase 2: find cycle entrance.",
+        orderIndex: 1,
+      },
     ],
   },
   {
@@ -324,30 +606,101 @@ export const linkedListProblems: ProblemFixture[] = [
         "0 <= value <= 10^5",
         "At most 2 * 10^5 calls will be made to get and put.",
       ],
-      solution: "Combine a hash map (key -> node) with a doubly linked list (ordered by recency). Get and put both move the accessed node to the head. When capacity is exceeded, remove the tail node and delete its key from the map.",
+      solution:
+        "Combine a hash map (key -> node) with a doubly linked list (ordered by recency). Get and put both move the accessed node to the head. When capacity is exceeded, remove the tail node and delete its key from the map.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/lru-cache/",
     },
     testCases: [
-      { input: { operations: ["LRUCache", "put", "put", "get", "put", "get", "put", "get", "get", "get"], args: [[2], [1, 1], [2, 2], [1], [3, 3], [2], [4, 4], [1], [3], [4]] }, expectedOutput: [null, null, null, 1, null, -1, null, -1, 3, 4], isVisible: true, orderIndex: 0 },
-      { input: { operations: ["LRUCache", "put", "get", "put", "get", "get"], args: [[1], [1, 1], [1], [2, 2], [1], [2]] }, expectedOutput: [null, null, 1, null, -1, 2], isVisible: true, orderIndex: 1 },
-      { input: { operations: ["LRUCache", "put", "put", "get", "get"], args: [[2], [1, 10], [2, 20], [1], [2]] }, expectedOutput: [null, null, null, 10, 20], isVisible: true, orderIndex: 2 },
-      { input: { operations: ["LRUCache", "put", "put", "put", "get"], args: [[2], [1, 1], [2, 2], [3, 3], [1]] }, expectedOutput: [null, null, null, null, -1], isVisible: false, orderIndex: 3 },
-      { input: { operations: ["LRUCache", "get"], args: [[1], [1]] }, expectedOutput: [null, -1], isVisible: false, orderIndex: 4 },
-      { input: { operations: ["LRUCache", "put", "put", "get", "put", "get"], args: [[2], [1, 1], [2, 2], [2], [3, 3], [1]] }, expectedOutput: [null, null, null, 2, null, -1], isVisible: false, orderIndex: 5 },
-      { input: { operations: ["LRUCache", "put", "put", "put", "put", "get", "get"], args: [[2], [2, 1], [1, 1], [2, 3], [4, 1], [1], [2]] }, expectedOutput: [null, null, null, null, null, -1, 3], isVisible: false, orderIndex: 6 },
-      { input: { operations: ["LRUCache", "put", "get", "put", "get"], args: [[1], [1, 42], [1], [1, 99], [1]] }, expectedOutput: [null, null, 42, null, 99], isVisible: false, orderIndex: 7 },
+      {
+        input: {
+          operations: ["LRUCache", "put", "put", "get", "put", "get", "put", "get", "get", "get"],
+          args: [[2], [1, 1], [2, 2], [1], [3, 3], [2], [4, 4], [1], [3], [4]],
+        },
+        expectedOutput: [null, null, null, 1, null, -1, null, -1, 3, 4],
+        isVisible: true,
+        orderIndex: 0,
+      },
+      {
+        input: {
+          operations: ["LRUCache", "put", "get", "put", "get", "get"],
+          args: [[1], [1, 1], [1], [2, 2], [1], [2]],
+        },
+        expectedOutput: [null, null, 1, null, -1, 2],
+        isVisible: true,
+        orderIndex: 1,
+      },
+      {
+        input: {
+          operations: ["LRUCache", "put", "put", "get", "get"],
+          args: [[2], [1, 10], [2, 20], [1], [2]],
+        },
+        expectedOutput: [null, null, null, 10, 20],
+        isVisible: true,
+        orderIndex: 2,
+      },
+      {
+        input: {
+          operations: ["LRUCache", "put", "put", "put", "get"],
+          args: [[2], [1, 1], [2, 2], [3, 3], [1]],
+        },
+        expectedOutput: [null, null, null, null, -1],
+        isVisible: false,
+        orderIndex: 3,
+      },
+      {
+        input: { operations: ["LRUCache", "get"], args: [[1], [1]] },
+        expectedOutput: [null, -1],
+        isVisible: false,
+        orderIndex: 4,
+      },
+      {
+        input: {
+          operations: ["LRUCache", "put", "put", "get", "put", "get"],
+          args: [[2], [1, 1], [2, 2], [2], [3, 3], [1]],
+        },
+        expectedOutput: [null, null, null, 2, null, -1],
+        isVisible: false,
+        orderIndex: 5,
+      },
+      {
+        input: {
+          operations: ["LRUCache", "put", "put", "put", "put", "get", "get"],
+          args: [[2], [2, 1], [1, 1], [2, 3], [4, 1], [1], [2]],
+        },
+        expectedOutput: [null, null, null, null, null, -1, 3],
+        isVisible: false,
+        orderIndex: 6,
+      },
+      {
+        input: {
+          operations: ["LRUCache", "put", "get", "put", "get"],
+          args: [[1], [1, 42], [1], [1, 99], [1]],
+        },
+        expectedOutput: [null, null, 42, null, 99],
+        isVisible: false,
+        orderIndex: 7,
+      },
     ],
     boilerplate: {
       language: "python",
-      template: "class LRUCache:\n    def __init__(self, capacity: int):\n        pass\n\n    def get(self, key: int) -> int:\n        pass\n\n    def put(self, key: int, value: int) -> None:\n        pass",
+      template:
+        "class LRUCache:\n    def __init__(self, capacity: int):\n        pass\n\n    def get(self, key: int) -> int:\n        pass\n\n    def put(self, key: int, value: int) -> None:\n        pass",
       methodName: "LRUCache",
       parameterNames: ["capacity"],
     },
     hints: [
-      { hintText: "You need O(1) lookup by key and O(1) insertion/removal by recency. Think about which data structures provide these properties.", orderIndex: 0 },
-      { hintText: "Use a hash map for O(1) key lookup and a doubly linked list to maintain access order. The most recently used item goes to the front, and the least recently used item (at the tail) gets evicted when capacity is exceeded.", orderIndex: 1 },
+      {
+        hintText:
+          "You need O(1) lookup by key and O(1) insertion/removal by recency. Think about which data structures provide these properties.",
+        orderIndex: 0,
+      },
+      {
+        hintText:
+          "Use a hash map for O(1) key lookup and a doubly linked list to maintain access order. The most recently used item goes to the front, and the least recently used item (at the tail) gets evicted when capacity is exceeded.",
+        orderIndex: 1,
+      },
     ],
   },
   {
@@ -366,31 +719,82 @@ export const linkedListProblems: ProblemFixture[] = [
         "lists[i] is sorted in ascending order.",
         "The sum of lists[i].length will not exceed 10^4.",
       ],
-      solution: "Use a min-heap (priority queue) to efficiently find the smallest element among all list heads. Push the head of each list into the heap. Repeatedly extract the minimum, add it to the result, and push the next node from that list.",
+      solution:
+        "Use a min-heap (priority queue) to efficiently find the smallest element among all list heads. Push the head of each list into the heap. Repeatedly extract the minimum, add it to the result, and push the next node from that list.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/merge-k-sorted-lists/",
     },
     testCases: [
-      { input: { lists: [[1, 4, 5], [1, 3, 4], [2, 6]] }, expectedOutput: [1, 1, 2, 3, 4, 4, 5, 6], isVisible: true, orderIndex: 0 },
+      {
+        input: {
+          lists: [
+            [1, 4, 5],
+            [1, 3, 4],
+            [2, 6],
+          ],
+        },
+        expectedOutput: [1, 1, 2, 3, 4, 4, 5, 6],
+        isVisible: true,
+        orderIndex: 0,
+      },
       { input: { lists: [] }, expectedOutput: [], isVisible: true, orderIndex: 1 },
       { input: { lists: [[]] }, expectedOutput: [], isVisible: true, orderIndex: 2 },
       { input: { lists: [[1]] }, expectedOutput: [1], isVisible: false, orderIndex: 3 },
-      { input: { lists: [[1, 2], [3, 4], [5, 6]] }, expectedOutput: [1, 2, 3, 4, 5, 6], isVisible: false, orderIndex: 4 },
-      { input: { lists: [[-1, 0, 1], [-2, 0, 2]] }, expectedOutput: [-2, -1, 0, 0, 1, 2], isVisible: false, orderIndex: 5 },
-      { input: { lists: [[1], [1], [1]] }, expectedOutput: [1, 1, 1], isVisible: false, orderIndex: 6 },
+      {
+        input: {
+          lists: [
+            [1, 2],
+            [3, 4],
+            [5, 6],
+          ],
+        },
+        expectedOutput: [1, 2, 3, 4, 5, 6],
+        isVisible: false,
+        orderIndex: 4,
+      },
+      {
+        input: {
+          lists: [
+            [-1, 0, 1],
+            [-2, 0, 2],
+          ],
+        },
+        expectedOutput: [-2, -1, 0, 0, 1, 2],
+        isVisible: false,
+        orderIndex: 5,
+      },
+      {
+        input: { lists: [[1], [1], [1]] },
+        expectedOutput: [1, 1, 1],
+        isVisible: false,
+        orderIndex: 6,
+      },
       { input: { lists: [[], [1], []] }, expectedOutput: [1], isVisible: false, orderIndex: 7 },
     ],
     boilerplate: {
       language: "python",
-      template: "# Definition for singly-linked list.\n# class ListNode:\n#     def __init__(self, val=0, next=None):\n#         self.val = val\n#         self.next = next\nclass Solution:\n    def mergeKLists(self, lists: List[Optional[ListNode]]) -> Optional[ListNode]:\n        pass",
+      template:
+        "# Definition for singly-linked list.\n# class ListNode:\n#     def __init__(self, val=0, next=None):\n#         self.val = val\n#         self.next = next\nclass Solution:\n    def mergeKLists(self, lists: List[Optional[ListNode]]) -> Optional[ListNode]:\n        pass",
       methodName: "mergeKLists",
       parameterNames: ["lists"],
     },
     hints: [
-      { hintText: "You need to repeatedly find the smallest element across k list heads. A brute force comparison each time is O(k). Can you do better?", orderIndex: 0 },
-      { hintText: "A min-heap (priority queue) lets you extract the minimum in O(log k) time. Push the head of each non-empty list into the heap.", orderIndex: 1 },
-      { hintText: "Initialize the heap with all list heads. Pop the minimum node, add it to the result. If that node has a next, push it into the heap. Continue until the heap is empty.", orderIndex: 2 },
+      {
+        hintText:
+          "You need to repeatedly find the smallest element across k list heads. A brute force comparison each time is O(k). Can you do better?",
+        orderIndex: 0,
+      },
+      {
+        hintText:
+          "A min-heap (priority queue) lets you extract the minimum in O(log k) time. Push the head of each non-empty list into the heap.",
+        orderIndex: 1,
+      },
+      {
+        hintText:
+          "Initialize the heap with all list heads. Pop the minimum node, add it to the result. If that node has a next, push it into the heap. Continue until the heap is empty.",
+        orderIndex: 2,
+      },
     ],
   },
   {
@@ -406,31 +810,75 @@ export const linkedListProblems: ProblemFixture[] = [
         "1 <= k <= n <= 5000",
         "0 <= Node.val <= 1000",
       ],
-      solution: "Process the list in groups of k. For each group, check if k nodes remain. If so, reverse those k nodes in place, then connect the reversed group to the previous part. Use a dummy head and track group boundaries.",
+      solution:
+        "Process the list in groups of k. For each group, check if k nodes remain. If so, reverse those k nodes in place, then connect the reversed group to the previous part. Use a dummy head and track group boundaries.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/reverse-nodes-in-k-group/",
     },
     testCases: [
-      { input: { head: [1, 2, 3, 4, 5], k: 2 }, expectedOutput: [2, 1, 4, 3, 5], isVisible: true, orderIndex: 0 },
-      { input: { head: [1, 2, 3, 4, 5], k: 3 }, expectedOutput: [3, 2, 1, 4, 5], isVisible: true, orderIndex: 1 },
-      { input: { head: [1, 2, 3, 4, 5], k: 1 }, expectedOutput: [1, 2, 3, 4, 5], isVisible: true, orderIndex: 2 },
-      { input: { head: [1, 2, 3, 4, 5], k: 5 }, expectedOutput: [5, 4, 3, 2, 1], isVisible: false, orderIndex: 3 },
+      {
+        input: { head: [1, 2, 3, 4, 5], k: 2 },
+        expectedOutput: [2, 1, 4, 3, 5],
+        isVisible: true,
+        orderIndex: 0,
+      },
+      {
+        input: { head: [1, 2, 3, 4, 5], k: 3 },
+        expectedOutput: [3, 2, 1, 4, 5],
+        isVisible: true,
+        orderIndex: 1,
+      },
+      {
+        input: { head: [1, 2, 3, 4, 5], k: 1 },
+        expectedOutput: [1, 2, 3, 4, 5],
+        isVisible: true,
+        orderIndex: 2,
+      },
+      {
+        input: { head: [1, 2, 3, 4, 5], k: 5 },
+        expectedOutput: [5, 4, 3, 2, 1],
+        isVisible: false,
+        orderIndex: 3,
+      },
       { input: { head: [1], k: 1 }, expectedOutput: [1], isVisible: false, orderIndex: 4 },
       { input: { head: [1, 2], k: 2 }, expectedOutput: [2, 1], isVisible: false, orderIndex: 5 },
-      { input: { head: [1, 2, 3, 4], k: 2 }, expectedOutput: [2, 1, 4, 3], isVisible: false, orderIndex: 6 },
-      { input: { head: [1, 2, 3, 4, 5, 6], k: 4 }, expectedOutput: [4, 3, 2, 1, 5, 6], isVisible: false, orderIndex: 7 },
+      {
+        input: { head: [1, 2, 3, 4], k: 2 },
+        expectedOutput: [2, 1, 4, 3],
+        isVisible: false,
+        orderIndex: 6,
+      },
+      {
+        input: { head: [1, 2, 3, 4, 5, 6], k: 4 },
+        expectedOutput: [4, 3, 2, 1, 5, 6],
+        isVisible: false,
+        orderIndex: 7,
+      },
     ],
     boilerplate: {
       language: "python",
-      template: "# Definition for singly-linked list.\n# class ListNode:\n#     def __init__(self, val=0, next=None):\n#         self.val = val\n#         self.next = next\nclass Solution:\n    def reverseKGroup(self, head: Optional[ListNode], k: int) -> Optional[ListNode]:\n        pass",
+      template:
+        "# Definition for singly-linked list.\n# class ListNode:\n#     def __init__(self, val=0, next=None):\n#         self.val = val\n#         self.next = next\nclass Solution:\n    def reverseKGroup(self, head: Optional[ListNode], k: int) -> Optional[ListNode]:\n        pass",
       methodName: "reverseKGroup",
       parameterNames: ["head", "k"],
     },
     hints: [
-      { hintText: "Process the list one group of k nodes at a time. Before reversing a group, check if there are at least k nodes remaining.", orderIndex: 0 },
-      { hintText: "For each group, reverse k nodes in place. Keep track of the node before the group (to connect after reversal) and the node after the group.", orderIndex: 1 },
-      { hintText: "Use a dummy node before head. For each group: (1) count k nodes ahead, (2) reverse those k nodes, (3) connect the previous group's tail to the new head, (4) the old head becomes the new tail for connecting the next group.", orderIndex: 2 },
+      {
+        hintText:
+          "Process the list one group of k nodes at a time. Before reversing a group, check if there are at least k nodes remaining.",
+        orderIndex: 0,
+      },
+      {
+        hintText:
+          "For each group, reverse k nodes in place. Keep track of the node before the group (to connect after reversal) and the node after the group.",
+        orderIndex: 1,
+      },
+      {
+        hintText:
+          "Use a dummy node before head. For each group: (1) count k nodes ahead, (2) reverse those k nodes, (3) connect the previous group's tail to the new head, (4) the old head becomes the new tail for connecting the next group.",
+        orderIndex: 2,
+      },
     ],
   },
 ];

@@ -9,11 +9,9 @@ export const arraysHashingProblems: ProblemFixture[] = [
       category: "Arrays & Hashing",
       description:
         "Given an integer array `nums`, return `true` if any value appears at least twice in the array, and return `false` if every element is distinct.",
-      constraints: [
-        "1 <= nums.length <= 10^5",
-        "-10^9 <= nums[i] <= 10^9",
-      ],
-      solution: "Use a hash set. Iterate through the array and check if the current element already exists in the set. If it does, return true. Otherwise, add it to the set. If the loop completes, return false.",
+      constraints: ["1 <= nums.length <= 10^5", "-10^9 <= nums[i] <= 10^9"],
+      solution:
+        "Use a hash set. Iterate through the array and check if the current element already exists in the set. If it does, return true. Otherwise, add it to the set. If the loop completes, return false.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/contains-duplicate/",
@@ -21,21 +19,41 @@ export const arraysHashingProblems: ProblemFixture[] = [
     testCases: [
       { input: { nums: [1, 2, 3, 1] }, expectedOutput: true, isVisible: true, orderIndex: 0 },
       { input: { nums: [1, 2, 3, 4] }, expectedOutput: false, isVisible: true, orderIndex: 1 },
-      { input: { nums: [1, 1, 1, 3, 3, 4, 3, 2, 4, 2] }, expectedOutput: true, isVisible: true, orderIndex: 2 },
+      {
+        input: { nums: [1, 1, 1, 3, 3, 4, 3, 2, 4, 2] },
+        expectedOutput: true,
+        isVisible: true,
+        orderIndex: 2,
+      },
       { input: { nums: [1] }, expectedOutput: false, isVisible: false, orderIndex: 3 },
       { input: { nums: [0, 0] }, expectedOutput: true, isVisible: false, orderIndex: 4 },
       { input: { nums: [-1, -2, -3, -1] }, expectedOutput: true, isVisible: false, orderIndex: 5 },
-      { input: { nums: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] }, expectedOutput: false, isVisible: false, orderIndex: 6 },
-      { input: { nums: [1000000000, -1000000000] }, expectedOutput: false, isVisible: false, orderIndex: 7 },
+      {
+        input: { nums: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] },
+        expectedOutput: false,
+        isVisible: false,
+        orderIndex: 6,
+      },
+      {
+        input: { nums: [1000000000, -1000000000] },
+        expectedOutput: false,
+        isVisible: false,
+        orderIndex: 7,
+      },
     ],
     boilerplate: {
       language: "python",
-      template: "class Solution:\n    def containsDuplicate(self, nums: List[int]) -> bool:\n        pass",
+      template:
+        "class Solution:\n    def containsDuplicate(self, nums: List[int]) -> bool:\n        pass",
       methodName: "containsDuplicate",
       parameterNames: ["nums"],
     },
     hints: [
-      { hintText: "Think about a data structure that supports O(1) lookup. As you iterate, check if you've already seen the current element.", orderIndex: 0 },
+      {
+        hintText:
+          "Think about a data structure that supports O(1) lookup. As you iterate, check if you've already seen the current element.",
+        orderIndex: 0,
+      },
     ],
   },
   {
@@ -50,20 +68,31 @@ export const arraysHashingProblems: ProblemFixture[] = [
         "1 <= s.length, t.length <= 5 * 10^4",
         "s and t consist of lowercase English letters.",
       ],
-      solution: "Count the frequency of each character in both strings using a hash map or array of size 26. Compare the frequency counts -- if they match, the strings are anagrams.",
+      solution:
+        "Count the frequency of each character in both strings using a hash map or array of size 26. Compare the frequency counts -- if they match, the strings are anagrams.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/valid-anagram/",
     },
     testCases: [
-      { input: { s: "anagram", t: "nagaram" }, expectedOutput: true, isVisible: true, orderIndex: 0 },
+      {
+        input: { s: "anagram", t: "nagaram" },
+        expectedOutput: true,
+        isVisible: true,
+        orderIndex: 0,
+      },
       { input: { s: "rat", t: "car" }, expectedOutput: false, isVisible: true, orderIndex: 1 },
       { input: { s: "a", t: "a" }, expectedOutput: true, isVisible: true, orderIndex: 2 },
       { input: { s: "ab", t: "ba" }, expectedOutput: true, isVisible: false, orderIndex: 3 },
       { input: { s: "aacc", t: "ccac" }, expectedOutput: false, isVisible: false, orderIndex: 4 },
       { input: { s: "", t: "" }, expectedOutput: true, isVisible: false, orderIndex: 5 },
       { input: { s: "abc", t: "abcd" }, expectedOutput: false, isVisible: false, orderIndex: 6 },
-      { input: { s: "listen", t: "silent" }, expectedOutput: true, isVisible: false, orderIndex: 7 },
+      {
+        input: { s: "listen", t: "silent" },
+        expectedOutput: true,
+        isVisible: false,
+        orderIndex: 7,
+      },
     ],
     boilerplate: {
       language: "python",
@@ -72,7 +101,11 @@ export const arraysHashingProblems: ProblemFixture[] = [
       parameterNames: ["s", "t"],
     },
     hints: [
-      { hintText: "Count the frequency of each character in both strings. If the frequency counts match, the strings are anagrams.", orderIndex: 0 },
+      {
+        hintText:
+          "Count the frequency of each character in both strings. If the frequency counts match, the strings are anagrams.",
+        orderIndex: 0,
+      },
     ],
   },
   {
@@ -89,29 +122,75 @@ export const arraysHashingProblems: ProblemFixture[] = [
         "-10^9 <= target <= 10^9",
         "Only one valid answer exists.",
       ],
-      solution: "Use a hash map to store each number's index as you iterate. For each number, check if target - num already exists in the map. If it does, return both indices.",
+      solution:
+        "Use a hash map to store each number's index as you iterate. For each number, check if target - num already exists in the map. If it does, return both indices.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/two-sum/",
     },
     testCases: [
-      { input: { nums: [2, 7, 11, 15], target: 9 }, expectedOutput: [0, 1], isVisible: true, orderIndex: 0 },
-      { input: { nums: [3, 2, 4], target: 6 }, expectedOutput: [1, 2], isVisible: true, orderIndex: 1 },
-      { input: { nums: [3, 3], target: 6 }, expectedOutput: [0, 1], isVisible: true, orderIndex: 2 },
-      { input: { nums: [1, 5, 3, 7], target: 8 }, expectedOutput: [1, 2], isVisible: false, orderIndex: 3 },
-      { input: { nums: [-1, -2, -3, -4, -5], target: -8 }, expectedOutput: [2, 4], isVisible: false, orderIndex: 4 },
-      { input: { nums: [0, 4, 3, 0], target: 0 }, expectedOutput: [0, 3], isVisible: false, orderIndex: 5 },
-      { input: { nums: [1, 2], target: 3 }, expectedOutput: [0, 1], isVisible: false, orderIndex: 6 },
-      { input: { nums: [5, 75, 25], target: 100 }, expectedOutput: [1, 2], isVisible: false, orderIndex: 7 },
+      {
+        input: { nums: [2, 7, 11, 15], target: 9 },
+        expectedOutput: [0, 1],
+        isVisible: true,
+        orderIndex: 0,
+      },
+      {
+        input: { nums: [3, 2, 4], target: 6 },
+        expectedOutput: [1, 2],
+        isVisible: true,
+        orderIndex: 1,
+      },
+      {
+        input: { nums: [3, 3], target: 6 },
+        expectedOutput: [0, 1],
+        isVisible: true,
+        orderIndex: 2,
+      },
+      {
+        input: { nums: [1, 5, 3, 7], target: 8 },
+        expectedOutput: [1, 2],
+        isVisible: false,
+        orderIndex: 3,
+      },
+      {
+        input: { nums: [-1, -2, -3, -4, -5], target: -8 },
+        expectedOutput: [2, 4],
+        isVisible: false,
+        orderIndex: 4,
+      },
+      {
+        input: { nums: [0, 4, 3, 0], target: 0 },
+        expectedOutput: [0, 3],
+        isVisible: false,
+        orderIndex: 5,
+      },
+      {
+        input: { nums: [1, 2], target: 3 },
+        expectedOutput: [0, 1],
+        isVisible: false,
+        orderIndex: 6,
+      },
+      {
+        input: { nums: [5, 75, 25], target: 100 },
+        expectedOutput: [1, 2],
+        isVisible: false,
+        orderIndex: 7,
+      },
     ],
     boilerplate: {
       language: "python",
-      template: "class Solution:\n    def twoSum(self, nums: List[int], target: int) -> List[int]:\n        pass",
+      template:
+        "class Solution:\n    def twoSum(self, nums: List[int], target: int) -> List[int]:\n        pass",
       methodName: "twoSum",
       parameterNames: ["nums", "target"],
     },
     hints: [
-      { hintText: "Try using a hash map to store each number's index as you iterate. For each number, check if `target - num` already exists in the map.", orderIndex: 0 },
+      {
+        hintText:
+          "Try using a hash map to store each number's index as you iterate. For each number, check if `target - num` already exists in the map.",
+        orderIndex: 0,
+      },
     ],
   },
   {
@@ -127,30 +206,71 @@ export const arraysHashingProblems: ProblemFixture[] = [
         "0 <= strs[i].length <= 100",
         "strs[i] consists of lowercase English letters.",
       ],
-      solution: "Use a hash map where the key is the sorted version of each string (or a character frequency tuple). Group strings that share the same key.",
+      solution:
+        "Use a hash map where the key is the sorted version of each string (or a character frequency tuple). Group strings that share the same key.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/group-anagrams/",
     },
     testCases: [
-      { input: { strs: ["eat", "tea", "tan", "ate", "nat", "bat"] }, expectedOutput: [["bat"], ["nat", "tan"], ["ate", "eat", "tea"]], isVisible: true, orderIndex: 0 },
+      {
+        input: { strs: ["eat", "tea", "tan", "ate", "nat", "bat"] },
+        expectedOutput: [["bat"], ["nat", "tan"], ["ate", "eat", "tea"]],
+        isVisible: true,
+        orderIndex: 0,
+      },
       { input: { strs: [""] }, expectedOutput: [[""]], isVisible: true, orderIndex: 1 },
       { input: { strs: ["a"] }, expectedOutput: [["a"]], isVisible: true, orderIndex: 2 },
-      { input: { strs: ["abc", "bca", "cab", "xyz", "zyx"] }, expectedOutput: [["abc", "bca", "cab"], ["xyz", "zyx"]], isVisible: false, orderIndex: 3 },
+      {
+        input: { strs: ["abc", "bca", "cab", "xyz", "zyx"] },
+        expectedOutput: [
+          ["abc", "bca", "cab"],
+          ["xyz", "zyx"],
+        ],
+        isVisible: false,
+        orderIndex: 3,
+      },
       { input: { strs: ["", ""] }, expectedOutput: [["", ""]], isVisible: false, orderIndex: 4 },
-      { input: { strs: ["ab", "ba", "abc", "cba"] }, expectedOutput: [["ab", "ba"], ["abc", "cba"]], isVisible: false, orderIndex: 5 },
-      { input: { strs: ["a", "b", "c"] }, expectedOutput: [["a"], ["b"], ["c"]], isVisible: false, orderIndex: 6 },
-      { input: { strs: ["listen", "silent", "hello"] }, expectedOutput: [["listen", "silent"], ["hello"]], isVisible: false, orderIndex: 7 },
+      {
+        input: { strs: ["ab", "ba", "abc", "cba"] },
+        expectedOutput: [
+          ["ab", "ba"],
+          ["abc", "cba"],
+        ],
+        isVisible: false,
+        orderIndex: 5,
+      },
+      {
+        input: { strs: ["a", "b", "c"] },
+        expectedOutput: [["a"], ["b"], ["c"]],
+        isVisible: false,
+        orderIndex: 6,
+      },
+      {
+        input: { strs: ["listen", "silent", "hello"] },
+        expectedOutput: [["listen", "silent"], ["hello"]],
+        isVisible: false,
+        orderIndex: 7,
+      },
     ],
     boilerplate: {
       language: "python",
-      template: "class Solution:\n    def groupAnagrams(self, strs: List[str]) -> List[List[str]]:\n        pass",
+      template:
+        "class Solution:\n    def groupAnagrams(self, strs: List[str]) -> List[List[str]]:\n        pass",
       methodName: "groupAnagrams",
       parameterNames: ["strs"],
     },
     hints: [
-      { hintText: "Two strings are anagrams if and only if their sorted versions are equal. Can you use this as a key?", orderIndex: 0 },
-      { hintText: "Use a hash map with the sorted string as the key. Append each original string to the list corresponding to its sorted key.", orderIndex: 1 },
+      {
+        hintText:
+          "Two strings are anagrams if and only if their sorted versions are equal. Can you use this as a key?",
+        orderIndex: 0,
+      },
+      {
+        hintText:
+          "Use a hash map with the sorted string as the key. Append each original string to the list corresponding to its sorted key.",
+        orderIndex: 1,
+      },
     ],
   },
   {
@@ -167,30 +287,56 @@ export const arraysHashingProblems: ProblemFixture[] = [
         "k is in the range [1, the number of unique elements in the array].",
         "It is guaranteed that the answer is unique.",
       ],
-      solution: "Count frequencies using a hash map. Then use bucket sort: create an array of size n+1 where index i contains elements with frequency i. Iterate buckets from high to low to collect the top k elements.",
+      solution:
+        "Count frequencies using a hash map. Then use bucket sort: create an array of size n+1 where index i contains elements with frequency i. Iterate buckets from high to low to collect the top k elements.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/top-k-frequent-elements/",
     },
     testCases: [
-      { input: { nums: [1, 1, 1, 2, 2, 3], k: 2 }, expectedOutput: [1, 2], isVisible: true, orderIndex: 0 },
+      {
+        input: { nums: [1, 1, 1, 2, 2, 3], k: 2 },
+        expectedOutput: [1, 2],
+        isVisible: true,
+        orderIndex: 0,
+      },
       { input: { nums: [1], k: 1 }, expectedOutput: [1], isVisible: true, orderIndex: 1 },
-      { input: { nums: [4, 1, -1, 2, -1, 2, 3], k: 2 }, expectedOutput: [-1, 2], isVisible: true, orderIndex: 2 },
+      {
+        input: { nums: [4, 1, -1, 2, -1, 2, 3], k: 2 },
+        expectedOutput: [-1, 2],
+        isVisible: true,
+        orderIndex: 2,
+      },
       { input: { nums: [1, 2], k: 2 }, expectedOutput: [1, 2], isVisible: false, orderIndex: 3 },
       { input: { nums: [3, 0, 1, 0], k: 1 }, expectedOutput: [0], isVisible: false, orderIndex: 4 },
       { input: { nums: [5, 5, 5, 5], k: 1 }, expectedOutput: [5], isVisible: false, orderIndex: 5 },
-      { input: { nums: [1, 1, 2, 2, 3, 3], k: 3 }, expectedOutput: [1, 2, 3], isVisible: false, orderIndex: 6 },
-      { input: { nums: [-1, -1, -2, -2, -3], k: 2 }, expectedOutput: [-1, -2], isVisible: false, orderIndex: 7 },
+      {
+        input: { nums: [1, 1, 2, 2, 3, 3], k: 3 },
+        expectedOutput: [1, 2, 3],
+        isVisible: false,
+        orderIndex: 6,
+      },
+      {
+        input: { nums: [-1, -1, -2, -2, -3], k: 2 },
+        expectedOutput: [-1, -2],
+        isVisible: false,
+        orderIndex: 7,
+      },
     ],
     boilerplate: {
       language: "python",
-      template: "class Solution:\n    def topKFrequent(self, nums: List[int], k: int) -> List[int]:\n        pass",
+      template:
+        "class Solution:\n    def topKFrequent(self, nums: List[int], k: int) -> List[int]:\n        pass",
       methodName: "topKFrequent",
       parameterNames: ["nums", "k"],
     },
     hints: [
       { hintText: "First count the frequency of each element using a hash map.", orderIndex: 0 },
-      { hintText: "Use bucket sort: create buckets indexed by frequency. Place elements into buckets based on their count, then collect from highest to lowest frequency.", orderIndex: 1 },
+      {
+        hintText:
+          "Use bucket sort: create buckets indexed by frequency. Place elements into buckets based on their count, then collect from highest to lowest frequency.",
+        orderIndex: 1,
+      },
     ],
   },
   {
@@ -206,30 +352,61 @@ export const arraysHashingProblems: ProblemFixture[] = [
         "-30 <= nums[i] <= 30",
         "The product of any prefix or suffix of nums is guaranteed to fit in a 32-bit integer.",
       ],
-      solution: "Use two passes. First pass (left to right): compute prefix products. Second pass (right to left): multiply each position by the suffix product. This gives the product of all elements except self without division.",
+      solution:
+        "Use two passes. First pass (left to right): compute prefix products. Second pass (right to left): multiply each position by the suffix product. This gives the product of all elements except self without division.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/product-of-array-except-self/",
     },
     testCases: [
-      { input: { nums: [1, 2, 3, 4] }, expectedOutput: [24, 12, 8, 6], isVisible: true, orderIndex: 0 },
-      { input: { nums: [-1, 1, 0, -3, 3] }, expectedOutput: [0, 0, 9, 0, 0], isVisible: true, orderIndex: 1 },
+      {
+        input: { nums: [1, 2, 3, 4] },
+        expectedOutput: [24, 12, 8, 6],
+        isVisible: true,
+        orderIndex: 0,
+      },
+      {
+        input: { nums: [-1, 1, 0, -3, 3] },
+        expectedOutput: [0, 0, 9, 0, 0],
+        isVisible: true,
+        orderIndex: 1,
+      },
       { input: { nums: [2, 3] }, expectedOutput: [3, 2], isVisible: true, orderIndex: 2 },
-      { input: { nums: [1, 1, 1, 1] }, expectedOutput: [1, 1, 1, 1], isVisible: false, orderIndex: 3 },
+      {
+        input: { nums: [1, 1, 1, 1] },
+        expectedOutput: [1, 1, 1, 1],
+        isVisible: false,
+        orderIndex: 3,
+      },
       { input: { nums: [0, 0] }, expectedOutput: [0, 0], isVisible: false, orderIndex: 4 },
-      { input: { nums: [1, 0, 3, 4] }, expectedOutput: [0, 12, 0, 0], isVisible: false, orderIndex: 5 },
+      {
+        input: { nums: [1, 0, 3, 4] },
+        expectedOutput: [0, 12, 0, 0],
+        isVisible: false,
+        orderIndex: 5,
+      },
       { input: { nums: [-1, -1, -1] }, expectedOutput: [1, 1, 1], isVisible: false, orderIndex: 6 },
-      { input: { nums: [5, 1, 2, 3] }, expectedOutput: [6, 30, 15, 10], isVisible: false, orderIndex: 7 },
+      {
+        input: { nums: [5, 1, 2, 3] },
+        expectedOutput: [6, 30, 15, 10],
+        isVisible: false,
+        orderIndex: 7,
+      },
     ],
     boilerplate: {
       language: "python",
-      template: "class Solution:\n    def productExceptSelf(self, nums: List[int]) -> List[int]:\n        pass",
+      template:
+        "class Solution:\n    def productExceptSelf(self, nums: List[int]) -> List[int]:\n        pass",
       methodName: "productExceptSelf",
       parameterNames: ["nums"],
     },
     hints: [
       { hintText: "Think about computing prefix and suffix products separately.", orderIndex: 0 },
-      { hintText: "For each index i, the answer is the product of all elements to the left of i multiplied by the product of all elements to the right of i. Compute these in two passes.", orderIndex: 1 },
+      {
+        hintText:
+          "For each index i, the answer is the product of all elements to the left of i multiplied by the product of all elements to the right of i. Compute these in two passes.",
+        orderIndex: 1,
+      },
     ],
   },
   {
@@ -239,13 +416,14 @@ export const arraysHashingProblems: ProblemFixture[] = [
       difficulty: "medium",
       category: "Arrays & Hashing",
       description:
-        'Determine if a `9 x 9` Sudoku board is valid. Only the filled cells need to be validated according to the following rules:\n\n1. Each row must contain the digits `1-9` without repetition.\n2. Each column must contain the digits `1-9` without repetition.\n3. Each of the nine `3 x 3` sub-boxes of the grid must contain the digits `1-9` without repetition.\n\nNote: A Sudoku board (partially filled) could be valid but is not necessarily solvable. Only the filled cells need to be validated according to the mentioned rules.',
+        "Determine if a `9 x 9` Sudoku board is valid. Only the filled cells need to be validated according to the following rules:\n\n1. Each row must contain the digits `1-9` without repetition.\n2. Each column must contain the digits `1-9` without repetition.\n3. Each of the nine `3 x 3` sub-boxes of the grid must contain the digits `1-9` without repetition.\n\nNote: A Sudoku board (partially filled) could be valid but is not necessarily solvable. Only the filled cells need to be validated according to the mentioned rules.",
       constraints: [
         "board.length == 9",
         "board[i].length == 9",
-        'board[i][j] is a digit 1-9 or \'.\'.',
+        "board[i][j] is a digit 1-9 or '.'.",
       ],
-      solution: "Use three sets of hash sets: one per row, one per column, one per 3x3 box. Iterate through each cell; for filled cells, check if the digit already exists in the corresponding row, column, or box set. If so, return false.",
+      solution:
+        "Use three sets of hash sets: one per row, one per column, one per 3x3 box. Iterate through each cell; for filled cells, check if the digit already exists in the corresponding row, column, or box set. If so, return false.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/valid-sudoku/",
@@ -398,13 +576,21 @@ export const arraysHashingProblems: ProblemFixture[] = [
     ],
     boilerplate: {
       language: "python",
-      template: "class Solution:\n    def isValidSudoku(self, board: List[List[str]]) -> bool:\n        pass",
+      template:
+        "class Solution:\n    def isValidSudoku(self, board: List[List[str]]) -> bool:\n        pass",
       methodName: "isValidSudoku",
       parameterNames: ["board"],
     },
     hints: [
-      { hintText: "You need to check three things: no duplicates in any row, column, or 3x3 box.", orderIndex: 0 },
-      { hintText: "Use hash sets to track seen digits. For each cell (r, c), the box index is (r // 3) * 3 + (c // 3).", orderIndex: 1 },
+      {
+        hintText: "You need to check three things: no duplicates in any row, column, or 3x3 box.",
+        orderIndex: 0,
+      },
+      {
+        hintText:
+          "Use hash sets to track seen digits. For each cell (r, c), the box index is (r // 3) * 3 + (c // 3).",
+        orderIndex: 1,
+      },
     ],
   },
   {
@@ -415,18 +601,26 @@ export const arraysHashingProblems: ProblemFixture[] = [
       category: "Arrays & Hashing",
       description:
         "Given an unsorted array of integers `nums`, return the length of the longest consecutive elements sequence.\n\nYou must write an algorithm that runs in O(n) time.",
-      constraints: [
-        "0 <= nums.length <= 10^5",
-        "-10^9 <= nums[i] <= 10^9",
-      ],
-      solution: "Put all numbers in a hash set. For each number, check if it's the start of a sequence (num - 1 not in set). If so, count how long the consecutive sequence is. Track the maximum length.",
+      constraints: ["0 <= nums.length <= 10^5", "-10^9 <= nums[i] <= 10^9"],
+      solution:
+        "Put all numbers in a hash set. For each number, check if it's the start of a sequence (num - 1 not in set). If so, count how long the consecutive sequence is. Track the maximum length.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: "https://leetcode.com/problems/longest-consecutive-sequence/",
     },
     testCases: [
-      { input: { nums: [100, 4, 200, 1, 3, 2] }, expectedOutput: 4, isVisible: true, orderIndex: 0 },
-      { input: { nums: [0, 3, 7, 2, 5, 8, 4, 6, 0, 1] }, expectedOutput: 9, isVisible: true, orderIndex: 1 },
+      {
+        input: { nums: [100, 4, 200, 1, 3, 2] },
+        expectedOutput: 4,
+        isVisible: true,
+        orderIndex: 0,
+      },
+      {
+        input: { nums: [0, 3, 7, 2, 5, 8, 4, 6, 0, 1] },
+        expectedOutput: 9,
+        isVisible: true,
+        orderIndex: 1,
+      },
       { input: { nums: [] }, expectedOutput: 0, isVisible: true, orderIndex: 2 },
       { input: { nums: [1] }, expectedOutput: 1, isVisible: false, orderIndex: 3 },
       { input: { nums: [1, 2, 3, 4, 5] }, expectedOutput: 5, isVisible: false, orderIndex: 4 },
@@ -436,13 +630,22 @@ export const arraysHashingProblems: ProblemFixture[] = [
     ],
     boilerplate: {
       language: "python",
-      template: "class Solution:\n    def longestConsecutive(self, nums: List[int]) -> int:\n        pass",
+      template:
+        "class Solution:\n    def longestConsecutive(self, nums: List[int]) -> int:\n        pass",
       methodName: "longestConsecutive",
       parameterNames: ["nums"],
     },
     hints: [
-      { hintText: "Think about which numbers could be the start of a consecutive sequence. A number is the start if num - 1 is not in the array.", orderIndex: 0 },
-      { hintText: "Put all numbers into a hash set for O(1) lookup. For each starting number, count consecutive elements (num+1, num+2, ...) that exist in the set.", orderIndex: 1 },
+      {
+        hintText:
+          "Think about which numbers could be the start of a consecutive sequence. A number is the start if num - 1 is not in the array.",
+        orderIndex: 0,
+      },
+      {
+        hintText:
+          "Put all numbers into a hash set for O(1) lookup. For each starting number, count consecutive elements (num+1, num+2, ...) that exist in the set.",
+        orderIndex: 1,
+      },
     ],
   },
   {
@@ -458,30 +661,70 @@ export const arraysHashingProblems: ProblemFixture[] = [
         "0 <= strs[i].length <= 200",
         "strs[i] contains any possible characters out of 256 valid ASCII characters.",
       ],
-      solution: "Use length-prefix encoding. For each string, prepend its length followed by a delimiter (e.g., '#'). To decode, read the length, skip the delimiter, then extract that many characters.",
+      solution:
+        "Use length-prefix encoding. For each string, prepend its length followed by a delimiter (e.g., '#'). To decode, read the length, skip the delimiter, then extract that many characters.",
       timeLimitMs: 5000,
       source: "curated",
       sourceUrl: null,
     },
     testCases: [
-      { input: { strs: ["hello", "world"] }, expectedOutput: ["hello", "world"], isVisible: true, orderIndex: 0 },
+      {
+        input: { strs: ["hello", "world"] },
+        expectedOutput: ["hello", "world"],
+        isVisible: true,
+        orderIndex: 0,
+      },
       { input: { strs: [""] }, expectedOutput: [""], isVisible: true, orderIndex: 1 },
       { input: { strs: [] }, expectedOutput: [], isVisible: true, orderIndex: 2 },
-      { input: { strs: ["a", "b", "c"] }, expectedOutput: ["a", "b", "c"], isVisible: false, orderIndex: 3 },
-      { input: { strs: ["we", "say", ":", "yes"] }, expectedOutput: ["we", "say", ":", "yes"], isVisible: false, orderIndex: 4 },
-      { input: { strs: ["#", "##", "###"] }, expectedOutput: ["#", "##", "###"], isVisible: false, orderIndex: 5 },
-      { input: { strs: ["", "", ""] }, expectedOutput: ["", "", ""], isVisible: false, orderIndex: 6 },
-      { input: { strs: ["abc123", "!@#$%^"] }, expectedOutput: ["abc123", "!@#$%^"], isVisible: false, orderIndex: 7 },
+      {
+        input: { strs: ["a", "b", "c"] },
+        expectedOutput: ["a", "b", "c"],
+        isVisible: false,
+        orderIndex: 3,
+      },
+      {
+        input: { strs: ["we", "say", ":", "yes"] },
+        expectedOutput: ["we", "say", ":", "yes"],
+        isVisible: false,
+        orderIndex: 4,
+      },
+      {
+        input: { strs: ["#", "##", "###"] },
+        expectedOutput: ["#", "##", "###"],
+        isVisible: false,
+        orderIndex: 5,
+      },
+      {
+        input: { strs: ["", "", ""] },
+        expectedOutput: ["", "", ""],
+        isVisible: false,
+        orderIndex: 6,
+      },
+      {
+        input: { strs: ["abc123", "!@#$%^"] },
+        expectedOutput: ["abc123", "!@#$%^"],
+        isVisible: false,
+        orderIndex: 7,
+      },
     ],
     boilerplate: {
       language: "python",
-      template: "class Solution:\n    def encode(self, strs: List[str]) -> str:\n        pass\n\n    def decode(self, s: str) -> List[str]:\n        pass",
+      template:
+        "class Solution:\n    def encode(self, strs: List[str]) -> str:\n        pass\n\n    def decode(self, s: str) -> List[str]:\n        pass",
       methodName: "encode",
       parameterNames: ["strs"],
     },
     hints: [
-      { hintText: "You need a way to separate strings that works even if the strings contain any character. Think about how HTTP headers encode variable-length data.", orderIndex: 0 },
-      { hintText: "Use length-prefix encoding: for each string, prepend its length followed by a special delimiter like '#'. To decode, read the number, skip the '#', then take the next N characters.", orderIndex: 1 },
+      {
+        hintText:
+          "You need a way to separate strings that works even if the strings contain any character. Think about how HTTP headers encode variable-length data.",
+        orderIndex: 0,
+      },
+      {
+        hintText:
+          "Use length-prefix encoding: for each string, prepend its length followed by a special delimiter like '#'. To decode, read the number, skip the '#', then take the next N characters.",
+        orderIndex: 1,
+      },
     ],
   },
 ];

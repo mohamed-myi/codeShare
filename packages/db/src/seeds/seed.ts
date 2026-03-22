@@ -1,19 +1,17 @@
-import { pool } from "../pool.js";
 import {
-  problemRepository,
-  testCaseRepository,
   boilerplateRepository,
   hintRepository,
+  problemRepository,
+  testCaseRepository,
 } from "../index.js";
+import { pool } from "../pool.js";
 import { fixtures } from "./data/index.js";
 
 async function seed(): Promise<void> {
   console.log("Seeding database...");
 
   for (const fixture of fixtures) {
-    const existing = await problemRepository.findBySlugIncludingDeleted(
-      fixture.problem.slug,
-    );
+    const existing = await problemRepository.findBySlugIncludingDeleted(fixture.problem.slug);
     if (existing) {
       if (existing.deletedAt) {
         await problemRepository.restoreById(existing.id);
