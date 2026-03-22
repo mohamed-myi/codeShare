@@ -1,6 +1,5 @@
 import type { PendingHintRequest, Problem, RoomMode } from "@codeshare/shared";
 
-
 interface HintProps {
   hintsUsed: number;
   hintLimit: number;
