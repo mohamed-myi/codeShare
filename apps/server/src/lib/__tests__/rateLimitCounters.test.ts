@@ -1,0 +1,72 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { globalCounters } from "../rateLimitCounters.js";
+
+describe("GlobalCounters", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    // Force rollover: advance to a new day to reset counters from prior tests
+    vi.setSystemTime(new Date("2099-01-01T12:00:00Z"));
+    globalCounters.canSubmit(1_000_000); // triggers rolloverIfNeeded
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  describe("canSubmit / reserveSubmission", () => {
+    it("allows submissions under the daily limit", () => {
+      expect(globalCounters.canSubmit(100)).toBe(true);
+    });
+
+    it("reserveSubmission returns true and blocks at the limit", () => {
+      expect(globalCounters.reserveSubmission(2)).toBe(true);
+      expect(globalCounters.reserveSubmission(2)).toBe(true);
+      expect(globalCounters.reserveSubmission(2)).toBe(false);
+    });
+
+    it("canSubmit returns false at the limit", () => {
+      globalCounters.reserveSubmission(1);
+      expect(globalCounters.canSubmit(1)).toBe(false);
+    });
+
+    it("recordSubmission increments counter", () => {
+      globalCounters.recordSubmission();
+      globalCounters.recordSubmission();
+      expect(globalCounters.canSubmit(2)).toBe(false);
+    });
+  });
+
+  describe("canImport / recordImport", () => {
+    it("allows imports under the daily limit", () => {
+      expect(globalCounters.canImport(50)).toBe(true);
+    });
+
+    it("recordImport increments and blocks at limit", () => {
+      for (let i = 0; i < 3; i++) {
+        globalCounters.recordImport();
+      }
+      expect(globalCounters.canImport(3)).toBe(false);
+    });
+  });
+
+  describe("daily rollover", () => {
+    it("resets counters when the day changes", () => {
+      globalCounters.reserveSubmission(1);
+      globalCounters.recordImport();
+      expect(globalCounters.canSubmit(1)).toBe(false);
+      expect(globalCounters.canImport(1)).toBe(false);
+
+      // Advance 48h to guarantee a local-day boundary in any timezone
+      vi.setSystemTime(new Date("2099-01-03T12:00:00Z"));
+      expect(globalCounters.canSubmit(1)).toBe(true);
+      expect(globalCounters.canImport(1)).toBe(true);
+    });
+
+    it("does not reset counters within the same day", () => {
+      globalCounters.reserveSubmission(2);
+      globalCounters.reserveSubmission(2);
+      vi.setSystemTime(new Date("2099-01-01T23:59:59Z"));
+      expect(globalCounters.canSubmit(2)).toBe(false);
+    });
+  });
+});

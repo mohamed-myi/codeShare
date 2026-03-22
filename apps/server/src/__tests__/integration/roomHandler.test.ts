@@ -1,17 +1,58 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import type { Socket as ClientSocket } from "socket.io-client";
 import { SocketEvents } from "@codeshare/shared";
-import type { UserJoinedPayload, RoomState } from "@codeshare/shared";
+import type { ProblemDetail, UserJoinedPayload, RoomState } from "@codeshare/shared";
 import {
   createTestServer,
   createTestClient,
   waitForEvent,
-} from "./helpers/socketTestHelper.js";
-import { setupSocketIO } from "../ws/socketio.js";
-import { roomManager } from "../models/RoomManager.js";
-import { createLogger } from "../lib/logger.js";
+} from "../helpers/socketTestHelper.js";
+import { setupSocketIO } from "../../ws/socketio.js";
+import { roomManager } from "../../models/RoomManager.js";
+import { createLogger } from "../../lib/logger.js";
+
+const mockGetById = vi.hoisted(() => vi.fn());
+
+vi.mock("../../services/ProblemService.js", () => ({
+  problemService: {
+    getById: mockGetById,
+  },
+}));
 
 const logger = createLogger("silent");
+const activeProblem: ProblemDetail = {
+  id: "00000000-0000-4000-8000-000000000001",
+  slug: "two-sum",
+  title: "Two Sum",
+  difficulty: "easy",
+  category: "Arrays",
+  description: "Find two numbers.",
+  constraints: [],
+  solution: "Use a hash map.",
+  timeLimitMs: 5000,
+  source: "curated",
+  sourceUrl: null,
+  createdAt: "2026-01-01T00:00:00Z",
+  updatedAt: "2026-01-01T00:00:00Z",
+  visibleTestCases: [
+    {
+      id: "tc-1",
+      problemId: "00000000-0000-4000-8000-000000000001",
+      input: { nums: [2, 7, 11, 15], target: 9 },
+      expectedOutput: [0, 1],
+      isVisible: true,
+      orderIndex: 0,
+    },
+  ],
+  boilerplate: {
+    id: "bp-1",
+    problemId: "00000000-0000-4000-8000-000000000001",
+    language: "python",
+    template: "def twoSum(nums, target):\n    pass",
+    methodName: "twoSum",
+    parameterNames: ["nums", "target"],
+  },
+};
 
 describe("Room handler", () => {
   let cleanup: (() => Promise<void>) | undefined;
@@ -20,6 +61,8 @@ describe("Room handler", () => {
 
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
+    mockGetById.mockReset();
+    mockGetById.mockResolvedValue(null);
   });
 
   afterEach(async () => {
@@ -102,6 +145,97 @@ describe("Room handler", () => {
         SocketEvents.USER_JOINED,
       );
       expect(aliceBroadcast.displayName).toBe("Bob");
+    });
+
+    it("normalizes uppercase room codes for socket joins", async () => {
+      const { server, room } = await setup();
+      const client = connectClient(server.port, room.roomCode.toUpperCase());
+      await waitForEvent(client, "connect");
+
+      client.emit(SocketEvents.USER_JOIN, { displayName: "Alice" });
+      const payload = await waitForEvent<UserJoinedPayload>(
+        client,
+        SocketEvents.USER_JOINED,
+      );
+
+      expect(payload.displayName).toBe("Alice");
+      expect(room.users).toHaveLength(1);
+      expect(room.users[0]?.connected).toBe(true);
+    });
+
+    it("treats repeated user:join from the same socket as idempotent", async () => {
+      const { server, room } = await setup();
+
+      const alice = connectClient(server.port, room.roomCode);
+      const bob = connectClient(server.port, room.roomCode);
+      await Promise.all([
+        waitForEvent(alice, "connect"),
+        waitForEvent(bob, "connect"),
+      ]);
+
+      alice.emit(SocketEvents.USER_JOIN, { displayName: "Alice" });
+      const firstJoin = await waitForEvent<UserJoinedPayload>(
+        alice,
+        SocketEvents.USER_JOINED,
+      );
+
+      bob.emit(SocketEvents.USER_JOIN, { displayName: "Bob" });
+      await waitForEvent<UserJoinedPayload>(bob, SocketEvents.USER_JOINED);
+      await waitForEvent<UserJoinedPayload>(alice, SocketEvents.USER_JOINED);
+
+      const unexpectedBroadcast = waitForEvent<UserJoinedPayload>(
+        bob,
+        SocketEvents.USER_JOINED,
+        150,
+      );
+
+      alice.emit(SocketEvents.USER_JOIN, { displayName: "Alice" });
+      const secondJoin = await waitForEvent<UserJoinedPayload>(
+        alice,
+        SocketEvents.USER_JOINED,
+      );
+
+      expect(secondJoin.userId).toBe(firstJoin.userId);
+      expect(secondJoin.displayName).toBe("Alice");
+      expect(room.users).toHaveLength(2);
+
+      await expect(unexpectedBroadcast).rejects.toThrow(/Timed out/);
+    });
+  });
+
+  describe("7a: join rate limiting", () => {
+    it("rejects additional join attempts from the same ip after the configured limit", async () => {
+      const room = roomManager.createRoom("collaboration");
+      roomCodes.push(room.roomCode);
+      const server = await createTestServer();
+      cleanup = server.cleanup;
+
+      setupSocketIO(server.io, logger, {
+        rateLimits: {
+          joinAttemptsPerHour: 1,
+        },
+      });
+
+      const alice = connectClient(server.port, room.roomCode);
+      const bob = connectClient(server.port, room.roomCode);
+      await Promise.all([
+        waitForEvent(alice, "connect"),
+        waitForEvent(bob, "connect"),
+      ]);
+
+      alice.emit(SocketEvents.USER_JOIN, { displayName: "Alice" });
+      await waitForEvent<UserJoinedPayload>(alice, SocketEvents.USER_JOINED);
+
+      bob.emit(SocketEvents.USER_JOIN, { displayName: "Bob" });
+      const rejected = await waitForEvent<{
+        event: string;
+        reason: string;
+        retryAfterSeconds?: number;
+      }>(bob, SocketEvents.EVENT_REJECTED);
+
+      expect(rejected.event).toBe(SocketEvents.USER_JOIN);
+      expect(rejected.reason).toContain("Too many join attempts");
+      expect(rejected.retryAfterSeconds).toBeGreaterThan(0);
     });
   });
 
@@ -217,6 +351,47 @@ describe("Room handler", () => {
       const bobBroadcast = await bobBroadcastPromise;
       expect(bobBroadcast.userId).toBe(aliceJoined.userId);
     });
+
+    it("reconnects with the active problem payload when the room already has a selected problem", async () => {
+      mockGetById.mockResolvedValue(activeProblem);
+      const { server, room } = await setup();
+      room.problemId = activeProblem.id;
+
+      const alice = connectClient(server.port, room.roomCode);
+      const bob = connectClient(server.port, room.roomCode);
+      await Promise.all([
+        waitForEvent(alice, "connect"),
+        waitForEvent(bob, "connect"),
+      ]);
+
+      alice.emit(SocketEvents.USER_JOIN, { displayName: "Alice" });
+      const aliceJoined = await waitForEvent<UserJoinedPayload>(alice, SocketEvents.USER_JOINED);
+
+      bob.emit(SocketEvents.USER_JOIN, { displayName: "Bob" });
+      await waitForEvent<UserJoinedPayload>(bob, SocketEvents.USER_JOINED);
+      await waitForEvent<UserJoinedPayload>(alice, SocketEvents.USER_JOINED);
+
+      alice.disconnect();
+      await waitForEvent(bob, SocketEvents.USER_LEFT);
+
+      const alice2 = connectClient(server.port, room.roomCode);
+      await waitForEvent(alice2, "connect");
+
+      const problemLoadedPromise = waitForEvent<{
+        problem: { id: string };
+        parameterNames: string[];
+      }>(alice2, SocketEvents.PROBLEM_LOADED);
+
+      alice2.emit(SocketEvents.USER_JOIN, {
+        displayName: "Alice",
+        reconnectToken: aliceJoined.reconnectToken,
+      });
+
+      const problemLoaded = await problemLoadedPromise;
+      expect(problemLoaded.problem.id).toBe(activeProblem.id);
+      expect(problemLoaded.parameterNames).toEqual(["nums", "target"]);
+      expect(mockGetById).toHaveBeenCalledWith(activeProblem.id);
+    });
   });
 
   // --- 7e: Reconnection with invalid token ---
@@ -330,7 +505,7 @@ describe("Room handler", () => {
   // --- 7g: Non-existent room ---
 
   describe("7g: non-existent room", () => {
-    it("user:join on non-existent room gets error", async () => {
+    it("user:join on non-existent room gets EVENT_REJECTED", async () => {
       const server = await createTestServer();
       cleanup = server.cleanup;
 
@@ -341,11 +516,12 @@ describe("Room handler", () => {
 
       client.emit(SocketEvents.USER_JOIN, { displayName: "Alice" });
 
-      const error = await waitForEvent<{ message: string }>(
+      const error = await waitForEvent<{ event: string; reason: string }>(
         client,
-        "error",
+        SocketEvents.EVENT_REJECTED,
       );
-      expect(error.message).toBeDefined();
+      expect(error.reason).toBeDefined();
+      expect(error.event).toBe(SocketEvents.USER_JOIN);
     });
   });
 });

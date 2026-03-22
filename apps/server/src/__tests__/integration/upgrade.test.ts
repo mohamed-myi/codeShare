@@ -1,14 +1,16 @@
 import { describe, it, expect, afterEach } from "vitest";
 import http from "node:http";
 import WebSocket from "ws";
-import * as Y from "yjs";
-import { WebsocketProvider } from "y-websocket";
 import { io as ioClient, type Socket as ClientSocket } from "socket.io-client";
 import { Server as SocketIOServer } from "socket.io";
-import { registerUpgradeHandler } from "../ws/upgrade.js";
-import { setupSocketIO } from "../ws/socketio.js";
-import { setupYjsServer } from "../ws/yjs.js";
-import { createLogger } from "../lib/logger.js";
+import * as Y from "yjs";
+import { WebsocketProvider } from "y-websocket";
+import { registerUpgradeHandler } from "../../ws/upgrade.js";
+import { setupSocketIO } from "../../ws/socketio.js";
+import { setupYjsServer } from "../../ws/yjs.js";
+import { createLogger } from "../../lib/logger.js";
+import { roomManager } from "../../models/RoomManager.js";
+import { listenOnLocalhost, TEST_HOST } from "../helpers/networkTestHelper.js";
 
 const logger = createLogger("silent");
 
@@ -16,6 +18,7 @@ interface TestEnv {
   httpServer: http.Server;
   io: SocketIOServer;
   port: number;
+  getDoc: (roomCode: string) => Y.Doc | undefined;
   cleanup: () => Promise<void>;
 }
 
@@ -29,23 +32,19 @@ async function createFullServer(): Promise<TestEnv> {
   io.attach(httpServer, { path: "/ws/socket" });
   setupSocketIO(io, logger);
 
-  const { wss, getDoc: _getDoc } = setupYjsServer(logger);
+  const { wss, getDoc } = setupYjsServer(logger, roomManager);
 
   // Remove Socket.io's default upgrade listener so we control routing
   httpServer.removeAllListeners("upgrade");
   registerUpgradeHandler(httpServer, wss, io, logger);
 
-  const port = await new Promise<number>((resolve) => {
-    httpServer.listen(0, () => {
-      const addr = httpServer.address();
-      resolve(addr && typeof addr === "object" ? addr.port : 0);
-    });
-  });
+  const port = await listenOnLocalhost(httpServer);
 
   return {
     httpServer,
     io,
     port,
+    getDoc,
     cleanup: async () => {
       io.disconnectSockets(true);
       await new Promise<void>((r) => io.close(() => r()));
@@ -58,25 +57,40 @@ async function createFullServer(): Promise<TestEnv> {
 describe("HTTP upgrade routing", () => {
   let env: TestEnv | undefined;
   const cleanups: (() => void)[] = [];
+  const createdRoomCodes: string[] = [];
 
   afterEach(async () => {
     for (const fn of cleanups) fn();
     cleanups.length = 0;
+    for (const code of createdRoomCodes) {
+      roomManager.destroyRoom(code);
+    }
+    createdRoomCodes.length = 0;
     if (env) {
       await env.cleanup();
       env = undefined;
     }
   });
 
+  function createTestRoom(): { roomCode: string; yjsToken: string } {
+    const room = roomManager.createRoom("collaboration");
+    createdRoomCodes.push(room.roomCode);
+    return { roomCode: room.roomCode, yjsToken: room.yjsToken };
+  }
+
   it("routes /ws/yjs to y-websocket server (Yjs sync works)", async () => {
     env = await createFullServer();
+    const { roomCode, yjsToken } = createTestRoom();
 
     const doc = new Y.Doc();
     const provider = new WebsocketProvider(
-      `ws://127.0.0.1:${env.port}/ws/yjs`,
-      "test-room",
+      `ws://${TEST_HOST}:${env.port}/ws/yjs`,
+      roomCode,
       doc,
-      { WebSocketPolyfill: WebSocket as unknown as typeof globalThis.WebSocket },
+      {
+        WebSocketPolyfill: WebSocket as unknown as typeof globalThis.WebSocket,
+        params: { token: yjsToken },
+      },
     );
     cleanups.push(() => {
       provider.destroy();
@@ -96,10 +110,45 @@ describe("HTTP upgrade routing", () => {
     expect(doc.getText("monaco").toString()).toBe("upgrade-test");
   });
 
+  it("keys the server-side Yjs doc by room code for /ws/yjs/<roomCode>", async () => {
+    env = await createFullServer();
+    const { roomCode, yjsToken } = createTestRoom();
+
+    const doc = new Y.Doc();
+    const provider = new WebsocketProvider(
+      `ws://${TEST_HOST}:${env.port}/ws/yjs`,
+      roomCode,
+      doc,
+      {
+        WebSocketPolyfill: WebSocket as unknown as typeof globalThis.WebSocket,
+        params: { token: yjsToken },
+      },
+    );
+    cleanups.push(() => {
+      provider.destroy();
+      doc.destroy();
+    });
+
+    await new Promise<void>((resolve) => {
+      if (provider.synced) return resolve();
+      provider.on("sync", (synced: boolean) => {
+        if (synced) resolve();
+      });
+    });
+
+    doc.getText("monaco").insert(0, "server-readable");
+    await new Promise((r) => setTimeout(r, 100));
+
+    expect(env.getDoc(roomCode)?.getText("monaco").toString()).toBe(
+      "server-readable",
+    );
+    expect(env.getDoc("ws")).toBeUndefined();
+  });
+
   it("routes /ws/socket to Socket.io server (connection works)", async () => {
     env = await createFullServer();
 
-    const client: ClientSocket = ioClient(`http://127.0.0.1:${env.port}`, {
+    const client: ClientSocket = ioClient(`http://${TEST_HOST}:${env.port}`, {
       path: "/ws/socket",
       transports: ["websocket"],
       query: { roomCode: "abc-xyz" },
@@ -124,7 +173,7 @@ describe("HTTP upgrade routing", () => {
   it("destroys socket for unknown path /ws/unknown", async () => {
     env = await createFullServer();
 
-    const ws = new WebSocket(`ws://127.0.0.1:${env.port}/ws/unknown`);
+    const ws = new WebSocket(`ws://${TEST_HOST}:${env.port}/ws/unknown`);
     cleanups.push(() => {
       if (ws.readyState === WebSocket.OPEN) ws.close();
     });
@@ -141,7 +190,7 @@ describe("HTTP upgrade routing", () => {
   it("destroys socket for root path /", async () => {
     env = await createFullServer();
 
-    const ws = new WebSocket(`ws://127.0.0.1:${env.port}/`);
+    const ws = new WebSocket(`ws://${TEST_HOST}:${env.port}/`);
     cleanups.push(() => {
       if (ws.readyState === WebSocket.OPEN) ws.close();
     });
@@ -153,5 +202,22 @@ describe("HTTP upgrade routing", () => {
     });
 
     expect(result).not.toBe("open");
+  });
+
+  it("rejects Yjs connection without token via upgrade handler", async () => {
+    env = await createFullServer();
+    const { roomCode } = createTestRoom();
+
+    const ws = new WebSocket(`ws://${TEST_HOST}:${env.port}/ws/yjs/${roomCode}`);
+    cleanups.push(() => {
+      if (ws.readyState === WebSocket.OPEN) ws.close();
+    });
+
+    const closeCode = await new Promise<number>((resolve) => {
+      ws.on("close", (code) => resolve(code));
+      ws.on("error", () => {});
+    });
+
+    expect(closeCode).toBe(4401);
   });
 });

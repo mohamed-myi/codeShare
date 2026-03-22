@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { Room } from "../models/Room.js";
+import { Room } from "../Room.js";
 
 describe("Room", () => {
   let room: Room;
@@ -36,6 +36,13 @@ describe("Room", () => {
       expect(room.isFull()).toBe(false);
       room.addUser("Bob", "peer", "s2");
       expect(room.isFull()).toBe(true);
+    });
+
+    it("generates distinct ids and reconnect tokens for each user", () => {
+      const alice = room.addUser("Alice", "peer", "s1");
+      const bob = room.addUser("Bob", "peer", "s2");
+      expect(alice.id).not.toBe(bob.id);
+      expect(alice.reconnectToken).not.toBe(bob.reconnectToken);
     });
   });
 
@@ -136,7 +143,15 @@ describe("Room", () => {
   });
 
   describe("canExecute", () => {
+    it("blocks when no problem is selected", () => {
+      expect(room.problemId).toBeNull();
+      const result = room.canExecute();
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toContain("Select a problem");
+    });
+
     it("blocks when executionInProgress is true", () => {
+      room.problemId = "p1";
       room.executionInProgress = true;
       const result = room.canExecute();
       expect(result.allowed).toBe(false);
@@ -144,16 +159,25 @@ describe("Room", () => {
     });
 
     it("blocks when submissionsUsed >= submissionLimit", () => {
+      room.problemId = "p1";
       room.submissionsUsed = room.submissionLimit;
       const result = room.canExecute();
       expect(result.allowed).toBe(false);
       expect(result.reason).toBeDefined();
     });
 
-    it("allows when no execution in progress and within limits", () => {
+    it("allows when problem selected, not executing, and within limits", () => {
+      room.problemId = "p1";
       const result = room.canExecute();
       expect(result.allowed).toBe(true);
       expect(result.reason).toBeUndefined();
+    });
+
+    it("allows when submissionsUsed is one below submissionLimit", () => {
+      room.problemId = "p1";
+      room.submissionsUsed = room.submissionLimit - 1;
+      const result = room.canExecute();
+      expect(result.allowed).toBe(true);
     });
   });
 
@@ -189,6 +213,7 @@ describe("Room", () => {
       expect(room.hintsUsed).toBe(0);
       expect(room.pendingHintRequest).toBeNull();
       expect(room.customTestCases).toEqual([]);
+      expect(room.hintHistory).toEqual([]);
     });
   });
 
@@ -228,6 +253,35 @@ describe("Room", () => {
 
       alice.connected = false;
       expect(room.connectedUserCount()).toBe(1);
+    });
+  });
+
+  describe("findBySocketId", () => {
+    it("returns the connected user matching socketId", () => {
+      const alice = room.addUser("Alice", "peer", "s1");
+      const found = room.findBySocketId("s1");
+      expect(found).not.toBeNull();
+      expect(found!.id).toBe(alice.id);
+    });
+
+    it("returns null when user is disconnected", () => {
+      const alice = room.addUser("Alice", "peer", "s1");
+      alice.connected = false;
+      expect(room.findBySocketId("s1")).toBeNull();
+    });
+
+    it("returns null for unknown socketId", () => {
+      room.addUser("Alice", "peer", "s1");
+      expect(room.findBySocketId("unknown")).toBeNull();
+    });
+  });
+
+  describe("occupiedUserCount", () => {
+    it("counts all users including disconnected", () => {
+      const alice = room.addUser("Alice", "peer", "s1");
+      room.addUser("Bob", "peer", "s2");
+      alice.connected = false;
+      expect(room.occupiedUserCount()).toBe(2);
     });
   });
 });

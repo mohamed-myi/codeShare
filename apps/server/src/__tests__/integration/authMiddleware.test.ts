@@ -5,11 +5,11 @@ import {
   createTestServer,
   createTestClient,
   waitForEvent,
-} from "./helpers/socketTestHelper.js";
-import { setupSocketIO } from "../ws/socketio.js";
-import { createAuthMiddleware } from "../middleware/authMiddleware.js";
-import { roomManager } from "../models/RoomManager.js";
-import { createLogger } from "../lib/logger.js";
+} from "../helpers/socketTestHelper.js";
+import { setupSocketIO } from "../../ws/socketio.js";
+import { createAuthMiddleware } from "../../middleware/authMiddleware.js";
+import { roomManager } from "../../models/RoomManager.js";
+import { createLogger } from "../../lib/logger.js";
 
 const logger = createLogger("silent");
 
@@ -90,6 +90,7 @@ describe("Auth middleware", () => {
     await waitForEvent(client, "connect");
 
     room.addUser("Alice", "peer", client.id!);
+    room.problemId = "problem-1";
 
     let rejected = false;
     client.on(SocketEvents.EVENT_REJECTED, () => {
@@ -130,6 +131,7 @@ describe("Auth middleware", () => {
     await waitForEvent(client, "connect");
 
     room.addUser("Alice", "peer", client.id!);
+    room.problemId = "problem-1";
     room.executionInProgress = true;
 
     client.emit(SocketEvents.CODE_RUN);
@@ -160,5 +162,109 @@ describe("Auth middleware", () => {
     );
 
     expect(rejection.event).toBe(SocketEvents.HINT_REQUEST);
+  });
+
+  it("rejects hint:approve from the requester", async () => {
+    const { server, room } = await setup();
+
+    const requester = createTestClient(server.port, room.roomCode);
+    clients.push(requester);
+    await waitForEvent(requester, "connect");
+
+    const approver = createTestClient(server.port, room.roomCode);
+    clients.push(approver);
+    await waitForEvent(approver, "connect");
+
+    const requesterUser = room.addUser("Alice", "peer", requester.id!);
+    room.addUser("Bob", "peer", approver.id!);
+    room.pendingHintRequest = {
+      requestedBy: requesterUser.id,
+      requestedAt: new Date().toISOString(),
+    };
+
+    requester.emit(SocketEvents.HINT_APPROVE);
+
+    const rejection = await waitForEvent<{ event: string; reason: string }>(
+      requester,
+      SocketEvents.EVENT_REJECTED,
+    );
+
+    expect(rejection.event).toBe(SocketEvents.HINT_APPROVE);
+    expect(rejection.reason).toContain("other participant");
+  });
+
+  it("rejects hint:deny from the requester", async () => {
+    const { server, room } = await setup();
+
+    const requester = createTestClient(server.port, room.roomCode);
+    clients.push(requester);
+    await waitForEvent(requester, "connect");
+
+    const approver = createTestClient(server.port, room.roomCode);
+    clients.push(approver);
+    await waitForEvent(approver, "connect");
+
+    const requesterUser = room.addUser("Alice", "peer", requester.id!);
+    room.addUser("Bob", "peer", approver.id!);
+    room.pendingHintRequest = {
+      requestedBy: requesterUser.id,
+      requestedAt: new Date().toISOString(),
+    };
+
+    requester.emit(SocketEvents.HINT_DENY);
+
+    const rejection = await waitForEvent<{ event: string; reason: string }>(
+      requester,
+      SocketEvents.EVENT_REJECTED,
+    );
+
+    expect(rejection.event).toBe(SocketEvents.HINT_DENY);
+    expect(rejection.reason).toContain("other participant");
+  });
+
+  it("rejects problem:import while execution is in progress", async () => {
+    const { server, room } = await setup();
+
+    const client = createTestClient(server.port, room.roomCode);
+    clients.push(client);
+    await waitForEvent(client, "connect");
+
+    room.addUser("Alice", "peer", client.id!);
+    room.executionInProgress = true;
+
+    client.emit(SocketEvents.PROBLEM_IMPORT, {
+      leetcodeUrl: "https://leetcode.com/problems/two-sum/",
+    });
+
+    const rejection = await waitForEvent<{ event: string; reason: string }>(
+      client,
+      SocketEvents.EVENT_REJECTED,
+    );
+
+    expect(rejection.event).toBe(SocketEvents.PROBLEM_IMPORT);
+    expect(rejection.reason).toContain("running");
+  });
+
+  it("rejects problem:import while a hint is being delivered", async () => {
+    const { server, room } = await setup();
+
+    const client = createTestClient(server.port, room.roomCode);
+    clients.push(client);
+    await waitForEvent(client, "connect");
+
+    room.addUser("Alice", "peer", client.id!);
+    room.hintStreaming = true;
+
+    client.emit(SocketEvents.PROBLEM_IMPORT, {
+      leetcodeUrl: "https://leetcode.com/problems/two-sum/",
+    });
+
+    const rejection = await waitForEvent<{ event: string; reason: string }>(
+      client,
+      SocketEvents.EVENT_REJECTED,
+    );
+
+    expect(rejection.event).toBe(SocketEvents.PROBLEM_IMPORT);
+    expect(rejection.reason).toContain("hint");
   });
 });

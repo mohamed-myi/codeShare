@@ -4,9 +4,9 @@ import {
   createTestServer,
   createTestClient,
   waitForEvent,
-} from "./helpers/socketTestHelper.js";
-import { setupSocketIO } from "../ws/socketio.js";
-import { createLogger } from "../lib/logger.js";
+} from "../helpers/socketTestHelper.js";
+import { setupSocketIO } from "../../ws/socketio.js";
+import { createLogger } from "../../lib/logger.js";
 
 const logger = createLogger("silent");
 
@@ -91,5 +91,44 @@ describe("Socket.io server setup", () => {
 
     // Verify they're independent connections
     expect(client1.id).not.toBe(client2.id);
+  });
+
+  it("rejects websocket connections after the per-ip connection limit is reached", async () => {
+    const server = await createTestServer();
+    cleanup = server.cleanup;
+
+    setupSocketIO(server.io, logger, {
+      rateLimits: {
+        wsConnectionsPerMinute: 1,
+      },
+    });
+
+    const client1 = createTestClient(server.port, "room-aaa");
+    const client2 = createTestClient(server.port, "room-bbb");
+    clients.push(client1, client2);
+
+    await waitForEvent(client1, "connect");
+
+    const error = await waitForEvent<Error>(client2, "connect_error");
+    expect(error.message).toContain("Too many websocket connections");
+  });
+
+  it("rejects websocket connections from disallowed origins", async () => {
+    const server = await createTestServer();
+    cleanup = server.cleanup;
+
+    setupSocketIO(server.io, logger, {
+      allowedOrigins: ["http://localhost:5173"],
+    });
+
+    const client = createTestClient(server.port, "abcd-efgh", {
+      extraHeaders: {
+        origin: "https://evil.example",
+      },
+    });
+    clients.push(client);
+
+    const error = await waitForEvent<Error>(client, "connect_error");
+    expect(error.message).toContain("Origin not allowed");
   });
 });

@@ -1,6 +1,7 @@
 import http from "node:http";
 import { Server, type ServerOptions } from "socket.io";
 import { io as ioClient, type Socket as ClientSocket } from "socket.io-client";
+import { listenOnLocalhost, TEST_HOST } from "./networkTestHelper.js";
 
 interface TestServer {
   httpServer: http.Server;
@@ -19,14 +20,7 @@ export async function createTestServer(
     ...opts,
   });
 
-  const port = await new Promise<number>((resolve) => {
-    httpServer.listen(0, () => {
-      const addr = httpServer.address();
-      if (addr && typeof addr === "object") {
-        resolve(addr.port);
-      }
-    });
-  });
+  const port = await listenOnLocalhost(httpServer);
 
   const cleanup = async () => {
     io.disconnectSockets(true);
@@ -46,7 +40,7 @@ export function createTestClient(
   roomCode: string,
   opts?: Record<string, unknown>,
 ): ClientSocket {
-  return ioClient(`http://127.0.0.1:${port}`, {
+  return ioClient(`http://${TEST_HOST}:${port}`, {
     path: "/ws/socket",
     transports: ["websocket"],
     autoConnect: true,
