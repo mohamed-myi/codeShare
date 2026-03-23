@@ -37,9 +37,9 @@ export function registerTestcaseHandler(
       return;
     }
 
-    if (room.customTestCases.length >= ROOM_LIMITS.MAX_CUSTOM_TEST_CASES) {
+    if (room.customTestCases.length >= room.customTestCaseLimit) {
       socket.emit(SocketEvents.TESTCASE_ERROR, {
-        message: `Custom test case limit reached (${ROOM_LIMITS.MAX_CUSTOM_TEST_CASES}).`,
+        message: `Custom test case limit reached (${room.customTestCaseLimit}).`,
       });
       return;
     }
@@ -68,9 +68,9 @@ export function registerTestcaseHandler(
         }
       }
 
-      if (room.customTestCases.length >= ROOM_LIMITS.MAX_CUSTOM_TEST_CASES) {
+      if (room.customTestCases.length >= room.customTestCaseLimit) {
         socket.emit(SocketEvents.TESTCASE_ERROR, {
-          message: `Custom test case limit reached (${ROOM_LIMITS.MAX_CUSTOM_TEST_CASES}).`,
+          message: `Custom test case limit reached (${room.customTestCaseLimit}).`,
         });
         return;
       }

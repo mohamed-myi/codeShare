@@ -100,7 +100,10 @@ export function registerExecutionHandler(
         return;
       }
       submissionReserved = true;
+      const judge0Start = Date.now();
       const response = await deps.judge0Client.submit(harness, problem.timeLimitMs);
+      const judge0LatencyMs = Date.now() - judge0Start;
+      logger.info({ roomCode, executionType, judge0LatencyMs }, "Judge0 submission completed");
 
       // Map Judge0 status codes
       const statusId = response.status.id;
@@ -163,7 +166,7 @@ export function registerExecutionHandler(
       const errorType: ExecutionErrorType =
         err instanceof DOMException && err.name === "AbortError" ? "api_timeout" : "api_error";
 
-      logger.error({ err, roomCode, executionType }, "Execution failed");
+      logger.error({ err, roomCode, executionType, errorType }, "Execution failed");
 
       io.to(roomCode).emit(SocketEvents.EXECUTION_ERROR, {
         errorType,

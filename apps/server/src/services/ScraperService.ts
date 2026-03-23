@@ -16,6 +16,7 @@ interface LeetCodeQuestionData {
 
 interface ScraperServiceDeps {
   fetchImpl: typeof fetch;
+  graphQlUrl: string;
   findBySourceUrl: (url: string) => Promise<Problem | null>;
   findBySlug: (slug: string) => Promise<Problem | null>;
   restoreProblem: (problemId: string) => Promise<void>;
@@ -250,9 +251,10 @@ function selectPythonBoilerplate(codeSnippets: Array<{ langSlug: string; code: s
 
 async function fetchQuestionData(
   fetchImpl: typeof fetch,
+  graphQlUrl: string,
   slug: string,
 ): Promise<LeetCodeQuestionData> {
-  const response = await fetchImpl(LEETCODE_GRAPHQL_URL, {
+  const response = await fetchImpl(graphQlUrl, {
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -299,6 +301,7 @@ async function fetchQuestionData(
 export function createScraperService(deps: Partial<ScraperServiceDeps> = {}) {
   const resolvedDeps: ScraperServiceDeps = {
     fetchImpl: deps.fetchImpl ?? fetch,
+    graphQlUrl: deps.graphQlUrl ?? LEETCODE_GRAPHQL_URL,
     findBySourceUrl:
       deps.findBySourceUrl ?? ((url) => problemRepository.findBySourceUrlIncludingDeleted(url)),
     findBySlug: deps.findBySlug ?? ((slug) => problemRepository.findBySlugIncludingDeleted(slug)),
@@ -330,7 +333,7 @@ export function createScraperService(deps: Partial<ScraperServiceDeps> = {}) {
         return existing;
       }
 
-      const question = await fetchQuestionData(resolvedDeps.fetchImpl, slug);
+      const question = await fetchQuestionData(resolvedDeps.fetchImpl, resolvedDeps.graphQlUrl, slug);
       const { methodName, parameterNames } = parseMetadata(question.metaData);
       const boilerplate = selectPythonBoilerplate(question.codeSnippets);
       const visibleExamples = extractExampleBlocks(question.content).slice(0, 3);

@@ -8,6 +8,7 @@ import { registerSecurityHeaders } from "./plugins/securityHeaders.js";
 import { healthRoutes } from "./routes/health.js";
 import { problemRoutes } from "./routes/problems.js";
 import { roomRoutes } from "./routes/rooms.js";
+import { testRoutes } from "./routes/test.js";
 import { setupUpgradeRouting } from "./server.js";
 
 const config = loadConfig();
@@ -22,6 +23,9 @@ await registerSecurityHeaders(app, config);
 await app.register(healthRoutes);
 await app.register(roomRoutes, { prefix: "/api", config });
 await app.register(problemRoutes, { prefix: "/api" });
+if (config.NODE_ENV === "test") {
+  await app.register(testRoutes);
+}
 
 const address = await app.listen({ port: config.PORT, host: "0.0.0.0" });
 logger.info(`Server listening on ${address}`);

@@ -1,7 +1,5 @@
 import type { Config } from "../config.js";
 
-const GROQ_CHAT_COMPLETIONS_URL = "https://api.groq.com/openai/v1/chat/completions";
-
 interface GroqMessage {
   role: "system" | "user";
   content: string;
@@ -17,7 +15,7 @@ export function createGroqClient(config: Config) {
      * Streams a chat completion from Groq. Yields text chunks.
      */
     async *streamCompletion(messages: GroqMessage[]): AsyncGenerator<string> {
-      const response = await fetch(GROQ_CHAT_COMPLETIONS_URL, {
+      const response = await fetch(config.GROQ_API_URL, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${config.GROQ_API_KEY}`,

@@ -107,6 +107,12 @@ describe("ScraperService", () => {
 
     expect(result).toEqual(createdProblem);
     expect(fetchImpl).toHaveBeenCalledOnce();
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "https://leetcode.com/graphql",
+      expect.objectContaining({
+        method: "POST",
+      }),
+    );
     expect(createProblem).toHaveBeenCalledWith(
       expect.objectContaining({
         slug: "two-sum",
@@ -241,5 +247,32 @@ describe("ScraperService", () => {
     );
 
     expect(deleteProblem).toHaveBeenCalledWith(createdProblem.id);
+  });
+
+  it("supports overriding the LeetCode GraphQL URL for local E2E stubs", async () => {
+    fetchImpl.mockResolvedValue({
+      ok: true,
+      json: async () => buildQuestionResponse(),
+    });
+
+    const service = createScraperService({
+      fetchImpl,
+      findBySourceUrl,
+      findBySlug,
+      createProblem,
+      createTestCase,
+      createBoilerplate,
+      deleteProblem,
+      graphQlUrl: "http://127.0.0.1:4100/graphql",
+    });
+
+    await service.importFromUrl("https://leetcode.com/problems/two-sum/");
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "http://127.0.0.1:4100/graphql",
+      expect.objectContaining({
+        method: "POST",
+      }),
+    );
   });
 });

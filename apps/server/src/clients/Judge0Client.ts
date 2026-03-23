@@ -29,11 +29,6 @@ const judge0ResponseSchema = z.object({
 type Judge0Response = z.infer<typeof judge0ResponseSchema>;
 
 export function createJudge0Client(config: Config) {
-  const judge0Url = new URL(config.JUDGE0_API_URL);
-  if (judge0Url.host !== RAPID_API_HOST) {
-    throw new Error("Judge0 must use the RapidAPI host.");
-  }
-
   return {
     async submit(sourceCode: string, timeLimitMs: number): Promise<Judge0Response> {
       const controller = new AbortController();

@@ -23,6 +23,7 @@ export interface HintHandlerDeps {
   maxLLMPromptChars: number;
   maxLLMHintChars: number;
   maxLLMCallsPerRoom: number;
+  hintConsentMs?: number;
   findStoredHint: (problemId: string, hintsUsed: number) => Promise<Hint | null>;
   findProblem: (problemId: string) => Promise<Problem | null>;
 }
@@ -136,7 +137,7 @@ export function registerHintHandler(
       if (requester?.socketId) {
         io.to(requester.socketId).emit(SocketEvents.HINT_DENIED);
       }
-    }, TIMEOUTS.HINT_CONSENT_MS);
+    }, deps.hintConsentMs ?? TIMEOUTS.HINT_CONSENT_MS);
     consentTimers.set(roomCode, timer);
   });
 
@@ -256,12 +257,17 @@ async function deliverHint(
     room.hintStreaming = true;
     let generatedHint = "";
     const maxAccumulateChars = deps.maxLLMHintChars * 2;
+    const groqStart = Date.now();
 
     try {
       for await (const chunk of deps.groqClient.streamCompletion(messages)) {
         generatedHint += chunk;
+        io.to(roomCode).emit(SocketEvents.HINT_CHUNK, { text: chunk });
         if (generatedHint.length > maxAccumulateChars) break;
       }
+
+      const groqLatencyMs = Date.now() - groqStart;
+      logger.info({ roomCode, groqLatencyMs }, "Groq LLM streaming completed");
 
       const fullHint = hintService.sanitizeLLMHint(generatedHint, deps.maxLLMHintChars);
       room.hintsUsed += 1;
@@ -273,7 +279,8 @@ async function deliverHint(
         hintsRemaining,
       } satisfies HintDonePayload);
     } catch (streamErr) {
-      logger.error({ err: streamErr, roomCode }, "LLM hint streaming failed");
+      const groqLatencyMs = Date.now() - groqStart;
+      logger.error({ err: streamErr, roomCode, groqLatencyMs }, "LLM hint streaming failed");
       socket.emit(SocketEvents.HINT_ERROR, {
         message:
           streamErr instanceof Error && /empty|code|solution/i.test(streamErr.message)

@@ -1,10 +1,8 @@
 import type { ProblemDetail, ProblemLoadedPayload } from "@codeshare/shared";
 import {
-  GLOBAL_LIMITS,
   HINT_LIMIT_BY_DIFFICULTY,
   problemImportSchema,
   problemSelectSchema,
-  ROOM_LIMITS,
   SocketEvents,
 } from "@codeshare/shared";
 import type { Logger } from "pino";
@@ -30,6 +28,8 @@ export function registerProblemHandler(
     ipRateLimiter: IpRateLimiter;
     importsPerHour: number;
     enableProblemImport: boolean;
+    importsDailyLimit: number;
+    importProblem?: (url: string) => Promise<{ id: string; sourceUrl: string | null }>;
   },
 ): void {
   async function loadProblemIntoRoom(
@@ -134,15 +134,15 @@ export function registerProblemHandler(
       return;
     }
 
-    if (room.importsUsed >= ROOM_LIMITS.MAX_IMPORTS) {
+    if (room.importsUsed >= room.importLimit) {
       socket.emit(SocketEvents.PROBLEM_IMPORT_STATUS, {
         status: "failed",
-        message: `Session import limit reached (${ROOM_LIMITS.MAX_IMPORTS}/${ROOM_LIMITS.MAX_IMPORTS}).`,
+        message: `Session import limit reached (${room.importLimit}/${room.importLimit}).`,
       });
       return;
     }
 
-    if (!globalCounters.canImport(GLOBAL_LIMITS.IMPORTS_DAILY)) {
+    if (!globalCounters.canImport(deps.importsDailyLimit)) {
       socket.emit(SocketEvents.PROBLEM_IMPORT_STATUS, {
         status: "failed",
         message: "Daily import limit reached. Please try again tomorrow.",
@@ -155,7 +155,9 @@ export function registerProblemHandler(
     });
 
     try {
-      const importedProblem = await scraperService.importFromUrl(parsed.data.leetcodeUrl);
+      const importedProblem = await (deps.importProblem
+        ? deps.importProblem(parsed.data.leetcodeUrl)
+        : scraperService.importFromUrl(parsed.data.leetcodeUrl));
       const detail = await problemService.getById(importedProblem.id);
 
       if (!detail) {

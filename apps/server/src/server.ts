@@ -5,6 +5,7 @@ import { createGroqClient } from "./clients/GroqClient.js";
 import { createJudge0Client } from "./clients/Judge0Client.js";
 import type { Config } from "./config.js";
 import { roomManager } from "./models/RoomManager.js";
+import { createScraperService } from "./services/ScraperService.js";
 import { setupSocketIO } from "./ws/socketio.js";
 import { registerUpgradeHandler } from "./ws/upgrade.js";
 import { setupYjsServer } from "./ws/yjs.js";
@@ -19,6 +20,13 @@ export function setupUpgradeRouting(
   config: Config,
   logger: Logger,
 ): SocketIOServer {
+  roomManager.configureDefaults({
+    submissionLimit: config.ROOM_MAX_SUBMISSIONS,
+    importLimit: config.ROOM_MAX_IMPORTS,
+    customTestCaseLimit: config.ROOM_MAX_CUSTOM_TEST_CASES,
+    gracePeriodMs: config.ROOM_GRACE_PERIOD_MS,
+  });
+
   const io = new SocketIOServer({
     path: "/ws/socket",
     cors: { origin: config.ALLOWED_ORIGINS, credentials: true },
@@ -36,12 +44,20 @@ export function setupUpgradeRouting(
   });
   const judge0Client = createJudge0Client(config);
   const groqClient = config.GROQ_API_KEY ? createGroqClient(config) : undefined;
+  const scraperService = createScraperService({
+    graphQlUrl: config.LEETCODE_GRAPHQL_URL,
+  });
 
   setupSocketIO(io, logger, {
     getDoc,
     judge0Client,
     dailyLimit: config.JUDGE0_DAILY_LIMIT,
     groqClient,
+    rateLimits: {
+      wsConnectionsPerMinute: config.RATE_LIMIT_WS_CONNECT,
+      joinAttemptsPerHour: config.RATE_LIMIT_JOIN,
+      importsPerHour: config.RATE_LIMIT_IMPORT,
+    },
     allowedOrigins: config.ALLOWED_ORIGINS,
     trustedProxyIps: config.TRUSTED_PROXY_IPS,
     maxCodeBytes: config.MAX_CODE_BYTES,
@@ -51,6 +67,9 @@ export function setupUpgradeRouting(
     maxLLMPromptChars: config.MAX_LLM_PROMPT_CHARS,
     maxLLMHintChars: config.MAX_LLM_HINT_CHARS,
     maxLLMCallsPerRoom: config.MAX_LLM_CALLS_PER_ROOM,
+    hintConsentMs: config.ROOM_HINT_CONSENT_MS,
+    importsDailyLimit: config.IMPORTS_DAILY_LIMIT,
+    importProblem: (url) => scraperService.importFromUrl(url),
   });
 
   // Replace Socket.io's default upgrade listener with our unified router

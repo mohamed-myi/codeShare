@@ -322,6 +322,9 @@ describe("Hint handler - single user LLM streaming fallback", () => {
     mockFindHintsByProblemId.mockResolvedValue([]);
     mockFindProblemById.mockResolvedValue(mockProblem);
 
+    const chunks: { text: string }[] = [];
+    client.on(SocketEvents.HINT_CHUNK, (data: { text: string }) => chunks.push(data));
+
     const doneP = waitForEvent<HintDonePayload>(client, SocketEvents.HINT_DONE);
     client.emit(SocketEvents.HINT_REQUEST);
     const result = await doneP;
@@ -330,6 +333,8 @@ describe("Hint handler - single user LLM streaming fallback", () => {
     expect(result.hintsRemaining).toBe(1);
     expect(room.hintsUsed).toBe(1);
     expect(room.hintStreaming).toBe(false);
+    expect(chunks.length).toBeGreaterThanOrEqual(1);
+    expect(chunks.map((c) => c.text).join("")).toBe("Hello world");
   });
 
   it("emits HINT_ERROR when LLM streaming fails", async () => {

@@ -50,6 +50,12 @@ class GlobalCounters {
     this.rolloverIfNeeded();
     this.importsToday++;
   }
+
+  reset(): void {
+    this.judge0Today = 0;
+    this.importsToday = 0;
+    this.dayStart = this.todayStart();
+  }
 }
 
 export const globalCounters = new GlobalCounters();

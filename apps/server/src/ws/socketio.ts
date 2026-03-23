@@ -20,6 +20,8 @@ import { normalizeRoomCode } from "../lib/roomCode.js";
 import { createAuthMiddleware } from "../middleware/authMiddleware.js";
 import { roomManager } from "../models/RoomManager.js";
 
+let activeIpRateLimiter: IpRateLimiter | null = null;
+
 interface Judge0Client {
   submit(
     source: string,
@@ -58,6 +60,9 @@ export interface SocketIODeps {
   maxLLMPromptChars?: number;
   maxLLMHintChars?: number;
   maxLLMCallsPerRoom?: number;
+  hintConsentMs?: number;
+  importsDailyLimit?: number;
+  importProblem?: (url: string) => Promise<{ id: string; sourceUrl: string | null }>;
 }
 
 /**
@@ -66,6 +71,7 @@ export interface SocketIODeps {
  */
 export function setupSocketIO(io: Server, logger: Logger, deps?: SocketIODeps): void {
   const ipRateLimiter = deps?.ipRateLimiter ?? new IpRateLimiter();
+  activeIpRateLimiter = ipRateLimiter;
   const wsConnectionsPerMinute = deps?.rateLimits?.wsConnectionsPerMinute ?? 20;
   const joinAttemptsPerHour = deps?.rateLimits?.joinAttemptsPerHour ?? 30;
   const importsPerHour = deps?.rateLimits?.importsPerHour ?? 10;
@@ -122,6 +128,8 @@ export function setupSocketIO(io: Server, logger: Logger, deps?: SocketIODeps): 
         ipRateLimiter,
         importsPerHour,
         enableProblemImport: deps?.enableProblemImport ?? true,
+        importsDailyLimit: deps?.importsDailyLimit ?? 50,
+        importProblem: deps?.importProblem,
       });
     }
     registerTestcaseHandler(io, socket, logger, roomManager, (problemId, language) =>
@@ -136,6 +144,7 @@ export function setupSocketIO(io: Server, logger: Logger, deps?: SocketIODeps): 
       maxLLMPromptChars: deps?.maxLLMPromptChars ?? 12_000,
       maxLLMHintChars: deps?.maxLLMHintChars ?? 1_500,
       maxLLMCallsPerRoom: deps?.maxLLMCallsPerRoom ?? 15,
+      hintConsentMs: deps?.hintConsentMs,
       findStoredHint:
         deps?.findStoredHint ??
         (async (problemId, hintsUsed) => {
@@ -163,4 +172,8 @@ export function setupSocketIO(io: Server, logger: Logger, deps?: SocketIODeps): 
       });
     }
   });
+}
+
+export function resetSocketIORateLimits(): void {
+  activeIpRateLimiter?.clear();
 }
