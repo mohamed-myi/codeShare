@@ -40,7 +40,7 @@ function RoomSessionLayout() {
   const bannerError = connectionError ?? state.lastError;
 
   return (
-    <div className="flex h-screen flex-col bg-[var(--color-bg-primary)]">
+    <div className="app-screen flex h-screen flex-col bg-[var(--color-bg-primary)]">
       <Header
         roomCode={state.roomCode}
         mode={state.mode}
@@ -51,7 +51,7 @@ function RoomSessionLayout() {
         {!connected && (
           <div
             data-testid="reconnecting-banner"
-            className="flex items-center justify-center gap-2 border-b border-[var(--color-border-subtle)] bg-[var(--color-warning-subtle)] px-4 py-1.5 text-center text-xs text-[var(--color-warning-text)]"
+            className="flex items-center justify-center gap-2 border-b border-[var(--color-border-subtle)] px-6 py-2 text-center text-xs text-[var(--color-warning-text)]"
             role="status"
           >
             <WifiOff size={12} />
@@ -61,7 +61,7 @@ function RoomSessionLayout() {
         {bannerError && (
           <div
             data-testid="room-error-banner"
-            className="flex items-center justify-center gap-2 border-b border-[var(--color-border-subtle)] bg-[var(--color-error-subtle)] px-4 py-1.5 text-center text-xs text-[var(--color-error-text)]"
+            className="flex items-center justify-center gap-2 border-b border-[var(--color-border-subtle)] px-6 py-2 text-center text-xs text-[var(--color-error-text)]"
             role="alert"
           >
             <AlertTriangle size={12} />
@@ -71,7 +71,7 @@ function RoomSessionLayout() {
         {connectedCount < 2 && (
           <div
             data-testid="waiting-banner"
-            className="flex items-center justify-center gap-2 bg-[var(--color-warning-subtle)] px-4 py-1.5 text-center text-xs text-[var(--color-warning-text)]"
+            className="flex items-center justify-center gap-2 border-b border-[var(--color-border-subtle)] px-6 py-2 text-center text-xs text-[var(--color-text-tertiary)]"
           >
             <Clock size={12} />
             Waiting for partner...

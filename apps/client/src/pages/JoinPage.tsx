@@ -50,7 +50,7 @@ export function JoinPage() {
 
   if (loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[var(--color-bg-primary)]">
+      <main className="app-screen flex min-h-screen items-center justify-center px-6">
         <div className="flex items-center gap-2 text-[var(--color-text-tertiary)]">
           <Loader2 size={16} className="animate-spin" />
           Checking room...
@@ -61,17 +61,19 @@ export function JoinPage() {
 
   if (error || !roomInfo || !roomInfo.exists) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[var(--color-bg-primary)] p-8">
-        <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">Room not found</h1>
-        <p className="text-[var(--color-text-tertiary)]">
-          It may have expired or the link is invalid.
-        </p>
-        <Link
-          to="/"
-          className="text-[var(--color-accent-text)] transition-colors hover:text-[var(--color-text-primary)]"
-        >
-          Back to home
-        </Link>
+      <main className="app-screen flex min-h-screen items-center px-6 py-8 md:px-10">
+        <div className="mx-auto w-full max-w-3xl border-t border-[var(--color-border-subtle)] pt-8">
+          <p className="ui-copy-kicker">Join Session</p>
+          <h1 className="mt-4 text-4xl font-medium tracking-[-0.04em] text-[var(--color-text-primary)]">
+            Room not found
+          </h1>
+          <p className="mt-4 max-w-xl text-base leading-7 text-[var(--color-text-secondary)]">
+            It may have expired or the link is invalid.
+          </p>
+          <Link to="/" className="ui-ghost-button mt-6 text-sm">
+            Back to home
+          </Link>
+        </div>
       </main>
     );
   }
@@ -82,17 +84,19 @@ export function JoinPage() {
     roomInfo.userCount >= roomInfo.maxUsers
   ) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[var(--color-bg-primary)] p-8">
-        <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">This room is full</h1>
-        <p className="text-[var(--color-text-tertiary)]">
-          {roomInfo.userCount}/{roomInfo.maxUsers} users
-        </p>
-        <Link
-          to="/"
-          className="text-[var(--color-accent-text)] transition-colors hover:text-[var(--color-text-primary)]"
-        >
-          Back to home
-        </Link>
+      <main className="app-screen flex min-h-screen items-center px-6 py-8 md:px-10">
+        <div className="mx-auto w-full max-w-3xl border-t border-[var(--color-border-subtle)] pt-8">
+          <p className="ui-copy-kicker">Join Session</p>
+          <h1 className="mt-4 text-4xl font-medium tracking-[-0.04em] text-[var(--color-text-primary)]">
+            This room is full
+          </h1>
+          <p className="mt-4 text-base leading-7 text-[var(--color-text-secondary)]">
+            {roomInfo.userCount}/{roomInfo.maxUsers} users
+          </p>
+          <Link to="/" className="ui-ghost-button mt-6 text-sm">
+            Back to home
+          </Link>
+        </div>
       </main>
     );
   }
@@ -101,31 +105,44 @@ export function JoinPage() {
   const roleHint = roomInfo.mode === "interview" ? "You'll join as Candidate" : null;
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-[var(--color-bg-primary)] p-8">
-      <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">Join Room</h1>
-      <p className="text-[var(--color-text-tertiary)]">
-        {modeLabel} room &mdash; {roomInfo.userCount}/{roomInfo.maxUsers} users
-      </p>
-      {roleHint && <p className="text-sm text-[var(--color-text-tertiary)]">{roleHint}</p>}
-      <div className="flex w-full max-w-md flex-col gap-4">
-        <input
-          type="text"
-          aria-label="Display name"
-          placeholder="Your display name"
-          value={displayName}
-          onChange={(e) => setDisplayName(e.target.value)}
-          maxLength={30}
-          className="rounded-[var(--radius-sm)] border border-[var(--color-border-strong)] bg-[var(--color-bg-tertiary)] px-4 py-2.5 text-[var(--color-text-primary)] placeholder-[var(--color-text-tertiary)] focus:border-[var(--color-accent)] focus:ring-2 focus:ring-[var(--color-focus-ring)]"
-        />
-        <button
-          type="button"
-          data-testid="join-room-button"
-          onClick={handleJoin}
-          disabled={!displayName.trim()}
-          className="rounded-[var(--radius-sm)] bg-[var(--color-accent)] px-4 py-2.5 text-white transition-colors duration-[var(--transition-fast)] hover:bg-[var(--color-accent-hover)] disabled:opacity-40"
-        >
-          Join
-        </button>
+    <main className="app-screen flex min-h-screen items-center px-6 py-8 md:px-10">
+      <div className="mx-auto grid w-full max-w-5xl gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(320px,420px)] lg:gap-16">
+        <section className="flex flex-col justify-center gap-4">
+          <p className="ui-copy-kicker">Join Session</p>
+          <h1 className="text-5xl leading-[0.96] font-medium tracking-[-0.04em] text-[var(--color-text-primary)] sm:text-6xl">
+            Join Room
+          </h1>
+          <p className="max-w-xl text-base leading-7 text-[var(--color-text-secondary)]">
+            {modeLabel} room &mdash; {roomInfo.userCount}/{roomInfo.maxUsers} users
+          </p>
+          {roleHint && <p className="text-sm text-[var(--color-text-tertiary)]">{roleHint}</p>}
+        </section>
+
+        <section className="border-t border-[var(--color-border-subtle)] pt-6 lg:border-t-0 lg:border-l lg:pl-10 lg:pt-0">
+          <label className="block">
+            <span className="mb-3 block text-xs uppercase tracking-[0.08em] text-[var(--color-text-tertiary)]">
+              Display Name
+            </span>
+            <input
+              type="text"
+              aria-label="Display name"
+              placeholder="Your display name"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              maxLength={30}
+              className="ui-line-control text-base"
+            />
+          </label>
+          <button
+            type="button"
+            data-testid="join-room-button"
+            onClick={handleJoin}
+            disabled={!displayName.trim()}
+            className="ui-flat-button mt-8 w-full justify-center"
+          >
+            Join
+          </button>
+        </section>
       </div>
     </main>
   );

@@ -26,7 +26,7 @@ export class RoomErrorBoundary extends Component<RoomErrorBoundaryProps, RoomErr
       return (
         <div className="flex min-h-screen items-center justify-center bg-[var(--color-bg-primary)] p-6">
           <div className="max-w-md rounded-[var(--radius-lg)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-elevated)] p-6 text-center shadow-sm">
-            <h1 className="text-lg font-semibold text-[var(--color-text-primary)]">
+            <h1 className="text-lg font-medium text-[var(--color-text-primary)]">
               Room failed to load
             </h1>
             <p className="mt-2 text-sm text-[var(--color-text-tertiary)]">

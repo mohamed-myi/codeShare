@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useProblems } from "../hooks/useProblems.ts";
 import { useSocket } from "../hooks/useSocket.ts";
 import { ConfirmDialog } from "./ConfirmDialog.tsx";
+import { Select } from "./Select.tsx";
 
 interface ProblemSelectorProps {
   currentProblemId: string | null;
@@ -70,31 +71,32 @@ export function ProblemSelector({
   return (
     <>
       <div className="flex flex-col">
-        <div className="flex gap-2 border-b border-[var(--color-border-subtle)] px-3 py-2">
-          <select
+        <div
+          className="flex gap-4 border-b border-[var(--color-border-subtle)] px-4 py-4"
+          data-testid="problems-filter-bar"
+        >
+          <Select
             value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            className="rounded-[var(--radius-sm)] border border-[var(--color-border-strong)] bg-[var(--color-bg-tertiary)] px-2 py-1 text-xs text-[var(--color-text-secondary)]"
-          >
-            <option value="">All Categories</option>
-            {categories.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
-            ))}
-          </select>
-          <select
+            onChange={setCategoryFilter}
+            placeholder="All Categories"
+            options={categories.map((cat) => ({ value: cat, label: cat }))}
+            size="compact"
+            disabled={executionInProgress || disabled}
+          />
+          <Select
             value={difficultyFilter}
-            onChange={(e) => setDifficultyFilter(e.target.value)}
-            className="rounded-[var(--radius-sm)] border border-[var(--color-border-strong)] bg-[var(--color-bg-tertiary)] px-2 py-1 text-xs text-[var(--color-text-secondary)]"
-          >
-            <option value="">All Difficulties</option>
-            <option value="easy">Easy</option>
-            <option value="medium">Medium</option>
-            <option value="hard">Hard</option>
-          </select>
+            onChange={setDifficultyFilter}
+            placeholder="All Difficulties"
+            options={[
+              { value: "easy", label: "Easy" },
+              { value: "medium", label: "Medium" },
+              { value: "hard", label: "Hard" },
+            ]}
+            size="compact"
+            disabled={executionInProgress || disabled}
+          />
         </div>
-        <div className="max-h-48 overflow-y-auto">
+        <div className="max-h-48 overflow-y-auto" data-testid="problems-list">
           {filtered.length === 0 ? (
             <div className="px-3 py-2 text-xs text-[var(--color-text-tertiary)]">
               No problems match filters.
@@ -106,10 +108,8 @@ export function ProblemSelector({
                 key={problem.id}
                 onClick={() => handleSelect(problem)}
                 disabled={executionInProgress || disabled}
-                className={`flex w-full items-center justify-between px-3 py-1.5 text-left text-sm text-[var(--color-text-secondary)] transition-colors duration-[var(--transition-fast)] hover:bg-[var(--color-hover-overlay)] disabled:opacity-40 ${
-                  problem.id === currentProblemId
-                    ? "border-l-2 border-l-[var(--color-accent)] bg-[var(--color-accent-subtle)]"
-                    : ""
+                className={`flex w-full items-center justify-between border-b border-[var(--color-border-subtle)] px-4 py-3 text-left text-sm text-[var(--color-text-secondary)] transition-colors duration-[140ms] ease-in-out hover:bg-[var(--color-hover-overlay)] disabled:opacity-40 ${
+                  problem.id === currentProblemId ? "bg-[var(--color-accent-subtle)]" : ""
                 }`}
               >
                 <span className="truncate">{problem.title}</span>

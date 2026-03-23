@@ -33,44 +33,43 @@ export function ProblemPanel({
 }: ProblemPanelProps) {
   if (!problem) {
     return (
-      <div className="flex h-full items-center justify-center p-4">
+      <div className="flex h-full items-center justify-center px-6 py-10">
         <p className="text-[var(--color-text-tertiary)]">{emptyMessage}</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4 p-4" data-testid="problem-panel">
+    <div className="space-y-8 px-6 py-8" data-testid="problem-panel">
       <div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <h2
-            className="text-lg font-semibold text-[var(--color-text-primary)]"
+            className="text-2xl leading-tight tracking-[-0.04em] text-[var(--color-text-primary)]"
             data-testid="problem-title"
           >
             {problem.title}
           </h2>
-          <span
-            className={`text-xs font-medium capitalize ${DIFFICULTY_STYLES[problem.difficulty]}`}
-          >
+          <span className={`text-sm capitalize ${DIFFICULTY_STYLES[problem.difficulty]}`}>
             {problem.difficulty}
           </span>
-          {/* TODO: Re-enable hint button in header */}
         </div>
-        <span className="text-xs text-[var(--color-text-tertiary)]">{problem.category}</span>
+        <span className="mt-2 inline-block text-sm text-[var(--color-text-tertiary)]">
+          {problem.category}
+        </span>
       </div>
 
       {hint && <HintStatus hint={hint} />}
 
-      <div className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--color-text-secondary)]">
+      <div className="whitespace-pre-wrap text-sm leading-7 text-[var(--color-text-secondary)]">
         {renderDescription(problem.description)}
       </div>
 
       {problem.constraints.length > 0 && (
-        <div>
-          <h3 className="mb-1 text-sm font-semibold text-[var(--color-text-primary)]">
+        <div className="border-t border-[var(--color-border-subtle)] pt-6">
+          <h3 className="mb-3 text-xs uppercase tracking-[0.08em] text-[var(--color-text-tertiary)]">
             Constraints:
           </h3>
-          <ul className="list-inside list-disc space-y-0.5 text-sm text-[var(--color-text-secondary)]">
+          <ul className="list-inside list-disc space-y-1.5 text-sm leading-7 text-[var(--color-text-secondary)]">
             {problem.constraints.map((c) => (
               <li key={c}>{c}</li>
             ))}
@@ -109,14 +108,14 @@ function HintStatus({ hint }: { hint: HintProps }) {
 
   return (
     <>
-      <div className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-tertiary)] px-3 py-2">
+      <div className="flex items-center justify-between gap-3 border-y border-[var(--color-border-subtle)] py-4">
         <p className="text-sm text-[var(--color-text-secondary)]">
           Hints remaining: {hintsRemaining}/{hint.hintLimit}
         </p>
         <button
           type="button"
           data-testid="request-hint-button"
-          className="rounded-[var(--radius-sm)] bg-[var(--color-accent)] px-3 py-1.5 text-sm text-white transition-colors duration-[var(--transition-fast)] hover:bg-[var(--color-accent-hover)] disabled:cursor-not-allowed disabled:opacity-40"
+          className="ui-flat-button px-3 py-1.5 text-xs"
           disabled={!canRequestHint}
           onClick={hint.onRequestHint}
         >
@@ -125,22 +124,20 @@ function HintStatus({ hint }: { hint: HintProps }) {
       </div>
 
       {hint.pendingHintRequest && isRequester && (
-        <div className="rounded-[var(--radius-md)] border border-[var(--color-warning)] bg-[var(--color-warning-subtle)] px-3 py-2 text-sm text-[var(--color-warning-text)]">
+        <div className="border-l border-[var(--color-warning)] pl-4 text-sm text-[var(--color-warning-text)]">
           Waiting for partner&apos;s approval...
         </div>
       )}
 
       {hint.pendingHintRequest && !isRequester && (
-        <div className="rounded-[var(--radius-md)] border border-[var(--color-info)] bg-[var(--color-info-subtle)] px-3 py-3">
+        <div className="border-l border-[var(--color-info)] pl-4">
           <div data-testid="hint-consent-card">
-            <p className="text-sm font-medium text-[var(--color-info-text)]">
-              Your partner wants a hint.
-            </p>
-            <div className="mt-3 flex gap-2">
+            <p className="text-sm text-[var(--color-info-text)]">Your partner wants a hint.</p>
+            <div className="mt-3 flex gap-4">
               <button
                 type="button"
                 data-testid="approve-hint-button"
-                className="rounded-[var(--radius-sm)] bg-[var(--color-accent)] px-3 py-1.5 text-sm text-white transition-colors duration-[var(--transition-fast)] hover:bg-[var(--color-accent-hover)]"
+                className="ui-flat-button px-3 py-1.5 text-xs"
                 onClick={hint.onApproveHint}
               >
                 Approve
@@ -148,7 +145,7 @@ function HintStatus({ hint }: { hint: HintProps }) {
               <button
                 type="button"
                 data-testid="deny-hint-button"
-                className="rounded-[var(--radius-sm)] border border-[var(--color-info)] px-3 py-1.5 text-sm text-[var(--color-info-text)] transition-colors duration-[var(--transition-fast)] hover:bg-[var(--color-info-subtle)]"
+                className="ui-ghost-button px-0 py-1.5 text-xs text-[var(--color-info-text)]"
                 onClick={hint.onDenyHint}
               >
                 Deny
@@ -160,7 +157,7 @@ function HintStatus({ hint }: { hint: HintProps }) {
 
       {hint.isHintStreaming && (
         <div
-          className="rounded-[var(--radius-md)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-tertiary)] px-3 py-3 text-sm text-[var(--color-text-secondary)]"
+          className="border-l border-[var(--color-border-subtle)] pl-4 text-sm leading-7 text-[var(--color-text-secondary)]"
           data-testid="hint-output"
         >
           <span>{hint.hintText}</span>
@@ -173,7 +170,7 @@ function HintStatus({ hint }: { hint: HintProps }) {
 
       {hasCompletedHint && (
         <div
-          className="rounded-[var(--radius-md)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-tertiary)] px-3 py-3 text-sm text-[var(--color-text-secondary)]"
+          className="border-l border-[var(--color-border-subtle)] pl-4 text-sm leading-7 text-[var(--color-text-secondary)]"
           data-testid="hint-output"
         >
           {hint.hintText}
@@ -199,17 +196,21 @@ function remainingHints(hintsUsed: number, hintLimit: number): number {
 
 function renderDescription(text: string): React.ReactNode {
   const parts = text.split(/(`[^`]+`)/g);
-  return parts.map((part) => {
+  return parts.map((part, index) => {
     if (part.startsWith("`") && part.endsWith("`")) {
       return (
+        // biome-ignore lint/suspicious/noArrayIndexKey: stable split() output, never reordered
         <code
-          key={part}
-          className="rounded bg-[var(--color-bg-tertiary)] px-1 py-0.5 text-xs text-[var(--color-text-primary)]"
+          key={`${part}-${index}`}
+          className="border-b border-[var(--color-border-subtle)] px-0.5 font-[var(--font-family-mono)] text-xs text-[var(--color-text-primary)]"
         >
           {part.slice(1, -1)}
         </code>
       );
     }
-    return part;
+    return (
+      // biome-ignore lint/suspicious/noArrayIndexKey: stable split() output, never reordered
+      <span key={`text-${index}`}>{part}</span>
+    );
   });
 }

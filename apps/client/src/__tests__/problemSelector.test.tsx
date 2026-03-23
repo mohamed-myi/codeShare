@@ -58,8 +58,9 @@ describe("ProblemSelector", () => {
 
   it("filters by category", () => {
     render(<ProblemSelector currentProblemId={null} executionInProgress={false} />);
-    const categorySelect = screen.getAllByRole("combobox")[0];
-    fireEvent.change(categorySelect, { target: { value: "Two Pointers" } });
+    const categoryTrigger = screen.getAllByRole("combobox")[0];
+    fireEvent.click(categoryTrigger);
+    fireEvent.click(screen.getByRole("option", { name: "Two Pointers" }));
 
     expect(screen.getByText("3Sum")).toBeDefined();
     expect(screen.getByText("Trapping Rain Water")).toBeDefined();
@@ -69,8 +70,9 @@ describe("ProblemSelector", () => {
 
   it("filters by difficulty", () => {
     render(<ProblemSelector currentProblemId={null} executionInProgress={false} />);
-    const diffSelect = screen.getAllByRole("combobox")[1];
-    fireEvent.change(diffSelect, { target: { value: "easy" } });
+    const diffTrigger = screen.getAllByRole("combobox")[1];
+    fireEvent.click(diffTrigger);
+    fireEvent.click(screen.getByRole("option", { name: "Easy" }));
 
     expect(screen.getByText("Two Sum")).toBeDefined();
     expect(screen.getByText("Valid Parentheses")).toBeDefined();
@@ -126,10 +128,13 @@ describe("ProblemSelector", () => {
 
   it("shows empty state for no matching filters", () => {
     render(<ProblemSelector currentProblemId={null} executionInProgress={false} />);
-    const categorySelect = screen.getAllByRole("combobox")[0];
-    const diffSelect = screen.getAllByRole("combobox")[1];
-    fireEvent.change(categorySelect, { target: { value: "Stack" } });
-    fireEvent.change(diffSelect, { target: { value: "hard" } });
+    const categoryTrigger = screen.getAllByRole("combobox")[0];
+    fireEvent.click(categoryTrigger);
+    fireEvent.click(screen.getByRole("option", { name: "Stack" }));
+
+    const diffTrigger = screen.getAllByRole("combobox")[1];
+    fireEvent.click(diffTrigger);
+    fireEvent.click(screen.getByRole("option", { name: "Hard" }));
 
     expect(screen.getByText("No problems match filters.")).toBeDefined();
   });

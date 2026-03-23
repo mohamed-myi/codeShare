@@ -45,13 +45,13 @@ export function RoomCodeModal({ isOpen, onClose, roomCode }: RoomCodeModalProps)
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: backdrop dismiss is supplementary to the X button
     <div
-      className="fixed inset-0 z-20 flex items-center justify-center bg-black/70"
+      className="ui-overlay"
       data-testid="room-code-modal-backdrop"
       role="presentation"
       onClick={handleBackdropClick}
     >
       <div
-        className="relative w-full max-w-sm rounded-[var(--radius-lg)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-elevated)] p-7 shadow-lg"
+        className="ui-dialog relative w-full max-w-sm p-6"
         role="dialog"
         aria-modal="true"
         data-testid="room-code-modal"
@@ -60,20 +60,22 @@ export function RoomCodeModal({ isOpen, onClose, roomCode }: RoomCodeModalProps)
           type="button"
           onClick={onClose}
           data-testid="modal-close-button"
-          className="absolute right-3 top-3 text-[var(--color-text-tertiary)] transition-colors duration-[var(--transition-fast)] hover:text-[var(--color-text-primary)]"
+          className="absolute right-4 top-4 text-[var(--color-text-tertiary)] transition-colors duration-[140ms] ease-in-out hover:text-[var(--color-text-primary)]"
           aria-label="Close"
         >
           <X size={18} />
         </button>
 
-        <h2 className="mb-5 text-lg font-semibold text-[var(--color-text-primary)]">Share Room</h2>
+        <h2 className="mb-5 text-lg tracking-[-0.03em] text-[var(--color-text-primary)]">
+          Share Room
+        </h2>
 
         <div className="flex flex-col gap-4">
           <div>
             <p className="mb-1 text-xs text-[var(--color-text-tertiary)]">Room Code</p>
             <div className="flex items-center gap-2">
               <span
-                className="flex-1 rounded-[var(--radius-sm)] bg-[var(--color-bg-tertiary)] px-3 py-2 font-[var(--font-family-mono)] text-lg tracking-widest text-[var(--color-text-primary)]"
+                className="flex-1 border-b border-[var(--color-border-strong)] pb-3 font-[var(--font-family-mono)] text-lg tracking-[0.2em] text-[var(--color-text-primary)]"
                 data-testid="modal-room-code"
               >
                 {roomCode}
@@ -82,7 +84,7 @@ export function RoomCodeModal({ isOpen, onClose, roomCode }: RoomCodeModalProps)
                 type="button"
                 onClick={() => handleCopy(roomCode, "code")}
                 data-testid="copy-code-button"
-                className="rounded-[var(--radius-sm)] border border-[var(--color-border-strong)] p-2 text-[var(--color-text-secondary)] transition-colors duration-[var(--transition-fast)] hover:bg-[var(--color-hover-overlay)]"
+                className="text-[var(--color-text-secondary)] transition-colors duration-[140ms] ease-in-out hover:text-[var(--color-text-primary)]"
                 aria-label="Copy room code"
               >
                 {copiedField === "code" ? (
@@ -98,7 +100,7 @@ export function RoomCodeModal({ isOpen, onClose, roomCode }: RoomCodeModalProps)
             <p className="mb-1 text-xs text-[var(--color-text-tertiary)]">Shareable Link</p>
             <div className="flex items-center gap-2">
               <span
-                className="flex-1 truncate rounded-[var(--radius-sm)] bg-[var(--color-bg-tertiary)] px-3 py-2 text-sm text-[var(--color-text-secondary)]"
+                className="flex-1 truncate border-b border-[var(--color-border-strong)] pb-3 text-sm text-[var(--color-text-secondary)]"
                 data-testid="modal-share-url"
               >
                 {shareUrl}
@@ -107,7 +109,7 @@ export function RoomCodeModal({ isOpen, onClose, roomCode }: RoomCodeModalProps)
                 type="button"
                 onClick={() => handleCopy(shareUrl, "url")}
                 data-testid="copy-url-button"
-                className="rounded-[var(--radius-sm)] border border-[var(--color-border-strong)] p-2 text-[var(--color-text-secondary)] transition-colors duration-[var(--transition-fast)] hover:bg-[var(--color-hover-overlay)]"
+                className="text-[var(--color-text-secondary)] transition-colors duration-[140ms] ease-in-out hover:text-[var(--color-text-primary)]"
                 aria-label="Copy shareable link"
               >
                 {copiedField === "url" ? (

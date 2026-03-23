@@ -26,21 +26,19 @@ export function TestCasePanel({
   }
 
   return (
-    <div className="overflow-y-auto p-3" data-testid="testcases-panel">
+    <div className="overflow-y-auto px-4 py-5" data-testid="testcases-panel">
       {testCases.length > 0 && (
         <>
-          <h3 className="mb-2 text-sm font-semibold text-[var(--color-text-primary)]">
+          <h3 className="mb-3 text-xs uppercase tracking-[0.08em] text-[var(--color-text-tertiary)]">
             Test Cases
           </h3>
-          <div className="space-y-3">
+          <div className="space-y-4">
             {testCases.map((tc, i) => (
               <div
                 key={tc.id}
-                className="rounded-[var(--radius-sm)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-tertiary)] p-2 text-xs"
+                className="border-l border-[var(--color-border-subtle)] pl-4 text-xs"
               >
-                <div className="mb-1 font-medium text-[var(--color-text-tertiary)]">
-                  Case {i + 1}
-                </div>
+                <div className="mb-2 text-[var(--color-text-tertiary)]">Case {i + 1}</div>
                 <div className="space-y-1">
                   {Object.entries(tc.input).map(([key, value]) => (
                     <div key={key} className="flex gap-1">
@@ -65,18 +63,16 @@ export function TestCasePanel({
 
       {customTestCases.length > 0 && (
         <div className="mt-3">
-          <h3 className="mb-2 text-sm font-semibold text-[var(--color-text-primary)]">
+          <h3 className="mb-3 text-xs uppercase tracking-[0.08em] text-[var(--color-text-tertiary)]">
             Custom Test Cases
           </h3>
-          <div className="space-y-3">
+          <div className="space-y-4">
             {customTestCases.map((ct, i) => (
               <div
                 key={JSON.stringify(ct.input)}
-                className="rounded-[var(--radius-sm)] border border-[var(--color-border-strong)] bg-[var(--color-bg-tertiary)] p-2 text-xs"
+                className="border-l border-[var(--color-border-subtle)] pl-4 text-xs"
               >
-                <div className="mb-1 font-medium text-[var(--color-text-secondary)]">
-                  Custom {i + 1}
-                </div>
+                <div className="mb-2 text-[var(--color-text-secondary)]">Custom {i + 1}</div>
                 <div className="space-y-1">
                   {Object.entries(ct.input).map(([key, value]) => (
                     <div key={key} className="flex gap-1">
@@ -154,9 +150,11 @@ function AddTestCaseForm({ parameterNames, onAdd }: AddTestCaseFormProps) {
     <form
       onSubmit={handleSubmit}
       data-testid="custom-testcase-form"
-      className="mt-3 rounded-[var(--radius-sm)] border border-dashed border-[var(--color-border-strong)] p-2"
+      className="mt-6 border-t border-dashed border-[var(--color-border-strong)] pt-4"
     >
-      <h4 className="mb-2 text-xs font-semibold text-[var(--color-text-primary)]">Add Test Case</h4>
+      <h4 className="mb-3 text-xs uppercase tracking-[0.08em] text-[var(--color-text-tertiary)]">
+        Add Test Case
+      </h4>
       <div className="space-y-2">
         {parameterNames.map((name) => (
           <div key={name}>
@@ -170,7 +168,7 @@ function AddTestCaseForm({ parameterNames, onAdd }: AddTestCaseFormProps) {
               id={`param-${name}`}
               type="text"
               data-testid={`custom-input-${name}`}
-              className="mt-0.5 w-full rounded-[var(--radius-sm)] border border-[var(--color-border-strong)] bg-[var(--color-bg-tertiary)] px-2 py-1 font-[var(--font-family-mono)] text-xs text-[var(--color-text-primary)] placeholder-[var(--color-text-tertiary)] focus:border-[var(--color-accent)] focus:ring-2 focus:ring-[var(--color-focus-ring)]"
+              className="ui-line-control mt-1 font-[var(--font-family-mono)] text-xs"
               value={values[name] ?? ""}
               onChange={(e) => handleValueChange(name, e.target.value)}
               placeholder={`JSON value for ${name}`}
@@ -188,7 +186,7 @@ function AddTestCaseForm({ parameterNames, onAdd }: AddTestCaseFormProps) {
             id="expected-output"
             type="text"
             data-testid="custom-expected-output"
-            className="mt-0.5 w-full rounded-[var(--radius-sm)] border border-[var(--color-border-strong)] bg-[var(--color-bg-tertiary)] px-2 py-1 font-[var(--font-family-mono)] text-xs text-[var(--color-text-primary)] placeholder-[var(--color-text-tertiary)] focus:border-[var(--color-accent)] focus:ring-2 focus:ring-[var(--color-focus-ring)]"
+            className="ui-line-control mt-1 font-[var(--font-family-mono)] text-xs"
             value={values.__expected ?? ""}
             onChange={(e) => handleValueChange("__expected", e.target.value)}
             placeholder="JSON expected output"
@@ -203,7 +201,7 @@ function AddTestCaseForm({ parameterNames, onAdd }: AddTestCaseFormProps) {
       <button
         type="submit"
         data-testid="add-custom-testcase-button"
-        className="mt-2 inline-flex items-center gap-1 rounded-[var(--radius-sm)] bg-[var(--color-accent)] px-3 py-1 text-xs text-white transition-colors duration-[var(--transition-fast)] hover:bg-[var(--color-accent-hover)]"
+        className="ui-flat-button mt-3 px-3 py-1.5 text-xs"
       >
         <Plus size={12} />
         Add

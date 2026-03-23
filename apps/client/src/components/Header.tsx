@@ -1,7 +1,7 @@
 import type { RoomMode, RoomUser } from "@codeshare/shared";
-import { Square } from "lucide-react";
 import { useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { JoinRoomDialog } from "./JoinRoomDialog.js";
 import { RoomCodeModal } from "./RoomCodeModal.js";
 
 interface HeaderProps {
@@ -16,6 +16,7 @@ export function Header({ roomCode, mode, users, connected }: HeaderProps) {
   const location = useLocation();
   const { roomCode: routeRoomCode } = useParams<{ roomCode: string }>();
   const [isShareOpen, setIsShareOpen] = useState(false);
+  const [isJoinOpen, setIsJoinOpen] = useState(false);
 
   const isSolverActive = location.pathname.endsWith("/solve");
   const modeLabel = mode === "interview" ? "Interview" : "Collab";
@@ -27,56 +28,70 @@ export function Header({ roomCode, mode, users, connected }: HeaderProps) {
 
   return (
     <header
-      className="flex h-10 shrink-0 items-center gap-3 border-b border-[var(--color-border-subtle)] bg-[var(--color-bg-secondary)] px-4"
+      className="flex h-14 shrink-0 items-center border-b border-[var(--color-border-subtle)] px-6 text-sm md:px-8"
       data-testid="room-header"
     >
-      <div className="flex items-center gap-2">
-        <Square size={14} className="fill-[var(--color-accent)] text-[var(--color-accent)]" />
-        <span className="text-sm font-semibold text-[var(--color-text-primary)]">CodeShare</span>
+      <div className="flex min-w-0 items-center gap-6">
+        <span className="text-[var(--color-text-secondary)]">CodeShare</span>
+        <span className="text-[var(--color-text-secondary)]">{modeLabel}</span>
+        <button
+          type="button"
+          className="font-[var(--font-family-mono)] text-xs tracking-[0.16em] text-[var(--color-text-secondary)] transition-colors duration-[140ms] ease-in-out hover:text-[var(--color-text-primary)]"
+          data-testid="room-code"
+          onClick={() => setIsShareOpen(true)}
+        >
+          {roomCode}
+        </button>
+        <button
+          type="button"
+          onClick={() => setIsJoinOpen(true)}
+          className="text-[var(--color-text-secondary)] transition-colors duration-[140ms] ease-in-out hover:text-[var(--color-text-primary)]"
+          data-testid="join-room-button"
+        >
+          Join
+        </button>
       </div>
-
-      <span className="text-sm text-[var(--color-text-secondary)]">{modeLabel}</span>
-
-      <button
-        type="button"
-        className="rounded-[var(--radius-sm)] px-1.5 py-0.5 font-[var(--font-family-mono)] text-xs text-[var(--color-text-tertiary)] transition-colors duration-[var(--transition-fast)] hover:bg-[var(--color-hover-overlay)] hover:text-[var(--color-text-secondary)]"
-        data-testid="room-code"
-        onClick={() => setIsShareOpen(true)}
-      >
-        {roomCode}
-      </button>
-
-      <div className="flex items-center gap-2">
-        {users.map((user) => (
-          <span
-            key={user.id}
-            className="inline-flex items-center gap-1 text-xs text-[var(--color-text-secondary)]"
-          >
-            <span
-              className={`inline-block h-1.5 w-1.5 rounded-full ${
-                user.connected ? "bg-[var(--color-success)]" : "bg-[var(--color-text-tertiary)]"
-              }`}
-            />
-            {user.displayName}
-          </span>
-        ))}
-      </div>
-
-      {!connected && (
-        <span className="text-xs text-[var(--color-warning-text)]">Reconnecting...</span>
-      )}
 
       <div className="flex-1" />
 
-      {users.length < 2 && connected && (
-        <span className="text-xs text-[var(--color-text-tertiary)]">Waiting for partner...</span>
-      )}
+      <div className="flex min-w-0 items-center gap-5 text-xs">
+        {!connected && <span className="text-[var(--color-warning-text)]">Reconnecting...</span>}
+        {users.length < 2 && connected && (
+          <div className="flex items-center gap-3 text-[var(--color-text-tertiary)]">
+            {users.map((user) => (
+              <span key={user.id} className="flex items-center gap-1.5 truncate">
+                <span
+                  className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${
+                    user.connected ? "bg-[var(--color-success)]" : "bg-[var(--color-text-tertiary)]"
+                  }`}
+                />
+                {user.displayName}
+              </span>
+            ))}
+            <span className="text-[var(--color-text-tertiary)]">Waiting for partner</span>
+          </div>
+        )}
+        {users.length >= 2 && (
+          <div className="flex min-w-0 items-center gap-3 truncate text-[var(--color-text-tertiary)]">
+            {users.map((user) => (
+              <span key={user.id} className="flex items-center gap-1.5 truncate">
+                <span
+                  className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${
+                    user.connected ? "bg-[var(--color-success)]" : "bg-[var(--color-text-tertiary)]"
+                  }`}
+                />
+                {user.displayName}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
 
       <button
         type="button"
         onClick={handleNavigate}
         data-testid="toggle-problems-view"
-        className="text-sm font-medium text-[var(--color-text-secondary)] transition-colors duration-[var(--transition-fast)] hover:text-[var(--color-text-primary)]"
+        className="ml-6 text-sm text-[var(--color-text-secondary)] transition-colors duration-[140ms] ease-in-out hover:text-[var(--color-text-primary)]"
       >
         {isSolverActive ? "Problems" : "Back to Solver"}
       </button>
@@ -86,6 +101,8 @@ export function Header({ roomCode, mode, users, connected }: HeaderProps) {
         onClose={() => setIsShareOpen(false)}
         roomCode={roomCode}
       />
+
+      <JoinRoomDialog isOpen={isJoinOpen} onClose={() => setIsJoinOpen(false)} />
     </header>
   );
 }

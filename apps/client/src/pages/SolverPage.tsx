@@ -158,11 +158,13 @@ export function SolverPage() {
             />
             {state.solution && (
               <section
-                className="border-t border-[var(--color-border-subtle)] bg-[var(--color-bg-tertiary)] p-4"
+                className="border-t border-[var(--color-border-subtle)] px-6 py-5"
                 data-testid="solution-panel"
               >
-                <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Solution</h3>
-                <div className="mt-2 whitespace-pre-wrap rounded-[var(--radius-sm)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-secondary)] p-3 font-[var(--font-family-mono)] text-sm text-[var(--color-text-secondary)]">
+                <h3 className="text-xs uppercase tracking-[0.08em] text-[var(--color-text-tertiary)]">
+                  Solution
+                </h3>
+                <div className="mt-3 whitespace-pre-wrap border-l border-[var(--color-border-subtle)] pl-4 font-[var(--font-family-mono)] text-sm leading-6 text-[var(--color-text-secondary)]">
                   {state.solution}
                 </div>
               </section>
@@ -283,11 +285,14 @@ function EditorToolbar({
   resultsCollapsed,
 }: EditorToolbarProps) {
   return (
-    <div className="flex h-10 shrink-0 items-center gap-1.5 border-b border-[var(--color-border-subtle)] bg-[var(--color-bg-secondary)] px-3">
+    <div
+      className="flex h-12 shrink-0 items-center gap-4 border-b border-[var(--color-border-subtle)] px-4"
+      data-testid="editor-command-bar"
+    >
       <button
         type="button"
         data-testid="run-code-button"
-        className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--color-accent)] px-2.5 py-1 text-xs font-medium text-white transition-colors duration-[var(--transition-fast)] hover:bg-[var(--color-accent-hover)] disabled:opacity-40"
+        className="ui-ghost-button px-0 py-1.5 text-xs"
         onClick={onRun}
         disabled={actionsDisabled}
       >
@@ -297,7 +302,7 @@ function EditorToolbar({
       <button
         type="button"
         data-testid="submit-code-button"
-        className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--color-accent)] px-2.5 py-1 text-xs font-medium text-white transition-colors duration-[var(--transition-fast)] hover:bg-[var(--color-accent-hover)] disabled:opacity-40"
+        className="ui-flat-button px-3 py-1.5 text-xs"
         onClick={onSubmit}
         disabled={actionsDisabled}
       >
@@ -308,7 +313,7 @@ function EditorToolbar({
         <button
           type="button"
           data-testid="reveal-solution-button"
-          className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-[var(--color-text-secondary)] transition-colors duration-[var(--transition-fast)] hover:text-[var(--color-text-primary)] disabled:opacity-40"
+          className="ui-ghost-button px-0 py-1.5 text-xs"
           onClick={onRevealSolution}
           disabled={actionsDisabled || !solutionAvailable}
           title={!solutionAvailable ? "No solution available for imported problems." : undefined}
@@ -321,7 +326,7 @@ function EditorToolbar({
         <button
           type="button"
           data-testid="solver-import-button"
-          className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-[var(--color-text-secondary)] transition-colors duration-[var(--transition-fast)] hover:text-[var(--color-text-primary)] disabled:opacity-40"
+          className="ui-ghost-button px-0 py-1.5 text-xs"
           onClick={onOpenImport}
           disabled={importDisabled || !connected}
         >
@@ -336,7 +341,7 @@ function EditorToolbar({
         type="button"
         onClick={onToggleProblemPanel}
         data-testid="toggle-problem-panel"
-        className="rounded-[var(--radius-sm)] p-1 text-[var(--color-text-tertiary)] transition-colors duration-[var(--transition-fast)] hover:bg-[var(--color-hover-overlay)] hover:text-[var(--color-text-secondary)]"
+        className="text-[var(--color-text-tertiary)] transition-colors duration-[140ms] ease-in-out hover:text-[var(--color-text-primary)]"
         title={problemCollapsed ? "Show problem panel" : "Hide problem panel"}
       >
         {problemCollapsed ? <PanelLeftOpen size={14} /> : <PanelLeftClose size={14} />}
@@ -345,7 +350,7 @@ function EditorToolbar({
         type="button"
         onClick={onToggleResultsPanel}
         data-testid="toggle-results-panel"
-        className="rounded-[var(--radius-sm)] p-1 text-[var(--color-text-tertiary)] transition-colors duration-[var(--transition-fast)] hover:bg-[var(--color-hover-overlay)] hover:text-[var(--color-text-secondary)]"
+        className="text-[var(--color-text-tertiary)] transition-colors duration-[140ms] ease-in-out hover:text-[var(--color-text-primary)]"
         title={resultsCollapsed ? "Show results panel" : "Hide results panel"}
       >
         {resultsCollapsed ? <PanelBottomOpen size={14} /> : <PanelBottomClose size={14} />}
@@ -368,16 +373,16 @@ function ResultsTabs({ activeTab, onTabChange }: ResultsTabsProps) {
   ];
 
   return (
-    <div className="flex h-8 shrink-0 items-center border-b border-[var(--color-border-subtle)] bg-[var(--color-bg-secondary)]">
+    <div className="flex min-h-11 shrink-0 items-center border-b border-[var(--color-border-subtle)] px-2">
       {tabs.map((tab) => (
         <button
           key={tab.key}
           type="button"
           data-testid={`results-tab-${tab.key}`}
           onClick={() => onTabChange(tab.key)}
-          className={`px-3 py-1.5 text-xs font-medium transition-colors duration-[var(--transition-fast)] ${
+          className={`px-3 py-3 text-xs transition-colors duration-[140ms] ease-in-out ${
             activeTab === tab.key
-              ? "border-b border-b-[var(--color-accent)] text-[var(--color-text-primary)]"
+              ? "border-b border-b-white/70 text-[var(--color-text-primary)]"
               : "text-[var(--color-text-tertiary)] hover:text-[var(--color-text-secondary)]"
           }`}
         >

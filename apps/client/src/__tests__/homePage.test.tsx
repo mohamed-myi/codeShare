@@ -29,9 +29,12 @@ describe("HomePage", () => {
     renderHomePage();
 
     expect(screen.getByPlaceholderText("Your display name")).toBeDefined();
-    expect(screen.getByRole("combobox")).toBeDefined();
-    expect(screen.getByText("Collaboration")).toBeDefined();
-    expect(screen.getByText("Mock Interview")).toBeDefined();
+    const combo = screen.getByRole("combobox");
+    expect(combo).toBeDefined();
+    expect(combo.textContent).toContain("Collaboration");
+
+    fireEvent.click(combo);
+    expect(screen.getByRole("option", { name: "Mock Interview" })).toBeDefined();
   });
 
   it("Create Room button is disabled when name is empty", () => {

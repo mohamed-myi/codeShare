@@ -64,9 +64,9 @@ export function ImportDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/70 p-4">
+    <div className="ui-overlay p-4">
       <div
-        className="w-full max-w-lg rounded-[var(--radius-lg)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-elevated)] p-7 shadow-lg"
+        className="ui-dialog w-full max-w-lg p-6"
         data-testid="import-dialog"
         role="dialog"
         aria-modal="true"
@@ -74,10 +74,13 @@ export function ImportDialog({
       >
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 id={`${inputId}-title`} className="font-semibold text-[var(--color-text-primary)]">
+            <h2
+              id={`${inputId}-title`}
+              className="text-lg tracking-[-0.03em] text-[var(--color-text-primary)]"
+            >
               Import Problem
             </h2>
-            <p className="mt-1 text-sm text-[var(--color-text-tertiary)]">
+            <p className="mt-2 text-sm leading-7 text-[var(--color-text-tertiary)]">
               Paste a LeetCode problem URL. Only `leetcode.com/problems/*` is supported.
             </p>
           </div>
@@ -85,7 +88,7 @@ export function ImportDialog({
             type="button"
             onClick={onClose}
             aria-label="Close import dialog"
-            className="rounded-[var(--radius-sm)] p-1 text-[var(--color-text-tertiary)] transition-colors duration-[var(--transition-fast)] hover:bg-[var(--color-hover-overlay)] hover:text-[var(--color-text-secondary)]"
+            className="text-[var(--color-text-tertiary)] transition-colors duration-[140ms] ease-in-out hover:text-[var(--color-text-primary)]"
           >
             <X size={18} />
           </button>
@@ -113,7 +116,7 @@ export function ImportDialog({
                 setNormalizedPreview(normalized ? normalized.canonicalUrl : null);
               }}
               placeholder="https://leetcode.com/problems/two-sum/"
-              className="mt-1 w-full rounded-[var(--radius-sm)] border border-[var(--color-border-strong)] bg-[var(--color-bg-tertiary)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-tertiary)] focus:border-[var(--color-accent)] focus:ring-2 focus:ring-[var(--color-focus-ring)]"
+              className="ui-line-control mt-1 text-sm"
             />
           </div>
 
@@ -126,7 +129,7 @@ export function ImportDialog({
             </p>
           )}
 
-          <div className="flex items-start gap-2 rounded-[var(--radius-sm)] border border-dashed border-[var(--color-border-strong)] bg-[var(--color-bg-tertiary)] px-3 py-2 text-xs text-[var(--color-text-tertiary)]">
+          <div className="flex items-start gap-2 border-l border-dashed border-[var(--color-border-strong)] pl-4 text-xs leading-6 text-[var(--color-text-tertiary)]">
             <Info size={14} className="mt-0.5 shrink-0" />3 imports per room session. Imported
             problems keep visible attribution and only include visible sample cases.
           </div>
@@ -155,14 +158,14 @@ export function ImportDialog({
               type="button"
               onClick={onClose}
               data-testid="cancel-import-button"
-              className="rounded-[var(--radius-sm)] border border-[var(--color-border-strong)] px-3 py-2 text-sm text-[var(--color-text-secondary)] transition-colors duration-[var(--transition-fast)] hover:bg-[var(--color-hover-overlay)]"
+              className="ui-ghost-button text-sm"
             >
               Cancel
             </button>
             <button
               type="submit"
               data-testid="submit-import-button"
-              className="rounded-[var(--radius-sm)] bg-[var(--color-accent)] px-3 py-2 text-sm text-white transition-colors duration-[var(--transition-fast)] hover:bg-[var(--color-accent-hover)] disabled:opacity-40"
+              className="ui-flat-button text-sm"
               disabled={disabled}
             >
               {isSubmitting ? "Importing..." : "Import Problem"}
