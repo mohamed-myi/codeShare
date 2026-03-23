@@ -87,6 +87,7 @@ export function registerRoomHandler(
   socket.on(SocketEvents.USER_JOIN, async (rawPayload: unknown) => {
     const parsed = userJoinSchema.safeParse(rawPayload);
     if (!parsed.success) {
+      logger.warn({ socketId: socket.id }, "Rejected user join: invalid payload");
       socket.emit(SocketEvents.EVENT_REJECTED, {
         event: SocketEvents.USER_JOIN,
         reason: "Invalid join payload.",
@@ -98,7 +99,18 @@ export function registerRoomHandler(
     const roomCode = normalizeRoomCode(socket.data.roomCode as string);
     const room = roomLookup.getRoom(roomCode);
 
+    logger.debug(
+      {
+        socketId: socket.id,
+        roomCode,
+        displayName,
+        reconnecting: Boolean(reconnectToken),
+      },
+      "Processing user join",
+    );
+
     if (!room) {
+      logger.warn({ socketId: socket.id, roomCode }, "Rejected user join: room not found");
       socket.emit(SocketEvents.EVENT_REJECTED, {
         event: SocketEvents.USER_JOIN,
         reason: "Room not found.",
@@ -124,6 +136,15 @@ export function registerRoomHandler(
       60 * 60 * 1000,
     );
     if (!joinCheck.allowed) {
+      logger.warn(
+        {
+          socketId: socket.id,
+          roomCode,
+          clientIp,
+          retryAfterSeconds: joinCheck.retryAfterSeconds,
+        },
+        "Rejected user join: rate limited",
+      );
       const payload: EventRejectedPayload = {
         event: SocketEvents.USER_JOIN,
         reason: `Too many join attempts. Try again in ${joinCheck.retryAfterSeconds}s.`,

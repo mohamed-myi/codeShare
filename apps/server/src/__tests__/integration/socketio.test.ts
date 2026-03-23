@@ -124,4 +124,24 @@ describe("Socket.io server setup", () => {
     const error = await waitForEvent<Error>(client, "connect_error");
     expect(error.message).toContain("Origin not allowed");
   });
+
+  it("accepts polling connections from an allowed LAN origin", async () => {
+    const server = await createTestServer();
+    cleanup = server.cleanup;
+
+    setupSocketIO(server.io, logger, {
+      allowedOrigins: ["http://192.168.1.238:5173"],
+    });
+
+    const client = createTestClient(server.port, "abc-xyz", {
+      transports: ["polling"],
+      extraHeaders: {
+        origin: "http://192.168.1.238:5173",
+      },
+    });
+    clients.push(client);
+
+    await waitForEvent(client, "connect");
+    expect(client.connected).toBe(true);
+  });
 });

@@ -81,11 +81,28 @@ export function setupSocketIO(io: Server, logger: Logger, deps?: SocketIODeps): 
   io.use((socket, next) => {
     const roomCode = socket.handshake.query.roomCode;
     if (!roomCode || typeof roomCode !== "string") {
+      logger.warn(
+        {
+          socketId: socket.id,
+          roomCode,
+          origin: socket.handshake.headers.origin,
+        },
+        "Socket handshake rejected: missing roomCode",
+      );
       return next(new Error("Missing required roomCode query parameter"));
     }
 
     const origin = socket.handshake.headers.origin;
     if (!isOriginAllowed(origin, allowedOrigins)) {
+      logger.warn(
+        {
+          socketId: socket.id,
+          roomCode,
+          origin,
+          allowedOrigins,
+        },
+        "Socket handshake rejected: origin not allowed",
+      );
       return next(new Error("Origin not allowed"));
     }
 
@@ -101,6 +118,15 @@ export function setupSocketIO(io: Server, logger: Logger, deps?: SocketIODeps): 
       60_000,
     );
     if (!connectionCheck.allowed) {
+      logger.warn(
+        {
+          socketId: socket.id,
+          roomCode,
+          clientIp,
+          retryAfterSeconds: connectionCheck.retryAfterSeconds,
+        },
+        "Socket handshake rejected: rate limited",
+      );
       return next(
         new Error(
           `Too many websocket connections. Try again in ${connectionCheck.retryAfterSeconds}s.`,
@@ -110,6 +136,15 @@ export function setupSocketIO(io: Server, logger: Logger, deps?: SocketIODeps): 
 
     socket.data.roomCode = normalizeRoomCode(roomCode);
     socket.data.clientIp = clientIp;
+    logger.debug(
+      {
+        socketId: socket.id,
+        roomCode: socket.data.roomCode,
+        origin,
+        clientIp,
+      },
+      "Socket handshake accepted",
+    );
     next();
   });
 
