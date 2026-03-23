@@ -22,11 +22,11 @@ describe("roomCreateSchema", () => {
 });
 
 describe("roomCodeSchema", () => {
-  it("accepts stronger 4+4 base32 room codes", () => {
-    expect(roomCodeSchema.safeParse("ab2d-ef7h").success).toBe(true);
+  it("accepts 3+3 base32 room codes", () => {
+    expect(roomCodeSchema.safeParse("ab2-ef7").success).toBe(true);
   });
 
-  it("rejects shorter legacy room codes", () => {
-    expect(roomCodeSchema.safeParse("abc-xyz").success).toBe(false);
+  it("rejects longer room codes", () => {
+    expect(roomCodeSchema.safeParse("abcd-efgh").success).toBe(false);
   });
 });

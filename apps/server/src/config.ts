@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { GLOBAL_LIMITS, ROOM_LIMITS, TIMEOUTS } from "@codeshare/shared";
 
 const optionalSecretSchema = z
   .string()
@@ -22,6 +23,8 @@ const envSchema = z.object({
   JUDGE0_DAILY_LIMIT: z.coerce.number().int().positive().default(100),
   GROQ_API_KEY: optionalSecretSchema,
   GROQ_MODEL: z.string().default("llama-3.3-70b-versatile"),
+  GROQ_API_URL: z.string().url().default("https://api.groq.com/openai/v1/chat/completions"),
+  LEETCODE_GRAPHQL_URL: z.string().url().default("https://leetcode.com/graphql"),
   PORT: z.coerce.number().int().positive().default(3001),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   CORS_ORIGIN: z.string().default("http://localhost:5173"),
@@ -42,7 +45,17 @@ const envSchema = z.object({
   MAX_LLM_CALLS_PER_ROOM: z.coerce.number().int().positive().default(15),
   MAX_LLM_PROMPT_CHARS: z.coerce.number().int().positive().default(12_000),
   MAX_LLM_HINT_CHARS: z.coerce.number().int().positive().default(1_500),
-  JUDGE0_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(30_000),
+  ROOM_GRACE_PERIOD_MS: z.coerce.number().int().positive().default(TIMEOUTS.GRACE_PERIOD_MS),
+  ROOM_HINT_CONSENT_MS: z.coerce.number().int().positive().default(TIMEOUTS.HINT_CONSENT_MS),
+  ROOM_MAX_SUBMISSIONS: z.coerce.number().int().positive().default(ROOM_LIMITS.MAX_SUBMISSIONS),
+  ROOM_MAX_IMPORTS: z.coerce.number().int().positive().default(ROOM_LIMITS.MAX_IMPORTS),
+  ROOM_MAX_CUSTOM_TEST_CASES: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(ROOM_LIMITS.MAX_CUSTOM_TEST_CASES),
+  IMPORTS_DAILY_LIMIT: z.coerce.number().int().positive().default(GLOBAL_LIMITS.IMPORTS_DAILY),
+  JUDGE0_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(TIMEOUTS.JUDGE0_REQUEST_MS),
   GROQ_MAX_TOKENS: z.coerce.number().int().positive().default(512),
   GROQ_TEMPERATURE: z.coerce.number().min(0).max(2).default(0.6),
   GROQ_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(15_000),

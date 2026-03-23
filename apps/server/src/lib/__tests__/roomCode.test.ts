@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { generateRoomCode, normalizeRoomCode } from "../roomCode.js";
 
 describe("generateRoomCode", () => {
-  it("generates a code in abcd-efgh format", () => {
+  it("generates a code in abc-xyz format", () => {
     const code = generateRoomCode(new Set());
-    expect(code).toMatch(/^[a-z2-7]{4}-[a-z2-7]{4}$/);
+    expect(code).toMatch(/^[a-z2-7]{3}-[a-z2-7]{3}$/);
   });
 
   it("avoids collisions with active codes", () => {

@@ -1,7 +1,7 @@
 import { ROOM_CODE } from "@codeshare/shared";
 
 /**
- * Generates a room code in format "abcd-efgh" using a base32-safe alphabet.
+ * Generates a room code in format "abc-xyz" using a base32-safe alphabet.
  * Checks for collision against active rooms, retries up to 5 times,
  * then falls back to UUID-based code.
  */

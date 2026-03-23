@@ -11,6 +11,8 @@ function setEnv(overrides: Record<string, string | undefined> = {}) {
     JUDGE0_API_KEY: "judge0-key",
     JUDGE0_DAILY_LIMIT: "100",
     GROQ_MODEL: "llama-3.3-70b-versatile",
+    GROQ_API_URL: "https://api.groq.com/openai/v1/chat/completions",
+    LEETCODE_GRAPHQL_URL: "https://leetcode.com/graphql",
     PORT: "3001",
     NODE_ENV: "test",
     CORS_ORIGIN: "http://localhost:5173",
@@ -31,6 +33,12 @@ function setEnv(overrides: Record<string, string | undefined> = {}) {
     MAX_LLM_CALLS_PER_ROOM: "15",
     MAX_LLM_PROMPT_CHARS: "12000",
     MAX_LLM_HINT_CHARS: "1500",
+    ROOM_GRACE_PERIOD_MS: "300000",
+    ROOM_HINT_CONSENT_MS: "30000",
+    ROOM_MAX_SUBMISSIONS: "20",
+    ROOM_MAX_IMPORTS: "3",
+    ROOM_MAX_CUSTOM_TEST_CASES: "10",
+    IMPORTS_DAILY_LIMIT: "50",
     JUDGE0_REQUEST_TIMEOUT_MS: "30000",
     GROQ_MAX_TOKENS: "512",
     GROQ_TEMPERATURE: "0.6",
@@ -62,10 +70,18 @@ describe("loadConfig", () => {
 
     expect(config.GROQ_API_KEY).toBeUndefined();
     expect(config.GROQ_MODEL).toBe("llama-3.3-70b-versatile");
+    expect(config.GROQ_API_URL).toBe("https://api.groq.com/openai/v1/chat/completions");
+    expect(config.LEETCODE_GRAPHQL_URL).toBe("https://leetcode.com/graphql");
     expect(config.ALLOWED_ORIGINS).toEqual(["http://localhost:5173"]);
     expect(config.ENABLE_PROBLEM_IMPORT).toBe(false);
     expect(config.ENABLE_LLM_HINT_FALLBACK).toBe(false);
     expect(config.ENABLE_IMPORTED_PROBLEM_HINTS).toBe(false);
+    expect(config.ROOM_GRACE_PERIOD_MS).toBe(300_000);
+    expect(config.ROOM_HINT_CONSENT_MS).toBe(30_000);
+    expect(config.ROOM_MAX_SUBMISSIONS).toBe(20);
+    expect(config.ROOM_MAX_IMPORTS).toBe(3);
+    expect(config.ROOM_MAX_CUSTOM_TEST_CASES).toBe(10);
+    expect(config.IMPORTS_DAILY_LIMIT).toBe(50);
   });
 
   it("still fails when required non-Groq variables are missing", () => {
@@ -101,6 +117,14 @@ describe("loadConfig", () => {
       ENABLE_LLM_HINT_FALLBACK: "true",
       ENABLE_IMPORTED_PROBLEM_HINTS: "true",
       TRUSTED_PROXY_IPS: "10.0.0.1,10.0.0.2",
+      GROQ_API_URL: "http://127.0.0.1:4100/openai/v1/chat/completions",
+      LEETCODE_GRAPHQL_URL: "http://127.0.0.1:4100/graphql",
+      ROOM_GRACE_PERIOD_MS: "1500",
+      ROOM_HINT_CONSENT_MS: "2000",
+      ROOM_MAX_SUBMISSIONS: "4",
+      ROOM_MAX_IMPORTS: "2",
+      ROOM_MAX_CUSTOM_TEST_CASES: "3",
+      IMPORTS_DAILY_LIMIT: "8",
     });
 
     const config = loadConfig();
@@ -113,5 +137,13 @@ describe("loadConfig", () => {
     expect(config.ENABLE_LLM_HINT_FALLBACK).toBe(true);
     expect(config.ENABLE_IMPORTED_PROBLEM_HINTS).toBe(true);
     expect(config.TRUSTED_PROXY_IPS).toEqual(["10.0.0.1", "10.0.0.2"]);
+    expect(config.GROQ_API_URL).toBe("http://127.0.0.1:4100/openai/v1/chat/completions");
+    expect(config.LEETCODE_GRAPHQL_URL).toBe("http://127.0.0.1:4100/graphql");
+    expect(config.ROOM_GRACE_PERIOD_MS).toBe(1_500);
+    expect(config.ROOM_HINT_CONSENT_MS).toBe(2_000);
+    expect(config.ROOM_MAX_SUBMISSIONS).toBe(4);
+    expect(config.ROOM_MAX_IMPORTS).toBe(2);
+    expect(config.ROOM_MAX_CUSTOM_TEST_CASES).toBe(3);
+    expect(config.IMPORTS_DAILY_LIMIT).toBe(8);
   });
 });

@@ -212,8 +212,12 @@ export function registerRoomHandler(
       logger.info({ roomCode, userId: user.id }, "User removed after grace period");
 
       if (room.users.length === 0) {
+        const durationMs = Date.now() - room.createdAt.getTime();
         roomLookup.destroyRoom(room.roomCode);
-        logger.info({ roomCode: room.roomCode }, "Room destroyed (empty after grace period)");
+        logger.info(
+          { roomCode: room.roomCode, durationMs, submissionsUsed: room.submissionsUsed },
+          "Room destroyed (empty after grace period)",
+        );
       }
     });
 

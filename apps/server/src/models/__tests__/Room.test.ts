@@ -140,6 +140,21 @@ describe("Room", () => {
     it("cancelGracePeriod is safe to call when no timer exists", () => {
       expect(() => room.cancelGracePeriod("nonexistent")).not.toThrow();
     });
+
+    it("uses the configured grace period duration", () => {
+      const customRoom = new Room("wxyz-2345", "collaboration", {
+        gracePeriodMs: 1_500,
+      });
+      const user = customRoom.addUser("Alice", "peer", "s1");
+      const onExpire = vi.fn();
+
+      customRoom.startGracePeriod(user.id, onExpire);
+      vi.advanceTimersByTime(1_499);
+      expect(onExpire).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(1);
+      expect(onExpire).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe("canExecute", () => {
@@ -214,6 +229,20 @@ describe("Room", () => {
       expect(room.pendingHintRequest).toBeNull();
       expect(room.customTestCases).toEqual([]);
       expect(room.hintHistory).toEqual([]);
+    });
+  });
+
+  describe("runtime limits", () => {
+    it("applies constructor overrides for submission, import, and custom test case limits", () => {
+      const customRoom = new Room("wxyz-2345", "collaboration", {
+        submissionLimit: 4,
+        importLimit: 2,
+        customTestCaseLimit: 3,
+      });
+
+      expect(customRoom.submissionLimit).toBe(4);
+      expect(customRoom.importLimit).toBe(2);
+      expect(customRoom.customTestCaseLimit).toBe(3);
     });
   });
 

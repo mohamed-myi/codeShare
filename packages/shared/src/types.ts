@@ -195,6 +195,9 @@ export interface HealthResponse {
   status: "ok" | "degraded";
   roomCount: number;
   dbConnected: boolean;
+  heapUsedMB?: number;
+  heapTotalMB?: number;
+  rssMB?: number;
 }
 
 export interface RoomInfoResponse {

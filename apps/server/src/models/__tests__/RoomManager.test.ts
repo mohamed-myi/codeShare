@@ -13,6 +13,7 @@ describe("RoomManager", () => {
       roomManager.destroyRoom(code);
     }
     createdRoomCodes.length = 0;
+    roomManager.resetDefaults();
     vi.useRealTimers();
   });
 
@@ -21,10 +22,10 @@ describe("RoomManager", () => {
   }
 
   describe("createRoom", () => {
-    it("returns a Room with a valid room code in abcd-efgh format", () => {
+    it("returns a Room with a valid room code in abc-xyz format", () => {
       const room = roomManager.createRoom("collaboration");
       trackRoom(room.roomCode);
-      expect(room.roomCode).toMatch(/^[a-z2-7]{4}-[a-z2-7]{4}$/);
+      expect(room.roomCode).toMatch(/^[a-z2-7]{3}-[a-z2-7]{3}$/);
       expect(room.mode).toBe("collaboration");
     });
 
@@ -47,6 +48,23 @@ describe("RoomManager", () => {
       const room = roomManager.createRoom("collaboration");
       trackRoom(room.roomCode);
       expect(roomManager.getRoomCount()).toBe(before + 1);
+    });
+
+    it("applies configured defaults to newly created rooms", () => {
+      roomManager.configureDefaults({
+        submissionLimit: 4,
+        importLimit: 2,
+        customTestCaseLimit: 3,
+        gracePeriodMs: 1_500,
+      });
+
+      const room = roomManager.createRoom("collaboration");
+      trackRoom(room.roomCode);
+
+      expect(room.submissionLimit).toBe(4);
+      expect(room.importLimit).toBe(2);
+      expect(room.customTestCaseLimit).toBe(3);
+      expect(room.gracePeriodMs).toBe(1_500);
     });
   });
 

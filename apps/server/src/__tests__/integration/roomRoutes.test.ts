@@ -1,5 +1,5 @@
 import Fastify from "fastify";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { Config } from "../../config.js";
 import { roomManager } from "../../models/RoomManager.js";
 import { registerRateLimit } from "../../plugins/rateLimit.js";
@@ -14,6 +14,8 @@ function buildConfig(overrides?: Partial<Config>): Config {
     JUDGE0_DAILY_LIMIT: 100,
     GROQ_API_KEY: "test-key",
     GROQ_MODEL: "llama-3.3-70b-versatile",
+    GROQ_API_URL: "https://api.groq.com/openai/v1/chat/completions",
+    LEETCODE_GRAPHQL_URL: "https://leetcode.com/graphql",
     PORT: 3001,
     NODE_ENV: "test",
     CORS_ORIGIN: "http://localhost:5173",
@@ -34,6 +36,12 @@ function buildConfig(overrides?: Partial<Config>): Config {
     MAX_LLM_CALLS_PER_ROOM: 15,
     MAX_LLM_PROMPT_CHARS: 12_000,
     MAX_LLM_HINT_CHARS: 1_500,
+    ROOM_GRACE_PERIOD_MS: 300_000,
+    ROOM_HINT_CONSENT_MS: 30_000,
+    ROOM_MAX_SUBMISSIONS: 20,
+    ROOM_MAX_IMPORTS: 3,
+    ROOM_MAX_CUSTOM_TEST_CASES: 10,
+    IMPORTS_DAILY_LIMIT: 50,
     JUDGE0_REQUEST_TIMEOUT_MS: 30_000,
     GROQ_MAX_TOKENS: 512,
     GROQ_TEMPERATURE: 0.6,
@@ -68,7 +76,7 @@ describe("POST /api/rooms", () => {
     createdCodes.length = 0;
   });
 
-  it("returns 201 with roomCode matching /^[a-z2-7]{4}-[a-z2-7]{4}$/ for collaboration mode", async () => {
+  it("returns 201 with roomCode matching /^[a-z2-7]{3}-[a-z2-7]{3}$/ for collaboration mode", async () => {
     const app = await buildApp();
     const res = await app.inject({
       method: "POST",
@@ -78,7 +86,7 @@ describe("POST /api/rooms", () => {
 
     expect(res.statusCode).toBe(201);
     const body = res.json();
-    expect(body.roomCode).toMatch(/^[a-z2-7]{4}-[a-z2-7]{4}$/);
+    expect(body.roomCode).toMatch(/^[a-z2-7]{3}-[a-z2-7]{3}$/);
     createdCodes.push(body.roomCode);
 
     const room = roomManager.getRoom(body.roomCode);
@@ -96,7 +104,7 @@ describe("POST /api/rooms", () => {
 
     expect(res.statusCode).toBe(201);
     const body = res.json();
-    expect(body.roomCode).toMatch(/^[a-z2-7]{4}-[a-z2-7]{4}$/);
+    expect(body.roomCode).toMatch(/^[a-z2-7]{3}-[a-z2-7]{3}$/);
     createdCodes.push(body.roomCode);
 
     const room = roomManager.getRoom(body.roomCode);
@@ -278,11 +286,16 @@ describe("GET /api/rooms/:roomCode", () => {
 describe("GET /api/health", () => {
   const createdCodes: string[] = [];
 
+  beforeEach(() => {
+    roomManager.resetRooms();
+  });
+
   afterEach(() => {
     for (const code of createdCodes) {
       roomManager.destroyRoom(code);
     }
     createdCodes.length = 0;
+    roomManager.resetRooms();
   });
 
   it("returns roomCount reflecting active rooms", async () => {

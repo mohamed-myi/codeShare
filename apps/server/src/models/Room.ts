@@ -16,6 +16,13 @@ interface RoomUserInternal extends RoomUser {
   socketId: string | null;
 }
 
+export interface RoomOptions {
+  submissionLimit?: number;
+  importLimit?: number;
+  customTestCaseLimit?: number;
+  gracePeriodMs?: number;
+}
+
 export class Room {
   readonly roomCode: string;
   readonly mode: RoomMode;
@@ -30,19 +37,26 @@ export class Room {
   customTestCases: CustomTestCase[] = [];
   hintHistory: string[] = [];
   submissionsUsed = 0;
-  submissionLimit = ROOM_LIMITS.MAX_SUBMISSIONS;
+  submissionLimit: number;
   executionInProgress = false;
   hintStreaming = false;
   llmCallsUsed = 0;
   importsUsed = 0;
+  importLimit: number;
+  customTestCaseLimit: number;
+  gracePeriodMs: number;
   readonly yjsToken: string;
   createdAt: Date;
   lastActivityAt: Date;
   gracePeriodTimers = new Map<string, NodeJS.Timeout>();
 
-  constructor(roomCode: string, mode: RoomMode) {
+  constructor(roomCode: string, mode: RoomMode, options: RoomOptions = {}) {
     this.roomCode = roomCode;
     this.mode = mode;
+    this.submissionLimit = options.submissionLimit ?? ROOM_LIMITS.MAX_SUBMISSIONS;
+    this.importLimit = options.importLimit ?? ROOM_LIMITS.MAX_IMPORTS;
+    this.customTestCaseLimit = options.customTestCaseLimit ?? ROOM_LIMITS.MAX_CUSTOM_TEST_CASES;
+    this.gracePeriodMs = options.gracePeriodMs ?? 5 * 60 * 1000;
     this.yjsToken = crypto.randomBytes(16).toString("hex");
     this.createdAt = new Date();
     this.lastActivityAt = new Date();
@@ -92,7 +106,7 @@ export class Room {
         this.gracePeriodTimers.delete(userId);
         onExpire();
       },
-      5 * 60 * 1000,
+      this.gracePeriodMs,
     );
     this.gracePeriodTimers.set(userId, timer);
   }
