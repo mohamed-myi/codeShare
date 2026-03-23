@@ -101,13 +101,10 @@ export class Room {
   }
 
   startGracePeriod(userId: string, onExpire: () => void): void {
-    const timer = setTimeout(
-      () => {
-        this.gracePeriodTimers.delete(userId);
-        onExpire();
-      },
-      this.gracePeriodMs,
-    );
+    const timer = setTimeout(() => {
+      this.gracePeriodTimers.delete(userId);
+      onExpire();
+    }, this.gracePeriodMs);
     this.gracePeriodTimers.set(userId, timer);
   }
 

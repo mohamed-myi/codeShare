@@ -71,7 +71,7 @@ export function TestCasePanel({
           <div className="space-y-3">
             {customTestCases.map((ct, i) => (
               <div
-                key={i}
+                key={JSON.stringify(ct.input)}
                 className="rounded-[var(--radius-sm)] border border-[var(--color-border-strong)] bg-[var(--color-bg-tertiary)] p-2 text-xs"
               >
                 <div className="mb-1 font-medium text-[var(--color-text-secondary)]">

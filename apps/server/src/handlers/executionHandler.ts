@@ -71,7 +71,7 @@ export function registerExecutionHandler(
               ...visible,
               ...room.customTestCases.map((ct, i) => ({
                 id: `custom-${i}`,
-                problemId: room.problemId!,
+                problemId: room.problemId as string,
                 input: ct.input,
                 expectedOutput: ct.expectedOutput,
                 isVisible: true,

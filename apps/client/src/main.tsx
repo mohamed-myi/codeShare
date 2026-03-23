@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import { App } from "./App.tsx";
 import "./index.css";
 
+// biome-ignore lint/style/noNonNullAssertion: root element guaranteed in index.html
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <BrowserRouter>

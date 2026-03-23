@@ -57,6 +57,7 @@ export function HomePage() {
           <option value="interview">Mock Interview</option>
         </select>
         <button
+          type="button"
           data-testid="create-room-button"
           onClick={handleCreate}
           disabled={!displayName.trim() || loading}

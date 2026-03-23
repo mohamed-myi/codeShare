@@ -140,7 +140,7 @@ export const hintService = {
         userMessage.content,
         Math.max(120, maxPromptChars - systemMessage.length),
       );
-      messages = [messages[0]!, userMessage];
+      messages = [messages[0] as (typeof messages)[0], userMessage];
       break;
     }
 
@@ -148,7 +148,7 @@ export const hintService = {
   },
 
   sanitizeLLMHint(text: string, maxHintChars: number): string {
-    const normalized = text.replace(/\u0000/g, "").trim();
+    const normalized = text.replaceAll("\0", "").trim();
     if (!normalized) {
       throw new Error("Generated hint was empty.");
     }

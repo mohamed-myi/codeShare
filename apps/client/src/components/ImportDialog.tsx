@@ -72,10 +72,7 @@ export function ImportDialog({
       >
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2
-              id={`${inputId}-title`}
-              className="font-semibold text-[var(--color-text-primary)]"
-            >
+            <h2 id={`${inputId}-title`} className="font-semibold text-[var(--color-text-primary)]">
               Import Problem
             </h2>
             <p className="mt-1 text-sm text-[var(--color-text-tertiary)]">
@@ -83,6 +80,7 @@ export function ImportDialog({
             </p>
           </div>
           <button
+            type="button"
             onClick={onClose}
             aria-label="Close import dialog"
             className="rounded-[var(--radius-sm)] p-1 text-[var(--color-text-tertiary)] transition-colors duration-[var(--transition-fast)] hover:bg-[var(--color-hover-overlay)] hover:text-[var(--color-text-secondary)]"

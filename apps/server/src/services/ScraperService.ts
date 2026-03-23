@@ -333,7 +333,11 @@ export function createScraperService(deps: Partial<ScraperServiceDeps> = {}) {
         return existing;
       }
 
-      const question = await fetchQuestionData(resolvedDeps.fetchImpl, resolvedDeps.graphQlUrl, slug);
+      const question = await fetchQuestionData(
+        resolvedDeps.fetchImpl,
+        resolvedDeps.graphQlUrl,
+        slug,
+      );
       const { methodName, parameterNames } = parseMetadata(question.metaData);
       const boilerplate = selectPythonBoilerplate(question.codeSnippets);
       const visibleExamples = extractExampleBlocks(question.content).slice(0, 3);

@@ -267,10 +267,13 @@ describe("roomReducer", () => {
 
   it("handles TESTCASE_ADDED", () => {
     const tc = { input: { n: 5 }, expectedOutput: 10 };
-    const next = roomReducer({ ...initialRoomState, lastError: "Old error" }, {
-      type: "TESTCASE_ADDED",
-      payload: { testCase: tc },
-    });
+    const next = roomReducer(
+      { ...initialRoomState, lastError: "Old error" },
+      {
+        type: "TESTCASE_ADDED",
+        payload: { testCase: tc },
+      },
+    );
     expect(next.customTestCases).toHaveLength(1);
     expect(next.customTestCases[0]).toEqual(tc);
     expect(next.lastError).toBeNull();

@@ -2,9 +2,8 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { RoomErrorBoundary } from "../components/RoomErrorBoundary.tsx";
 
-function ThrowingChild() {
+function ThrowingChild(): null {
   throw new Error("boom");
-  return null;
 }
 
 describe("RoomErrorBoundary", () => {

@@ -102,6 +102,7 @@ export function ProblemSelector({
           ) : (
             filtered.map((problem) => (
               <button
+                type="button"
                 key={problem.id}
                 onClick={() => handleSelect(problem)}
                 disabled={executionInProgress || disabled}

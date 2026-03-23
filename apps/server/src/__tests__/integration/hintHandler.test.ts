@@ -339,6 +339,7 @@ describe("Hint handler - single user LLM streaming fallback", () => {
 
   it("emits HINT_ERROR when LLM streaming fails", async () => {
     async function* failingStream(): AsyncGenerator<string> {
+      yield ""; // biome requires yield in generators
       throw new Error("Groq API error: 500");
     }
     const mockGroqClient = {

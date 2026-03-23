@@ -21,12 +21,14 @@ export function ConfirmDialog({ isOpen, title, message, onConfirm, onCancel }: C
         <p className="mb-4 text-[var(--color-text-secondary)]">{message}</p>
         <div className="flex justify-end gap-2">
           <button
+            type="button"
             onClick={onCancel}
             className="rounded-[var(--radius-sm)] border border-[var(--color-border-strong)] px-3 py-1 text-sm text-[var(--color-text-secondary)] transition-colors duration-[var(--transition-fast)] hover:bg-[var(--color-hover-overlay)]"
           >
             Cancel
           </button>
           <button
+            type="button"
             onClick={onConfirm}
             className="rounded-[var(--radius-sm)] bg-[var(--color-accent)] px-3 py-1 text-sm text-white transition-colors duration-[var(--transition-fast)] hover:bg-[var(--color-accent-hover)]"
           >

@@ -71,8 +71,8 @@ export function ProblemPanel({
             Constraints:
           </h3>
           <ul className="list-inside list-disc space-y-0.5 text-sm text-[var(--color-text-secondary)]">
-            {problem.constraints.map((c, i) => (
-              <li key={i}>{c}</li>
+            {problem.constraints.map((c) => (
+              <li key={c}>{c}</li>
             ))}
           </ul>
         </div>
@@ -199,11 +199,11 @@ function remainingHints(hintsUsed: number, hintLimit: number): number {
 
 function renderDescription(text: string): React.ReactNode {
   const parts = text.split(/(`[^`]+`)/g);
-  return parts.map((part, i) => {
+  return parts.map((part) => {
     if (part.startsWith("`") && part.endsWith("`")) {
       return (
         <code
-          key={i}
+          key={part}
           className="rounded bg-[var(--color-bg-tertiary)] px-1 py-0.5 text-xs text-[var(--color-text-primary)]"
         >
           {part.slice(1, -1)}

@@ -39,22 +39,26 @@ export function createAuthMiddleware(roomLookup: RoomLookup) {
       const eventName = event[0];
 
       if (BYPASS_EVENTS.has(eventName)) {
-        return next();
+        next();
+        return;
       }
 
       const roomCode = socket.data.roomCode as string | undefined;
       if (!roomCode) {
-        return next(new Error("silent"));
+        next(new Error("silent"));
+        return;
       }
 
       const room = roomLookup.getRoom(roomCode);
       if (!room) {
-        return next(new Error("silent"));
+        next(new Error("silent"));
+        return;
       }
 
       const user = room.users.find((u) => u.socketId === socket.id);
       if (!user) {
-        return next(new Error("silent"));
+        next(new Error("silent"));
+        return;
       }
 
       // Role-based checks for interview mode
@@ -90,7 +94,7 @@ export function createAuthMiddleware(roomLookup: RoomLookup) {
         if (!check.allowed) {
           socket.emit(SocketEvents.EVENT_REJECTED, {
             event: eventName,
-            reason: check.reason!,
+            reason: check.reason as string,
           });
           return;
         }
@@ -101,7 +105,7 @@ export function createAuthMiddleware(roomLookup: RoomLookup) {
         if (!check.allowed) {
           socket.emit(SocketEvents.EVENT_REJECTED, {
             event: eventName,
-            reason: check.reason!,
+            reason: check.reason as string,
           });
           return;
         }

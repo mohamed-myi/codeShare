@@ -32,9 +32,14 @@ export function YjsProvider({ children }: { children: ReactNode }) {
 
     const normalizedRoomCode = roomCode.toLowerCase();
     const ydoc = new Y.Doc();
-    const wsProvider = new WebsocketProvider(`${getRealtimeWsBase()}/ws/yjs`, normalizedRoomCode, ydoc, {
-      params: { token: yjsToken },
-    });
+    const wsProvider = new WebsocketProvider(
+      `${getRealtimeWsBase()}/ws/yjs`,
+      normalizedRoomCode,
+      ydoc,
+      {
+        params: { token: yjsToken },
+      },
+    );
 
     setDoc(ydoc);
     setProvider(wsProvider);

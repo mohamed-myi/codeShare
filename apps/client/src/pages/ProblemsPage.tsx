@@ -187,6 +187,7 @@ export function ProblemsPage() {
           <div className="divide-y divide-[var(--color-border-subtle)]">
             {filtered.map((problem, i) => (
               <button
+                type="button"
                 key={problem.id}
                 onClick={() => handleSelect(problem)}
                 data-testid={`problem-option-${problem.slug}`}

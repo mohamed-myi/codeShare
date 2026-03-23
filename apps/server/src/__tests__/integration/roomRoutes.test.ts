@@ -268,7 +268,8 @@ describe("GET /api/rooms/:roomCode", () => {
     const { roomCode } = createRes.json();
     createdCodes.push(roomCode);
 
-    const room = roomManager.getRoom(roomCode)!;
+    const room = roomManager.getRoom(roomCode);
+    if (!room) throw new Error("Room not found");
     room.addUser("Alice", "peer", "socket-a");
     const disconnectedUser = room.addUser("Bob", "peer", "socket-b");
     disconnectedUser.connected = false;

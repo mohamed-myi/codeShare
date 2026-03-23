@@ -35,8 +35,9 @@ export function RoomSessionPage() {
 
 function RoomSessionLayout() {
   const { state } = useRoom();
-  const { connected } = useSocket();
+  const { connected, connectionError } = useSocket();
   const connectedCount = state.users.filter((u) => u.connected).length;
+  const bannerError = connectionError ?? state.lastError;
 
   return (
     <div className="flex h-screen flex-col bg-[var(--color-bg-primary)]">
@@ -57,14 +58,14 @@ function RoomSessionLayout() {
             Reconnecting to the room...
           </div>
         )}
-        {state.lastError && (
+        {bannerError && (
           <div
             data-testid="room-error-banner"
             className="flex items-center justify-center gap-2 border-b border-[var(--color-border-subtle)] bg-[var(--color-error-subtle)] px-4 py-1.5 text-center text-xs text-[var(--color-error-text)]"
             role="alert"
           >
             <AlertTriangle size={12} />
-            {state.lastError}
+            {bannerError}
           </div>
         )}
         {connectedCount < 2 && (

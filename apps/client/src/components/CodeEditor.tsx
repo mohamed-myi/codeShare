@@ -72,7 +72,8 @@ export function CodeEditor({ readOnly = false }: CodeEditorProps) {
     if (!doc || !editorRef.current || !mounted) return;
 
     const ytext = doc.getText("monaco");
-    const model = editorRef.current.getModel()!;
+    const model = editorRef.current.getModel();
+    if (!model) return;
     const binding = new MonacoBinding(
       ytext,
       model,

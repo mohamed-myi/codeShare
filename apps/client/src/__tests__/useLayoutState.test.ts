@@ -124,7 +124,7 @@ describe("useLayoutState", () => {
 
     const raw = store.get(STORAGE_KEY);
     expect(raw).toBeDefined();
-    const parsed = JSON.parse(raw!);
+    const parsed = JSON.parse(raw as string);
     expect(parsed.problemCollapsed).toBe(true);
   });
 

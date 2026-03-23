@@ -85,7 +85,7 @@ describe("Auth middleware", () => {
     clients.push(client);
     await waitForEvent(client, "connect");
 
-    room.addUser("Alice", "peer", client.id!);
+    room.addUser("Alice", "peer", client.id as string);
     room.problemId = "problem-1";
 
     let rejected = false;
@@ -106,7 +106,7 @@ describe("Auth middleware", () => {
     clients.push(client);
     await waitForEvent(client, "connect");
 
-    room.addUser("Candidate", "candidate", client.id!);
+    room.addUser("Candidate", "candidate", client.id as string);
 
     client.emit(SocketEvents.PROBLEM_SELECT, { problemId: "some-uuid" });
 
@@ -126,7 +126,7 @@ describe("Auth middleware", () => {
     clients.push(client);
     await waitForEvent(client, "connect");
 
-    room.addUser("Alice", "peer", client.id!);
+    room.addUser("Alice", "peer", client.id as string);
     room.problemId = "problem-1";
     room.executionInProgress = true;
 
@@ -148,7 +148,7 @@ describe("Auth middleware", () => {
     clients.push(client);
     await waitForEvent(client, "connect");
 
-    room.addUser("Interviewer", "interviewer", client.id!);
+    room.addUser("Interviewer", "interviewer", client.id as string);
 
     client.emit(SocketEvents.HINT_REQUEST);
 
@@ -171,8 +171,8 @@ describe("Auth middleware", () => {
     clients.push(approver);
     await waitForEvent(approver, "connect");
 
-    const requesterUser = room.addUser("Alice", "peer", requester.id!);
-    room.addUser("Bob", "peer", approver.id!);
+    const requesterUser = room.addUser("Alice", "peer", requester.id as string);
+    room.addUser("Bob", "peer", approver.id as string);
     room.pendingHintRequest = {
       requestedBy: requesterUser.id,
       requestedAt: new Date().toISOString(),
@@ -200,8 +200,8 @@ describe("Auth middleware", () => {
     clients.push(approver);
     await waitForEvent(approver, "connect");
 
-    const requesterUser = room.addUser("Alice", "peer", requester.id!);
-    room.addUser("Bob", "peer", approver.id!);
+    const requesterUser = room.addUser("Alice", "peer", requester.id as string);
+    room.addUser("Bob", "peer", approver.id as string);
     room.pendingHintRequest = {
       requestedBy: requesterUser.id,
       requestedAt: new Date().toISOString(),
@@ -225,7 +225,7 @@ describe("Auth middleware", () => {
     clients.push(client);
     await waitForEvent(client, "connect");
 
-    room.addUser("Alice", "peer", client.id!);
+    room.addUser("Alice", "peer", client.id as string);
     room.executionInProgress = true;
 
     client.emit(SocketEvents.PROBLEM_IMPORT, {
@@ -248,7 +248,7 @@ describe("Auth middleware", () => {
     clients.push(client);
     await waitForEvent(client, "connect");
 
-    room.addUser("Alice", "peer", client.id!);
+    room.addUser("Alice", "peer", client.id as string);
     room.hintStreaming = true;
 
     client.emit(SocketEvents.PROBLEM_IMPORT, {

@@ -190,7 +190,7 @@ async function deliverHint(
   roomCode: string,
 ): Promise<void> {
   try {
-    const hint = await deps.findStoredHint(room.problemId!, room.hintsUsed);
+    const hint = await deps.findStoredHint(room.problemId as string, room.hintsUsed);
 
     if (hint) {
       room.hintsUsed += 1;
@@ -225,7 +225,7 @@ async function deliverHint(
       return;
     }
 
-    const problem = await deps.findProblem(room.problemId!);
+    const problem = await deps.findProblem(room.problemId as string);
     if (!problem) {
       socket.emit(SocketEvents.HINT_ERROR, {
         message: "Problem not found.",

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SocketProvider, useSocketContext } from "../providers/SocketProvider.tsx";
@@ -13,26 +13,27 @@ vi.mock("../lib/realtimeUrl.ts", () => ({
 }));
 
 function TestConsumer() {
-  const { socket, connected } = useSocketContext();
+  const { socket, connected, connectionError } = useSocketContext();
   return (
     <div>
       <span data-testid="connected">{String(connected)}</span>
       <span data-testid="hasSocket">{String(socket !== null)}</span>
+      <span data-testid="connectionError">{connectionError ?? ""}</span>
     </div>
   );
 }
 
 function createMockSocket() {
-  const listeners = new Map<string, (() => void)[]>();
+  const listeners = new Map<string, ((...args: unknown[]) => void)[]>();
   return {
-    on: vi.fn((event: string, cb: () => void) => {
+    on: vi.fn((event: string, cb: (...args: unknown[]) => void) => {
       if (!listeners.has(event)) listeners.set(event, []);
       listeners.get(event)?.push(cb);
     }),
     off: vi.fn(),
     disconnect: vi.fn(),
-    _trigger: (event: string) => {
-      for (const cb of listeners.get(event) ?? []) cb();
+    _trigger: (event: string, ...args: unknown[]) => {
+      for (const cb of listeners.get(event) ?? []) cb(...args);
     },
   };
 }
@@ -87,5 +88,37 @@ describe("SocketProvider", () => {
 
     expect(mockIo).not.toHaveBeenCalled();
     expect(screen.getByTestId("hasSocket").textContent).toBe("false");
+  });
+
+  it("surfaces connect errors and clears them after reconnect", async () => {
+    const mockSocket = createMockSocket();
+    mockIo.mockReturnValue(mockSocket);
+
+    render(
+      <MemoryRouter initialEntries={["/room/abc-xyz/session"]}>
+        <Routes>
+          <Route
+            path="/room/:roomCode/session"
+            element={
+              <SocketProvider>
+                <TestConsumer />
+              </SocketProvider>
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    mockSocket._trigger("connect_error", new Error("Origin not allowed"));
+    await waitFor(() => {
+      expect(screen.getByTestId("connected").textContent).toBe("false");
+      expect(screen.getByTestId("connectionError").textContent).toBe("Origin not allowed");
+    });
+
+    mockSocket._trigger("connect");
+    await waitFor(() => {
+      expect(screen.getByTestId("connected").textContent).toBe("true");
+      expect(screen.getByTestId("connectionError").textContent).toBe("");
+    });
   });
 });

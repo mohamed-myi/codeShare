@@ -118,6 +118,7 @@ export function JoinPage() {
           className="rounded-[var(--radius-sm)] border border-[var(--color-border-strong)] bg-[var(--color-bg-tertiary)] px-4 py-2.5 text-[var(--color-text-primary)] placeholder-[var(--color-text-tertiary)] focus:border-[var(--color-accent)] focus:ring-2 focus:ring-[var(--color-focus-ring)]"
         />
         <button
+          type="button"
           data-testid="join-room-button"
           onClick={handleJoin}
           disabled={!displayName.trim()}
