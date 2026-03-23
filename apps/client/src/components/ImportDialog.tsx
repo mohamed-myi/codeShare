@@ -63,16 +63,28 @@ export function ImportDialog({
 
   return (
     <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/70 p-4">
-      <div className="w-full max-w-lg rounded-[var(--radius-lg)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-elevated)] p-7 shadow-lg">
+      <div
+        className="w-full max-w-lg rounded-[var(--radius-lg)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-elevated)] p-7 shadow-lg"
+        data-testid="import-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={`${inputId}-title`}
+      >
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 className="font-semibold text-[var(--color-text-primary)]">Import Problem</h2>
+            <h2
+              id={`${inputId}-title`}
+              className="font-semibold text-[var(--color-text-primary)]"
+            >
+              Import Problem
+            </h2>
             <p className="mt-1 text-sm text-[var(--color-text-tertiary)]">
               Paste a LeetCode problem URL. Only `leetcode.com/problems/*` is supported.
             </p>
           </div>
           <button
             onClick={onClose}
+            aria-label="Close import dialog"
             className="rounded-[var(--radius-sm)] p-1 text-[var(--color-text-tertiary)] transition-colors duration-[var(--transition-fast)] hover:bg-[var(--color-hover-overlay)] hover:text-[var(--color-text-secondary)]"
           >
             <X size={18} />
@@ -90,6 +102,8 @@ export function ImportDialog({
             <input
               id={inputId}
               type="url"
+              aria-label="LeetCode URL"
+              data-testid="import-url-input"
               value={leetcodeUrl}
               onChange={(event) => {
                 setLeetCodeUrl(event.target.value);
@@ -115,6 +129,7 @@ export function ImportDialog({
           )}
           {statusMessage && (
             <p
+              data-testid="import-status-message"
               className={
                 importStatus?.status === "failed"
                   ? "text-sm text-[var(--color-error-text)]"
@@ -129,12 +144,14 @@ export function ImportDialog({
             <button
               type="button"
               onClick={onClose}
+              data-testid="cancel-import-button"
               className="rounded-[var(--radius-sm)] border border-[var(--color-border-strong)] px-3 py-2 text-sm text-[var(--color-text-secondary)] transition-colors duration-[var(--transition-fast)] hover:bg-[var(--color-hover-overlay)]"
             >
               Cancel
             </button>
             <button
               type="submit"
+              data-testid="submit-import-button"
               className="rounded-[var(--radius-sm)] bg-[var(--color-accent)] px-3 py-2 text-sm text-white transition-colors duration-[var(--transition-fast)] hover:bg-[var(--color-accent-hover)] disabled:opacity-40"
               disabled={disabled}
             >

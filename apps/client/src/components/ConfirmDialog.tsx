@@ -11,7 +11,12 @@ export function ConfirmDialog({ isOpen, title, message, onConfirm, onCancel }: C
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black/70">
-      <div className="rounded-[var(--radius-lg)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-elevated)] p-7 shadow-lg">
+      <div
+        className="rounded-[var(--radius-lg)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-elevated)] p-7 shadow-lg"
+        role="dialog"
+        aria-modal="true"
+        data-testid="confirm-dialog"
+      >
         <h2 className="mb-2 font-semibold text-[var(--color-text-primary)]">{title}</h2>
         <p className="mb-4 text-[var(--color-text-secondary)]">{message}</p>
         <div className="flex justify-end gap-2">

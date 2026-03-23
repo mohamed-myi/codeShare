@@ -29,7 +29,10 @@ export function HomePage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-[var(--color-bg-primary)] p-8">
+    <main
+      className="flex min-h-screen flex-col items-center justify-center gap-6 bg-[var(--color-bg-primary)] p-8"
+      data-testid="home-page"
+    >
       <h1 className="text-4xl font-bold text-[var(--color-text-primary)]">CodeShare</h1>
       <p className="text-sm text-[var(--color-text-tertiary)]">
         Collaborative coding. No setup required.
@@ -37,6 +40,7 @@ export function HomePage() {
       <div className="flex w-full max-w-md flex-col gap-4">
         <input
           type="text"
+          aria-label="Display name"
           placeholder="Your display name"
           value={displayName}
           onChange={(e) => setDisplayName(e.target.value)}
@@ -44,6 +48,7 @@ export function HomePage() {
           className="rounded-[var(--radius-sm)] border border-[var(--color-border-strong)] bg-[var(--color-bg-tertiary)] px-4 py-2.5 text-[var(--color-text-primary)] placeholder-[var(--color-text-tertiary)] focus:border-[var(--color-accent)] focus:ring-2 focus:ring-[var(--color-focus-ring)]"
         />
         <select
+          aria-label="Room mode"
           value={mode}
           onChange={(e) => setMode(e.target.value as RoomMode)}
           className="rounded-[var(--radius-sm)] border border-[var(--color-border-strong)] bg-[var(--color-bg-tertiary)] px-4 py-2.5 text-[var(--color-text-primary)]"
@@ -52,6 +57,7 @@ export function HomePage() {
           <option value="interview">Mock Interview</option>
         </select>
         <button
+          data-testid="create-room-button"
           onClick={handleCreate}
           disabled={!displayName.trim() || loading}
           className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-sm)] bg-[var(--color-accent)] px-4 py-2.5 text-white transition-colors duration-[var(--transition-fast)] hover:bg-[var(--color-accent-hover)] disabled:opacity-40"
@@ -61,6 +67,6 @@ export function HomePage() {
         </button>
         {error && <p className="text-sm text-[var(--color-error-text)]">{error}</p>}
       </div>
-    </div>
+    </main>
   );
 }

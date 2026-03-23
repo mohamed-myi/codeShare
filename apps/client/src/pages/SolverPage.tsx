@@ -124,7 +124,7 @@ export function SolverPage() {
   }, [layout]);
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden">
+    <div className="flex flex-1 flex-col overflow-hidden" data-testid="solver-page">
       <Group orientation="horizontal" id="solver-layout">
         <Panel
           id="problem"
@@ -157,7 +157,10 @@ export function SolverPage() {
               }
             />
             {state.solution && (
-              <section className="border-t border-[var(--color-border-subtle)] bg-[var(--color-bg-tertiary)] p-4">
+              <section
+                className="border-t border-[var(--color-border-subtle)] bg-[var(--color-bg-tertiary)] p-4"
+                data-testid="solution-panel"
+              >
                 <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Solution</h3>
                 <div className="mt-2 whitespace-pre-wrap rounded-[var(--radius-sm)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-secondary)] p-3 font-[var(--font-family-mono)] text-sm text-[var(--color-text-secondary)]">
                   {state.solution}
@@ -283,6 +286,7 @@ function EditorToolbar({
     <div className="flex h-10 shrink-0 items-center gap-1.5 border-b border-[var(--color-border-subtle)] bg-[var(--color-bg-secondary)] px-3">
       <button
         type="button"
+        data-testid="run-code-button"
         className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--color-accent)] px-2.5 py-1 text-xs font-medium text-white transition-colors duration-[var(--transition-fast)] hover:bg-[var(--color-accent-hover)] disabled:opacity-40"
         onClick={onRun}
         disabled={actionsDisabled}
@@ -292,7 +296,8 @@ function EditorToolbar({
       </button>
       <button
         type="button"
-        className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] border border-[var(--color-accent)] px-2.5 py-1 text-xs font-medium text-[var(--color-accent)] transition-colors duration-[var(--transition-fast)] hover:bg-[var(--color-accent-subtle)] disabled:opacity-40"
+        data-testid="submit-code-button"
+        className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--color-accent)] px-2.5 py-1 text-xs font-medium text-white transition-colors duration-[var(--transition-fast)] hover:bg-[var(--color-accent-hover)] disabled:opacity-40"
         onClick={onSubmit}
         disabled={actionsDisabled}
       >
@@ -302,6 +307,7 @@ function EditorToolbar({
       {canRevealSolution && (
         <button
           type="button"
+          data-testid="reveal-solution-button"
           className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-[var(--color-text-secondary)] transition-colors duration-[var(--transition-fast)] hover:text-[var(--color-text-primary)] disabled:opacity-40"
           onClick={onRevealSolution}
           disabled={actionsDisabled || !solutionAvailable}
@@ -314,6 +320,7 @@ function EditorToolbar({
       {canImport && (
         <button
           type="button"
+          data-testid="solver-import-button"
           className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-[var(--color-text-secondary)] transition-colors duration-[var(--transition-fast)] hover:text-[var(--color-text-primary)] disabled:opacity-40"
           onClick={onOpenImport}
           disabled={importDisabled || !connected}
@@ -328,6 +335,7 @@ function EditorToolbar({
       <button
         type="button"
         onClick={onToggleProblemPanel}
+        data-testid="toggle-problem-panel"
         className="rounded-[var(--radius-sm)] p-1 text-[var(--color-text-tertiary)] transition-colors duration-[var(--transition-fast)] hover:bg-[var(--color-hover-overlay)] hover:text-[var(--color-text-secondary)]"
         title={problemCollapsed ? "Show problem panel" : "Hide problem panel"}
       >
@@ -336,6 +344,7 @@ function EditorToolbar({
       <button
         type="button"
         onClick={onToggleResultsPanel}
+        data-testid="toggle-results-panel"
         className="rounded-[var(--radius-sm)] p-1 text-[var(--color-text-tertiary)] transition-colors duration-[var(--transition-fast)] hover:bg-[var(--color-hover-overlay)] hover:text-[var(--color-text-secondary)]"
         title={resultsCollapsed ? "Show results panel" : "Hide results panel"}
       >
@@ -364,6 +373,7 @@ function ResultsTabs({ activeTab, onTabChange }: ResultsTabsProps) {
         <button
           key={tab.key}
           type="button"
+          data-testid={`results-tab-${tab.key}`}
           onClick={() => onTabChange(tab.key)}
           className={`px-3 py-1.5 text-xs font-medium transition-colors duration-[var(--transition-fast)] ${
             activeTab === tab.key

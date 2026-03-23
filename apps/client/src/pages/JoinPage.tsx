@@ -50,29 +50,29 @@ export function JoinPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[var(--color-bg-primary)]">
+      <main className="flex min-h-screen items-center justify-center bg-[var(--color-bg-primary)]">
         <div className="flex items-center gap-2 text-[var(--color-text-tertiary)]">
           <Loader2 size={16} className="animate-spin" />
           Checking room...
         </div>
-      </div>
+      </main>
     );
   }
 
   if (error || !roomInfo || !roomInfo.exists) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[var(--color-bg-primary)] p-8">
+      <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[var(--color-bg-primary)] p-8">
         <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">Room not found</h1>
         <p className="text-[var(--color-text-tertiary)]">
           It may have expired or the link is invalid.
         </p>
         <Link
           to="/"
-          className="text-[var(--color-accent)] transition-colors hover:text-[var(--color-text-primary)]"
+          className="text-[var(--color-accent-text)] transition-colors hover:text-[var(--color-text-primary)]"
         >
           Back to home
         </Link>
-      </div>
+      </main>
     );
   }
 
@@ -82,18 +82,18 @@ export function JoinPage() {
     roomInfo.userCount >= roomInfo.maxUsers
   ) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[var(--color-bg-primary)] p-8">
+      <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[var(--color-bg-primary)] p-8">
         <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">This room is full</h1>
         <p className="text-[var(--color-text-tertiary)]">
           {roomInfo.userCount}/{roomInfo.maxUsers} users
         </p>
         <Link
           to="/"
-          className="text-[var(--color-accent)] transition-colors hover:text-[var(--color-text-primary)]"
+          className="text-[var(--color-accent-text)] transition-colors hover:text-[var(--color-text-primary)]"
         >
           Back to home
         </Link>
-      </div>
+      </main>
     );
   }
 
@@ -101,7 +101,7 @@ export function JoinPage() {
   const roleHint = roomInfo.mode === "interview" ? "You'll join as Candidate" : null;
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-[var(--color-bg-primary)] p-8">
+    <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-[var(--color-bg-primary)] p-8">
       <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">Join Room</h1>
       <p className="text-[var(--color-text-tertiary)]">
         {modeLabel} room &mdash; {roomInfo.userCount}/{roomInfo.maxUsers} users
@@ -110,6 +110,7 @@ export function JoinPage() {
       <div className="flex w-full max-w-md flex-col gap-4">
         <input
           type="text"
+          aria-label="Display name"
           placeholder="Your display name"
           value={displayName}
           onChange={(e) => setDisplayName(e.target.value)}
@@ -117,6 +118,7 @@ export function JoinPage() {
           className="rounded-[var(--radius-sm)] border border-[var(--color-border-strong)] bg-[var(--color-bg-tertiary)] px-4 py-2.5 text-[var(--color-text-primary)] placeholder-[var(--color-text-tertiary)] focus:border-[var(--color-accent)] focus:ring-2 focus:ring-[var(--color-focus-ring)]"
         />
         <button
+          data-testid="join-room-button"
           onClick={handleJoin}
           disabled={!displayName.trim()}
           className="rounded-[var(--radius-sm)] bg-[var(--color-accent)] px-4 py-2.5 text-white transition-colors duration-[var(--transition-fast)] hover:bg-[var(--color-accent-hover)] disabled:opacity-40"
@@ -124,6 +126,6 @@ export function JoinPage() {
           Join
         </button>
       </div>
-    </div>
+    </main>
   );
 }

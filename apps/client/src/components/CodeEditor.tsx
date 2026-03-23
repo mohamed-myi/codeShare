@@ -7,6 +7,15 @@ interface CodeEditorProps {
   readOnly?: boolean;
 }
 
+declare global {
+  interface Window {
+    __codeshareEditor?: {
+      getValue(): string;
+      setValue(value: string): void;
+    };
+  }
+}
+
 const handleBeforeMount: BeforeMount = (monaco) => {
   monaco.editor.defineTheme("codeshare-dark", {
     base: "vs-dark",
@@ -48,6 +57,10 @@ export function CodeEditor({ readOnly = false }: CodeEditorProps) {
 
   const handleMount: OnMount = (editor) => {
     editorRef.current = editor;
+    window.__codeshareEditor = {
+      getValue: () => editor.getValue(),
+      setValue: (value: string) => editor.setValue(value),
+    };
     setMounted(true);
   };
 
@@ -73,6 +86,12 @@ export function CodeEditor({ readOnly = false }: CodeEditorProps) {
   }, [doc, provider, mounted]);
 
   useEffect(() => {
+    return () => {
+      delete window.__codeshareEditor;
+    };
+  }, []);
+
+  useEffect(() => {
     const container = containerRef.current;
     const editor = editorRef.current;
     if (!container || !editor) return;
@@ -88,7 +107,7 @@ export function CodeEditor({ readOnly = false }: CodeEditorProps) {
   }, []);
 
   return (
-    <div ref={containerRefCallback} className="h-full w-full">
+    <div ref={containerRefCallback} className="h-full w-full" data-testid="code-editor">
       <Editor
         height="100%"
         language="python"

@@ -14,12 +14,13 @@
   /* Text */
   --color-text-primary: #E6EDF3;
   --color-text-secondary: #9BA3AF;
-  --color-text-tertiary: #6B7280;
+  --color-text-tertiary: #848D97;
 
   /* Accent */
   --color-accent: #2563EB;
   --color-accent-hover: #1D4ED8;
   --color-accent-subtle: rgba(37, 99, 235, 0.12);
+  --color-accent-text: #60A5FA;
 
   /* Semantic: Success */
   --color-success: #22C55E;

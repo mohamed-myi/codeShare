@@ -23,7 +23,10 @@ export function Header({ roomCode, mode, users, connected }: HeaderProps) {
   }
 
   return (
-    <header className="flex h-10 shrink-0 items-center gap-3 border-b border-[var(--color-border-subtle)] bg-[var(--color-bg-secondary)] px-4">
+    <header
+      className="flex h-10 shrink-0 items-center gap-3 border-b border-[var(--color-border-subtle)] bg-[var(--color-bg-secondary)] px-4"
+      data-testid="room-header"
+    >
       <div className="flex items-center gap-2">
         <Square size={14} className="fill-[var(--color-accent)] text-[var(--color-accent)]" />
         <span className="text-sm font-semibold text-[var(--color-text-primary)]">CodeShare</span>
@@ -31,7 +34,10 @@ export function Header({ roomCode, mode, users, connected }: HeaderProps) {
 
       <span className="text-sm text-[var(--color-text-secondary)]">{modeLabel}</span>
 
-      <span className="font-[var(--font-family-mono)] text-xs text-[var(--color-text-tertiary)]">
+      <span
+        className="font-[var(--font-family-mono)] text-xs text-[var(--color-text-tertiary)]"
+        data-testid="room-code"
+      >
         {roomCode}
       </span>
 
@@ -64,6 +70,7 @@ export function Header({ roomCode, mode, users, connected }: HeaderProps) {
       <button
         type="button"
         onClick={handleNavigate}
+        data-testid="toggle-problems-view"
         className="text-sm font-medium text-[var(--color-text-secondary)] transition-colors duration-[var(--transition-fast)] hover:text-[var(--color-text-primary)]"
       >
         {isSolverActive ? "Problems" : "Back to Solver"}

@@ -112,7 +112,7 @@ export function ProblemsPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden">
+    <div className="flex flex-1 flex-col overflow-hidden" data-testid="problems-page">
       <div className="px-6 pt-6 pb-2">
         <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">Problems</h1>
         <p className="mt-1 text-sm text-[var(--color-text-tertiary)]">
@@ -128,6 +128,7 @@ export function ProblemsPage() {
           />
           <input
             type="text"
+            aria-label="Search problems"
             placeholder="Search problems..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -136,6 +137,7 @@ export function ProblemsPage() {
         </div>
 
         <select
+          aria-label="Category"
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value)}
           className="rounded-[var(--radius-sm)] border border-[var(--color-border-strong)] bg-[var(--color-bg-tertiary)] px-3 py-2 text-sm text-[var(--color-text-secondary)]"
@@ -149,6 +151,7 @@ export function ProblemsPage() {
         </select>
 
         <select
+          aria-label="Difficulty"
           value={difficultyFilter}
           onChange={(e) => setDifficultyFilter(e.target.value)}
           className="rounded-[var(--radius-sm)] border border-[var(--color-border-strong)] bg-[var(--color-bg-tertiary)] px-3 py-2 text-sm text-[var(--color-text-secondary)]"
@@ -163,6 +166,7 @@ export function ProblemsPage() {
           <button
             type="button"
             onClick={() => setShowImportDialog(true)}
+            data-testid="open-import-dialog"
             disabled={importDisabled || !connected}
             className="inline-flex items-center gap-1.5 px-2.5 py-2 text-sm text-[var(--color-text-secondary)] transition-colors duration-[var(--transition-fast)] hover:text-[var(--color-text-primary)] disabled:opacity-40"
           >
@@ -185,6 +189,7 @@ export function ProblemsPage() {
               <button
                 key={problem.id}
                 onClick={() => handleSelect(problem)}
+                data-testid={`problem-option-${problem.slug}`}
                 disabled={
                   state.executionInProgress ||
                   !connected ||
