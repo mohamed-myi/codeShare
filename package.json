@@ -13,8 +13,12 @@
     "e2e:live": "PLAYWRIGHT_LIVE=1 playwright test --config e2e/playwright.config.ts --grep @live",
     "db:migrate": "pnpm --filter @codeshare/db migrate",
     "db:seed": "pnpm --filter @codeshare/db seed",
-    "db:up": "docker compose up -d",
+    "db:up": "docker compose up -d --wait",
     "db:down": "docker compose down",
+    "db:reset": "pnpm db:down && docker compose up -d --wait && pnpm db:migrate && pnpm db:seed",
+    "setup": "bash scripts/setup.sh",
+    "verify": "pnpm lint && pnpm typecheck && pnpm test",
+    "dev:fresh": "docker compose up -d --wait && pnpm dev",
     "load-test": "pnpm --filter codeshare-load-tests lt",
     "load-test:all": "pnpm --filter codeshare-load-tests lt"
   },
