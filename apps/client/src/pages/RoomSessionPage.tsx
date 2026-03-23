@@ -46,31 +46,38 @@ function RoomSessionLayout() {
         users={state.users}
         connected={connected}
       />
-      {!connected && (
-        <div
-          className="flex items-center justify-center gap-2 border-b border-[var(--color-border-subtle)] bg-[var(--color-warning-subtle)] px-4 py-1.5 text-center text-xs text-[var(--color-warning-text)]"
-          role="status"
-        >
-          <WifiOff size={12} />
-          Reconnecting to the room...
-        </div>
-      )}
-      {state.lastError && (
-        <div
-          className="flex items-center justify-center gap-2 border-b border-[var(--color-border-subtle)] bg-[var(--color-error-subtle)] px-4 py-1.5 text-center text-xs text-[var(--color-error-text)]"
-          role="alert"
-        >
-          <AlertTriangle size={12} />
-          {state.lastError}
-        </div>
-      )}
-      {connectedCount < 2 && (
-        <div className="flex items-center justify-center gap-2 bg-[var(--color-warning-subtle)] px-4 py-1.5 text-center text-xs text-[var(--color-warning-text)]">
-          <Clock size={12} />
-          Waiting for partner...
-        </div>
-      )}
-      <Outlet />
+      <main className="flex min-h-0 flex-1 flex-col">
+        {!connected && (
+          <div
+            data-testid="reconnecting-banner"
+            className="flex items-center justify-center gap-2 border-b border-[var(--color-border-subtle)] bg-[var(--color-warning-subtle)] px-4 py-1.5 text-center text-xs text-[var(--color-warning-text)]"
+            role="status"
+          >
+            <WifiOff size={12} />
+            Reconnecting to the room...
+          </div>
+        )}
+        {state.lastError && (
+          <div
+            data-testid="room-error-banner"
+            className="flex items-center justify-center gap-2 border-b border-[var(--color-border-subtle)] bg-[var(--color-error-subtle)] px-4 py-1.5 text-center text-xs text-[var(--color-error-text)]"
+            role="alert"
+          >
+            <AlertTriangle size={12} />
+            {state.lastError}
+          </div>
+        )}
+        {connectedCount < 2 && (
+          <div
+            data-testid="waiting-banner"
+            className="flex items-center justify-center gap-2 bg-[var(--color-warning-subtle)] px-4 py-1.5 text-center text-xs text-[var(--color-warning-text)]"
+          >
+            <Clock size={12} />
+            Waiting for partner...
+          </div>
+        )}
+        <Outlet />
+      </main>
     </div>
   );
 }

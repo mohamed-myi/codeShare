@@ -40,10 +40,13 @@ export function ProblemPanel({
   }
 
   return (
-    <div className="space-y-4 p-4">
+    <div className="space-y-4 p-4" data-testid="problem-panel">
       <div>
         <div className="flex items-center gap-2">
-          <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">
+          <h2
+            className="text-lg font-semibold text-[var(--color-text-primary)]"
+            data-testid="problem-title"
+          >
             {problem.title}
           </h2>
           <span
@@ -82,7 +85,7 @@ export function ProblemPanel({
             href={problem.sourceUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[var(--color-accent)] underline"
+            className="text-[var(--color-accent-text)] underline"
           >
             LeetCode
           </a>
@@ -96,11 +99,31 @@ function HintStatus({ hint }: { hint: HintProps }) {
   const isRequester = hint.pendingHintRequest?.requestedBy === hint.currentUserId;
   const hasCompletedHint = !hint.isHintStreaming && hint.hintText.trim().length > 0;
   const hintsRemaining = remainingHints(hint.hintsUsed, hint.hintLimit);
+  const canRequestHint =
+    !hint.pendingHintRequest &&
+    !hint.isHintStreaming &&
+    !hint.executionInProgress &&
+    hintsRemaining > 0;
 
   if (hint.mode !== "collaboration") return null;
 
   return (
     <>
+      <div className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-tertiary)] px-3 py-2">
+        <p className="text-sm text-[var(--color-text-secondary)]">
+          Hints remaining: {hintsRemaining}/{hint.hintLimit}
+        </p>
+        <button
+          type="button"
+          data-testid="request-hint-button"
+          className="rounded-[var(--radius-sm)] bg-[var(--color-accent)] px-3 py-1.5 text-sm text-white transition-colors duration-[var(--transition-fast)] hover:bg-[var(--color-accent-hover)] disabled:cursor-not-allowed disabled:opacity-40"
+          disabled={!canRequestHint}
+          onClick={hint.onRequestHint}
+        >
+          Request Hint
+        </button>
+      </div>
+
       {hint.pendingHintRequest && isRequester && (
         <div className="rounded-[var(--radius-md)] border border-[var(--color-warning)] bg-[var(--color-warning-subtle)] px-3 py-2 text-sm text-[var(--color-warning-text)]">
           Waiting for partner&apos;s approval...
@@ -109,30 +132,37 @@ function HintStatus({ hint }: { hint: HintProps }) {
 
       {hint.pendingHintRequest && !isRequester && (
         <div className="rounded-[var(--radius-md)] border border-[var(--color-info)] bg-[var(--color-info-subtle)] px-3 py-3">
-          <p className="text-sm font-medium text-[var(--color-info-text)]">
-            Your partner wants a hint.
-          </p>
-          <div className="mt-3 flex gap-2">
-            <button
-              type="button"
-              className="rounded-[var(--radius-sm)] bg-[var(--color-info)] px-3 py-1.5 text-sm text-white transition-colors duration-[var(--transition-fast)]"
-              onClick={hint.onApproveHint}
-            >
-              Approve
-            </button>
-            <button
-              type="button"
-              className="rounded-[var(--radius-sm)] border border-[var(--color-info)] px-3 py-1.5 text-sm text-[var(--color-info-text)] transition-colors duration-[var(--transition-fast)] hover:bg-[var(--color-info-subtle)]"
-              onClick={hint.onDenyHint}
-            >
-              Deny
-            </button>
+          <div data-testid="hint-consent-card">
+            <p className="text-sm font-medium text-[var(--color-info-text)]">
+              Your partner wants a hint.
+            </p>
+            <div className="mt-3 flex gap-2">
+              <button
+                type="button"
+                data-testid="approve-hint-button"
+                className="rounded-[var(--radius-sm)] bg-[var(--color-accent)] px-3 py-1.5 text-sm text-white transition-colors duration-[var(--transition-fast)] hover:bg-[var(--color-accent-hover)]"
+                onClick={hint.onApproveHint}
+              >
+                Approve
+              </button>
+              <button
+                type="button"
+                data-testid="deny-hint-button"
+                className="rounded-[var(--radius-sm)] border border-[var(--color-info)] px-3 py-1.5 text-sm text-[var(--color-info-text)] transition-colors duration-[var(--transition-fast)] hover:bg-[var(--color-info-subtle)]"
+                onClick={hint.onDenyHint}
+              >
+                Deny
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {hint.isHintStreaming && (
-        <div className="rounded-[var(--radius-md)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-tertiary)] px-3 py-3 text-sm text-[var(--color-text-secondary)]">
+        <div
+          className="rounded-[var(--radius-md)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-tertiary)] px-3 py-3 text-sm text-[var(--color-text-secondary)]"
+          data-testid="hint-output"
+        >
           <span>{hint.hintText}</span>
           <span
             aria-hidden="true"
@@ -142,7 +172,10 @@ function HintStatus({ hint }: { hint: HintProps }) {
       )}
 
       {hasCompletedHint && (
-        <div className="rounded-[var(--radius-md)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-tertiary)] px-3 py-3 text-sm text-[var(--color-text-secondary)]">
+        <div
+          className="rounded-[var(--radius-md)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-tertiary)] px-3 py-3 text-sm text-[var(--color-text-secondary)]"
+          data-testid="hint-output"
+        >
           {hint.hintText}
         </div>
       )}

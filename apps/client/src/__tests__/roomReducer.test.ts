@@ -262,16 +262,26 @@ describe("roomReducer", () => {
     };
     const next = roomReducer(withPending, { type: "HINT_DENIED" });
     expect(next.pendingHintRequest).toBeNull();
+    expect(next.lastError).toBe("Hint request denied.");
   });
 
   it("handles TESTCASE_ADDED", () => {
     const tc = { input: { n: 5 }, expectedOutput: 10 };
-    const next = roomReducer(initialRoomState, {
+    const next = roomReducer({ ...initialRoomState, lastError: "Old error" }, {
       type: "TESTCASE_ADDED",
       payload: { testCase: tc },
     });
     expect(next.customTestCases).toHaveLength(1);
     expect(next.customTestCases[0]).toEqual(tc);
+    expect(next.lastError).toBeNull();
+  });
+
+  it("handles TESTCASE_ERROR", () => {
+    const next = roomReducer(initialRoomState, {
+      type: "TESTCASE_ERROR",
+      payload: { message: "Custom test case limit reached." },
+    });
+    expect(next.lastError).toBe("Custom test case limit reached.");
   });
 
   it("handles SOLUTION_REVEALED", () => {

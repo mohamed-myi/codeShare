@@ -104,6 +104,8 @@ export function RoomProvider({ children }: { children: ReactNode }) {
       dispatch({ type: "HINT_ERROR", payload });
     const handleTestcaseAdded = (payload: { testCase: CustomTestCase }) =>
       dispatch({ type: "TESTCASE_ADDED", payload });
+    const handleTestcaseError = (payload: { message: string }) =>
+      dispatch({ type: "TESTCASE_ERROR", payload });
     const handleSolutionRevealed = (payload: { solution: string }) =>
       dispatch({ type: "SOLUTION_REVEALED", payload });
 
@@ -125,6 +127,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
     socket.on(SocketEvents.PROBLEM_IMPORT_STATUS, handleImportStatus);
     socket.on(SocketEvents.HINT_ERROR, handleHintError);
     socket.on(SocketEvents.TESTCASE_ADDED, handleTestcaseAdded);
+    socket.on(SocketEvents.TESTCASE_ERROR, handleTestcaseError);
     socket.on(SocketEvents.SOLUTION_REVEALED, handleSolutionRevealed);
 
     if (socket.connected) {
@@ -150,6 +153,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
       socket.off(SocketEvents.PROBLEM_IMPORT_STATUS, handleImportStatus);
       socket.off(SocketEvents.HINT_ERROR, handleHintError);
       socket.off(SocketEvents.TESTCASE_ADDED, handleTestcaseAdded);
+      socket.off(SocketEvents.TESTCASE_ERROR, handleTestcaseError);
       socket.off(SocketEvents.SOLUTION_REVEALED, handleSolutionRevealed);
     };
   }, [socket]);

@@ -15,7 +15,10 @@ export function ResultsPanel({
   if (executionInProgress) {
     return (
       <div className="flex h-full items-center justify-center p-4">
-        <div className="flex items-center gap-2 text-sm text-[var(--color-text-tertiary)]">
+        <div
+          className="flex items-center gap-2 text-sm text-[var(--color-text-tertiary)]"
+          data-testid="execution-running-state"
+        >
           <Loader2 size={16} className="animate-spin" />
           Running...
         </div>
@@ -25,7 +28,7 @@ export function ResultsPanel({
 
   if (lastError) {
     return (
-      <div className="p-4">
+      <div className="p-4" data-testid="results-panel">
         <div className="rounded-[var(--radius-sm)] border border-[var(--color-error)] bg-[var(--color-error-subtle)] p-3 text-sm text-[var(--color-error-text)]">
           {lastError}
         </div>
@@ -35,7 +38,7 @@ export function ResultsPanel({
 
   if (!executionResult) {
     return (
-      <div className="flex h-full items-center justify-center p-4">
+      <div className="flex h-full items-center justify-center p-4" data-testid="results-panel">
         <p className="text-sm text-[var(--color-text-tertiary)]">
           No results yet. Run or submit your code.
         </p>
@@ -54,7 +57,7 @@ function RunResultView({ result }: { result: RunResult }) {
   const allPassed = result.passed === result.total;
 
   return (
-    <div className="overflow-y-auto p-3">
+    <div className="overflow-y-auto p-3" data-testid="results-panel">
       <div className="mb-2 flex items-center gap-2">
         {allPassed ? (
           <Check size={16} className="text-[var(--color-success)]" />
@@ -149,7 +152,7 @@ function SubmitResultView({ result }: { result: SubmitResult }) {
   const allPassed = result.passed === result.total;
 
   return (
-    <div className="overflow-y-auto p-3">
+    <div className="overflow-y-auto p-3" data-testid="results-panel">
       <div className="mb-2 flex items-center gap-2">
         {allPassed ? (
           <Check size={16} className="text-[var(--color-success)]" />

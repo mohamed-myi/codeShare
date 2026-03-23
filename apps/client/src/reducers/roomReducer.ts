@@ -30,6 +30,7 @@ export type RoomAction =
   | { type: "HINT_ERROR"; payload: { message: string } }
   | { type: "IMPORT_STATUS"; payload: { status: ImportStatus; message?: string } }
   | { type: "TESTCASE_ADDED"; payload: { testCase: CustomTestCase } }
+  | { type: "TESTCASE_ERROR"; payload: { message: string } }
   | { type: "SOLUTION_REVEALED"; payload: { solution: string } }
   | { type: "EVENT_REJECTED"; payload: { event: string; reason: string } };
 
@@ -184,13 +185,22 @@ export function roomReducer(state: ClientRoomState, action: RoomAction): ClientR
       };
 
     case "HINT_DENIED":
-      return { ...state, pendingHintRequest: null, isHintStreaming: false };
+      return {
+        ...state,
+        pendingHintRequest: null,
+        isHintStreaming: false,
+        lastError: "Hint request denied.",
+      };
 
     case "TESTCASE_ADDED":
       return {
         ...state,
+        lastError: null,
         customTestCases: [...state.customTestCases, action.payload.testCase],
       };
+
+    case "TESTCASE_ERROR":
+      return { ...state, lastError: action.payload.message };
 
     case "SOLUTION_REVEALED":
       return { ...state, solution: action.payload.solution };
