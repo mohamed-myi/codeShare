@@ -1,3 +1,5 @@
+import { buildDelimitedBlock } from "../lib/promptSanitize.js";
+
 export interface HintMessage {
   role: "system" | "user";
   content: string;
@@ -27,16 +29,16 @@ function truncate(value: string, maxChars: number): string {
   return `${value.slice(0, Math.max(0, maxChars - 1))}…`;
 }
 
-// Escape bracket-delimited tags so user content can't break out of delimited blocks
-function escapeDelimiters(value: string): string {
-  return value.replace(
-    /\[\/?(PROBLEM_DESCRIPTION|CONSTRAINTS|CURRENT_CODE|PREVIOUS_HINTS|LAST_FAILURE|SYSTEM)\]/gi,
-    (match) => match.replace(/\[/g, "\uFF3B").replace(/\]/g, "\uFF3D"),
-  );
-}
+const HINT_TAGS = [
+  "PROBLEM_DESCRIPTION",
+  "CONSTRAINTS",
+  "CURRENT_CODE",
+  "PREVIOUS_HINTS",
+  "LAST_FAILURE",
+];
 
-function buildDelimitedBlock(label: string, value: string): string {
-  return `[${label}]\n${escapeDelimiters(value)}\n[/${label}]`;
+function buildHintBlock(label: string, value: string): string {
+  return buildDelimitedBlock(label, value, HINT_TAGS);
 }
 
 function allocateBudgets(maxPromptChars: number) {
@@ -97,27 +99,24 @@ export const hintService = {
 
     const userSections = [
       `Hint level: ${opts.hintLevel} (1=concept, 2=approach, 3=pseudocode-level guidance without code).`,
-      buildDelimitedBlock("PROBLEM_DESCRIPTION", truncate(opts.description, budgets.description)),
+      buildHintBlock("PROBLEM_DESCRIPTION", truncate(opts.description, budgets.description)),
       opts.constraints.length > 0
-        ? buildDelimitedBlock(
-            "CONSTRAINTS",
-            truncate(opts.constraints.join("\n"), budgets.constraints),
-          )
+        ? buildHintBlock("CONSTRAINTS", truncate(opts.constraints.join("\n"), budgets.constraints))
         : "",
       opts.currentCode
-        ? buildDelimitedBlock(
+        ? buildHintBlock(
             "CURRENT_CODE",
             truncate(stripCodeComments(opts.currentCode), budgets.currentCode),
           )
         : "",
       opts.previousHints.length > 0
-        ? buildDelimitedBlock(
+        ? buildHintBlock(
             "PREVIOUS_HINTS",
             truncate(opts.previousHints.join("\n"), budgets.previousHints),
           )
         : "",
       opts.lastFailure
-        ? buildDelimitedBlock("LAST_FAILURE", truncate(opts.lastFailure, budgets.lastFailure))
+        ? buildHintBlock("LAST_FAILURE", truncate(opts.lastFailure, budgets.lastFailure))
         : "",
     ]
       .filter(Boolean)
