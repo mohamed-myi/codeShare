@@ -1,4 +1,4 @@
-import type { RoomMode, RoomUser } from "@codeshare/shared";
+import type { RoomMode, RoomUser, UserRole } from "@codeshare/shared";
 import { useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { JoinRoomDialog } from "./JoinRoomDialog.js";
@@ -9,9 +9,10 @@ interface HeaderProps {
   mode: RoomMode;
   users: RoomUser[];
   connected: boolean;
+  currentUserId?: string | null;
 }
 
-export function Header({ roomCode, mode, users, connected }: HeaderProps) {
+export function Header({ roomCode, mode, users, connected, currentUserId }: HeaderProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { roomCode: routeRoomCode } = useParams<{ roomCode: string }>();
@@ -66,6 +67,7 @@ export function Header({ roomCode, mode, users, connected }: HeaderProps) {
                   }`}
                 />
                 {user.displayName}
+                <RoleBadge mode={mode} role={user.role} isCurrentUser={user.id === currentUserId} />
               </span>
             ))}
             <span className="text-[var(--color-text-tertiary)]">Waiting for partner</span>
@@ -81,6 +83,7 @@ export function Header({ roomCode, mode, users, connected }: HeaderProps) {
                   }`}
                 />
                 {user.displayName}
+                <RoleBadge mode={mode} role={user.role} isCurrentUser={user.id === currentUserId} />
               </span>
             ))}
           </div>
@@ -104,5 +107,31 @@ export function Header({ roomCode, mode, users, connected }: HeaderProps) {
 
       <JoinRoomDialog isOpen={isJoinOpen} onClose={() => setIsJoinOpen(false)} />
     </header>
+  );
+}
+
+function RoleBadge({
+  mode,
+  role,
+  isCurrentUser,
+}: {
+  mode: RoomMode;
+  role: UserRole;
+  isCurrentUser: boolean;
+}) {
+  if (mode !== "interview") return null;
+
+  const label = role === "interviewer" ? "Interviewer" : "Candidate";
+  const suffix = isCurrentUser ? " (you)" : "";
+  const colorClass =
+    role === "interviewer"
+      ? "text-[var(--color-accent-text)]"
+      : "text-[var(--color-text-tertiary)]";
+
+  return (
+    <span className={`text-[10px] ${colorClass}`} data-testid={`role-badge-${role}`}>
+      {label}
+      {suffix}
+    </span>
   );
 }

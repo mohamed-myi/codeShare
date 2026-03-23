@@ -368,6 +368,38 @@ describe("Room handler", () => {
 
       await waitForEvent(imposter, SocketEvents.ROOM_FULL);
     });
+
+    it("malformed reconnect token (wrong length) is rejected gracefully", async () => {
+      const { server, room } = await setup();
+
+      const alice = connectClient(server.port, room.roomCode);
+      await waitForEvent(alice, "connect");
+
+      alice.emit(SocketEvents.USER_JOIN, {
+        displayName: "Alice",
+        reconnectToken: "tooshort",
+      });
+
+      // Falls through to normal join (room not full)
+      const payload = await waitForEvent<UserJoinedPayload>(alice, SocketEvents.USER_JOINED);
+      expect(payload.displayName).toBe("Alice");
+      expect(payload.role).toBe("peer");
+    });
+
+    it("malformed reconnect token (non-hex chars) is rejected gracefully", async () => {
+      const { server, room } = await setup();
+
+      const alice = connectClient(server.port, room.roomCode);
+      await waitForEvent(alice, "connect");
+
+      alice.emit(SocketEvents.USER_JOIN, {
+        displayName: "Alice",
+        reconnectToken: "GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG",
+      });
+
+      const payload = await waitForEvent<UserJoinedPayload>(alice, SocketEvents.USER_JOINED);
+      expect(payload.displayName).toBe("Alice");
+    });
   });
 
   // --- 7f: Disconnect triggers grace period ---

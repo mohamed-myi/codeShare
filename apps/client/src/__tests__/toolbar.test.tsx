@@ -69,4 +69,40 @@ describe("Header", () => {
     renderInRouter(<Header {...headerProps} />);
     expect(screen.getByText("Back to Solver")).toBeDefined();
   });
+
+  it("shows role badges in interview mode", () => {
+    renderInRouter(
+      <Header
+        {...headerProps}
+        mode="interview"
+        currentUserId="u1"
+        users={[
+          { id: "u1", displayName: "Alice", role: "interviewer", connected: true },
+          { id: "u2", displayName: "Bob", role: "candidate", connected: true },
+        ]}
+      />,
+    );
+
+    expect(screen.getByTestId("role-badge-interviewer")).toBeDefined();
+    expect(screen.getByTestId("role-badge-interviewer").textContent).toContain("Interviewer");
+    expect(screen.getByTestId("role-badge-interviewer").textContent).toContain("(you)");
+    expect(screen.getByTestId("role-badge-candidate")).toBeDefined();
+    expect(screen.getByTestId("role-badge-candidate").textContent).toContain("Candidate");
+  });
+
+  it("does not show role badges in collaboration mode", () => {
+    renderInRouter(
+      <Header
+        {...headerProps}
+        mode="collaboration"
+        users={[
+          { id: "u1", displayName: "Alice", role: "peer", connected: true },
+          { id: "u2", displayName: "Bob", role: "peer", connected: true },
+        ]}
+      />,
+    );
+
+    expect(screen.queryByTestId("role-badge-interviewer")).toBeNull();
+    expect(screen.queryByTestId("role-badge-candidate")).toBeNull();
+  });
 });

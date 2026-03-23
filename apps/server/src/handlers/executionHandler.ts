@@ -102,8 +102,11 @@ export function registerExecutionHandler(
       submissionReserved = true;
       const judge0Start = Date.now();
       const response = await deps.judge0Client.submit(harness, problem.timeLimitMs);
-      const judge0LatencyMs = Date.now() - judge0Start;
-      logger.info({ roomCode, executionType, judge0LatencyMs }, "Judge0 submission completed");
+      const durationMs = Date.now() - judge0Start;
+      logger.info(
+        { roomCode, executionType, service: "judge0", durationMs },
+        "Judge0 submission completed",
+      );
 
       // Map Judge0 status codes
       const statusId = response.status.id;

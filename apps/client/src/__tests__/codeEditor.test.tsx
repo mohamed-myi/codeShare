@@ -63,6 +63,19 @@ describe("CodeEditor", () => {
     expect(editor.dataset.readonly).toBe("true");
   });
 
+  it("shows reconnecting overlay when disconnected", () => {
+    mockYjsContext.doc = null;
+    render(<CodeEditor connected={false} />);
+    expect(screen.getByTestId("editor-reconnecting-overlay")).toBeDefined();
+    expect(screen.getByText("Reconnecting...")).toBeDefined();
+  });
+
+  it("does not show reconnecting overlay when connected", () => {
+    mockYjsContext.doc = null;
+    render(<CodeEditor connected={true} />);
+    expect(screen.queryByTestId("editor-reconnecting-overlay")).toBeNull();
+  });
+
   it("creates MonacoBinding when doc and editor are both available", async () => {
     const mockDoc = {
       getText: vi.fn(() => "ytext-object"),

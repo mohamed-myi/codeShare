@@ -156,6 +156,9 @@ export function registerProblemHandler(
       status: "scraping",
     });
 
+    const importStart = Date.now();
+    logger.info({ roomCode, sourceUrl: parsed.data.leetcodeUrl }, "Problem import started");
+
     try {
       const importedProblem = await (deps.importProblem
         ? deps.importProblem(parsed.data.leetcodeUrl)
@@ -180,6 +183,7 @@ export function registerProblemHandler(
           roomCode,
           problemId: importedProblem.id,
           sourceUrl: importedProblem.sourceUrl,
+          importDurationMs: Date.now() - importStart,
         },
         "Problem imported for room",
       );

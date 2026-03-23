@@ -150,7 +150,7 @@ export function setupSocketIO(io: Server, logger: Logger, deps?: SocketIODeps): 
     next();
   });
 
-  const authMiddleware = createAuthMiddleware(roomManager);
+  const authMiddleware = createAuthMiddleware(roomManager, logger);
 
   io.on("connection", (socket) => {
     logger.info({ socketId: socket.id, roomCode: socket.data.roomCode }, "Socket connected");

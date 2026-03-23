@@ -14,6 +14,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Group, Panel, type PanelImperativeHandle, Separator } from "react-resizable-panels";
 import { CodeEditor } from "../components/CodeEditor.tsx";
 import { ImportDialog } from "../components/ImportDialog.tsx";
+import { PanelErrorBoundary } from "../components/PanelErrorBoundary.tsx";
 import { ProblemPanel } from "../components/ProblemPanel.tsx";
 import { ResultsPanel } from "../components/ResultsPanel.tsx";
 import { TestCasePanel } from "../components/TestCasePanel.tsx";
@@ -134,42 +135,44 @@ export function SolverPage() {
           collapsible
           collapsedSize={0}
         >
-          <div className="flex h-full flex-col overflow-y-auto">
-            <ProblemPanel
-              problem={state.currentProblem}
-              emptyMessage={problemEmptyMessage}
-              hint={
-                state.problemId
-                  ? {
-                      hintsUsed: state.hintsUsed,
-                      hintLimit: state.hintLimit,
-                      pendingHintRequest: state.pendingHintRequest,
-                      isHintStreaming: state.isHintStreaming,
-                      executionInProgress: state.executionInProgress,
-                      hintText: state.hintText,
-                      currentUserId: state.currentUserId,
-                      mode: state.mode,
-                      onRequestHint: handleRequestHint,
-                      onApproveHint: approveHint,
-                      onDenyHint: denyHint,
-                    }
-                  : undefined
-              }
-            />
-            {state.solution && (
-              <section
-                className="border-t border-[var(--color-border-subtle)] px-6 py-5"
-                data-testid="solution-panel"
-              >
-                <h3 className="text-xs uppercase tracking-[0.08em] text-[var(--color-text-tertiary)]">
-                  Solution
-                </h3>
-                <div className="mt-3 whitespace-pre-wrap border-l border-[var(--color-border-subtle)] pl-4 font-[var(--font-family-mono)] text-sm leading-6 text-[var(--color-text-secondary)]">
-                  {state.solution}
-                </div>
-              </section>
-            )}
-          </div>
+          <PanelErrorBoundary name="Problem">
+            <div className="flex h-full flex-col overflow-y-auto">
+              <ProblemPanel
+                problem={state.currentProblem}
+                emptyMessage={problemEmptyMessage}
+                hint={
+                  state.problemId
+                    ? {
+                        hintsUsed: state.hintsUsed,
+                        hintLimit: state.hintLimit,
+                        pendingHintRequest: state.pendingHintRequest,
+                        isHintStreaming: state.isHintStreaming,
+                        executionInProgress: state.executionInProgress,
+                        hintText: state.hintText,
+                        currentUserId: state.currentUserId,
+                        mode: state.mode,
+                        onRequestHint: handleRequestHint,
+                        onApproveHint: approveHint,
+                        onDenyHint: denyHint,
+                      }
+                    : undefined
+                }
+              />
+              {state.solution && (
+                <section
+                  className="border-t border-[var(--color-border-subtle)] px-6 py-5"
+                  data-testid="solution-panel"
+                >
+                  <h3 className="text-xs uppercase tracking-[0.08em] text-[var(--color-text-tertiary)]">
+                    Solution
+                  </h3>
+                  <div className="mt-3 whitespace-pre-wrap border-l border-[var(--color-border-subtle)] pl-4 font-[var(--font-family-mono)] text-sm leading-6 text-[var(--color-text-secondary)]">
+                    {state.solution}
+                  </div>
+                </section>
+              )}
+            </div>
+          </PanelErrorBoundary>
         </Panel>
 
         <Separator />
@@ -193,10 +196,13 @@ export function SolverPage() {
                   canRevealSolution={canRevealSolution}
                   problemCollapsed={layout.state.problemCollapsed}
                   resultsCollapsed={layout.state.resultsCollapsed}
+                  isInterviewMode={state.mode === "interview"}
                 />
-                <div className="flex-1 overflow-hidden">
-                  <CodeEditor readOnly={editorReadOnly} />
-                </div>
+                <PanelErrorBoundary name="Editor">
+                  <div className="flex-1 overflow-hidden">
+                    <CodeEditor readOnly={editorReadOnly} connected={connected} />
+                  </div>
+                </PanelErrorBoundary>
               </div>
             </Panel>
 
@@ -215,23 +221,27 @@ export function SolverPage() {
                   activeTab={layout.state.activeResultsTab}
                   onTabChange={layout.setActiveResultsTab}
                 />
-                <div className="flex-1 overflow-hidden">
-                  {layout.state.activeResultsTab === "testcases" ? (
-                    <TestCasePanel
-                      testCases={state.visibleTestCases}
-                      customTestCases={state.customTestCases}
-                      parameterNames={state.parameterNames}
-                      onAddTestCase={handleAddTestCase}
-                      canAddMore={state.customTestCases.length < ROOM_LIMITS.MAX_CUSTOM_TEST_CASES}
-                    />
-                  ) : (
-                    <ResultsPanel
-                      executionResult={state.executionResult}
-                      executionInProgress={state.executionInProgress}
-                      lastError={state.lastError}
-                    />
-                  )}
-                </div>
+                <PanelErrorBoundary name="Results">
+                  <div className="flex-1 overflow-hidden">
+                    {layout.state.activeResultsTab === "testcases" ? (
+                      <TestCasePanel
+                        testCases={state.visibleTestCases}
+                        customTestCases={state.customTestCases}
+                        parameterNames={state.parameterNames}
+                        onAddTestCase={handleAddTestCase}
+                        canAddMore={
+                          state.customTestCases.length < ROOM_LIMITS.MAX_CUSTOM_TEST_CASES
+                        }
+                      />
+                    ) : (
+                      <ResultsPanel
+                        executionResult={state.executionResult}
+                        executionInProgress={state.executionInProgress}
+                        lastError={state.lastError}
+                      />
+                    )}
+                  </div>
+                </PanelErrorBoundary>
               </div>
             </Panel>
           </Group>
@@ -266,6 +276,7 @@ interface EditorToolbarProps {
   canRevealSolution: boolean;
   problemCollapsed: boolean;
   resultsCollapsed: boolean;
+  isInterviewMode: boolean;
 }
 
 function EditorToolbar({
@@ -283,6 +294,7 @@ function EditorToolbar({
   canRevealSolution,
   problemCollapsed,
   resultsCollapsed,
+  isInterviewMode,
 }: EditorToolbarProps) {
   return (
     <div
@@ -333,6 +345,15 @@ function EditorToolbar({
           <Download size={12} />
           Import
         </button>
+      )}
+
+      {isInterviewMode && (
+        <span
+          data-testid="interview-mode-badge"
+          className="rounded-sm border border-[var(--color-border-subtle)] px-2 py-0.5 text-[10px] text-[var(--color-text-tertiary)]"
+        >
+          Interview Mode
+        </span>
       )}
 
       <div className="flex-1" />

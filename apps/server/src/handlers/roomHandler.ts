@@ -156,26 +156,31 @@ export function registerRoomHandler(
 
     // Reconnection attempt
     if (reconnectToken) {
-      const existingUser = room.findByReconnectToken(reconnectToken);
-      if (existingUser) {
-        const reconnected = room.reconnectUser(existingUser.id, socket.id);
-        if (reconnected) {
-          await emitJoinedPayload(room, reconnected);
+      if (!/^[0-9a-f]{32}$/.test(reconnectToken)) {
+        logger.debug({ socketId: socket.id, roomCode }, "Invalid reconnect token format");
+        // Fall through to normal join
+      } else {
+        const existingUser = room.findByReconnectToken(reconnectToken);
+        if (existingUser) {
+          const reconnected = room.reconnectUser(existingUser.id, socket.id);
+          if (reconnected) {
+            await emitJoinedPayload(room, reconnected);
 
-          socket.to(room.roomCode).emit(SocketEvents.USER_JOINED, {
-            userId: reconnected.id,
-            displayName: reconnected.displayName,
-            role: reconnected.role,
-            mode: room.mode,
-            reconnectToken: "",
-            yjsToken: "",
-          });
+            socket.to(room.roomCode).emit(SocketEvents.USER_JOINED, {
+              userId: reconnected.id,
+              displayName: reconnected.displayName,
+              role: reconnected.role,
+              mode: room.mode,
+              reconnectToken: "",
+              yjsToken: "",
+            });
 
-          logger.info({ roomCode, userId: reconnected.id }, "User reconnected");
-          return;
+            logger.info({ roomCode, userId: reconnected.id }, "User reconnected");
+            return;
+          }
         }
+        // Token valid format but user not found -- fall through to normal join
       }
-      // Token invalid or user not found -- fall through to normal join
     }
 
     // Room full check

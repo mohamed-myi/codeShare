@@ -5,6 +5,7 @@ import { useYjsContext } from "../providers/YjsProvider.tsx";
 
 interface CodeEditorProps {
   readOnly?: boolean;
+  connected?: boolean;
 }
 
 declare global {
@@ -49,7 +50,7 @@ const handleBeforeMount: BeforeMount = (monaco) => {
   });
 };
 
-export function CodeEditor({ readOnly = false }: CodeEditorProps) {
+export function CodeEditor({ readOnly = false, connected = true }: CodeEditorProps) {
   const { doc, provider } = useYjsContext();
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
   const monacoRef = useRef<Parameters<OnMount>[1] | null>(null);
@@ -117,7 +118,7 @@ export function CodeEditor({ readOnly = false }: CodeEditorProps) {
   }, []);
 
   return (
-    <div ref={containerRefCallback} className="h-full w-full" data-testid="code-editor">
+    <div ref={containerRefCallback} className="relative h-full w-full" data-testid="code-editor">
       <Editor
         height="100%"
         language="python"
@@ -145,6 +146,16 @@ export function CodeEditor({ readOnly = false }: CodeEditorProps) {
           },
         }}
       />
+      {!connected && (
+        <div
+          className="absolute inset-0 flex items-center justify-center bg-[var(--color-bg-primary)]/60"
+          data-testid="editor-reconnecting-overlay"
+        >
+          <span className="rounded-sm border border-[var(--color-border-subtle)] bg-[var(--color-bg-elevated)] px-3 py-1.5 text-xs text-[var(--color-warning-text)]">
+            Reconnecting...
+          </span>
+        </div>
+      )}
     </div>
   );
 }

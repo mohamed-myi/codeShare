@@ -1,4 +1,5 @@
 import { SocketEvents } from "@codeshare/shared";
+import type { Logger } from "pino";
 import type { Socket } from "socket.io";
 import type { Room } from "../models/Room.js";
 
@@ -33,7 +34,7 @@ const HINT_RESPONSE_EVENTS = new Set<string>([SocketEvents.HINT_APPROVE, SocketE
  * Creates a per-event middleware factory.
  * Usage: socket.use(createAuthMiddleware(roomManager)(socket))
  */
-export function createAuthMiddleware(roomLookup: RoomLookup) {
+export function createAuthMiddleware(roomLookup: RoomLookup, logger?: Logger) {
   return (socket: Socket) => {
     return (event: [string, ...unknown[]], next: (err?: Error) => void): void => {
       const eventName = event[0];
@@ -45,24 +46,37 @@ export function createAuthMiddleware(roomLookup: RoomLookup) {
 
       const roomCode = socket.data.roomCode as string | undefined;
       if (!roomCode) {
+        logger?.warn({ socketId: socket.id, eventName }, "Auth middleware: missing roomCode");
         next(new Error("silent"));
         return;
       }
 
       const room = roomLookup.getRoom(roomCode);
       if (!room) {
+        logger?.warn(
+          { socketId: socket.id, eventName, roomCode },
+          "Auth middleware: room not found",
+        );
         next(new Error("silent"));
         return;
       }
 
       const user = room.users.find((u) => u.socketId === socket.id);
       if (!user) {
+        logger?.warn(
+          { socketId: socket.id, eventName, roomCode },
+          "Auth middleware: user not in room",
+        );
         next(new Error("silent"));
         return;
       }
 
       // Role-based checks for interview mode
       if (eventName === SocketEvents.SOLUTION_REVEAL && room.mode !== "interview") {
+        logger?.info(
+          { socketId: socket.id, eventName, roomCode },
+          "Auth middleware: solution reveal outside interview mode",
+        );
         socket.emit(SocketEvents.EVENT_REJECTED, {
           event: eventName,
           reason: "Solutions can only be revealed in interview mode.",
@@ -72,6 +86,10 @@ export function createAuthMiddleware(roomLookup: RoomLookup) {
 
       if (room.mode === "interview") {
         if (INTERVIEWER_ONLY_EVENTS.has(eventName) && user.role !== "interviewer") {
+          logger?.info(
+            { socketId: socket.id, eventName, roomCode, userId: user.id, role: user.role },
+            "Auth middleware: interviewer-only event rejected",
+          );
           socket.emit(SocketEvents.EVENT_REJECTED, {
             event: eventName,
             reason: "Only the interviewer can perform this action.",
@@ -80,6 +98,10 @@ export function createAuthMiddleware(roomLookup: RoomLookup) {
         }
 
         if (BLOCKED_IN_INTERVIEW.has(eventName)) {
+          logger?.info(
+            { socketId: socket.id, eventName, roomCode },
+            "Auth middleware: blocked in interview mode",
+          );
           socket.emit(SocketEvents.EVENT_REJECTED, {
             event: eventName,
             reason: "Hints are not available in interview mode.",

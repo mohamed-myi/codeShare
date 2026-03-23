@@ -104,7 +104,18 @@ function HintStatus({ hint }: { hint: HintProps }) {
     !hint.executionInProgress &&
     hintsRemaining > 0;
 
-  if (hint.mode !== "collaboration") return null;
+  if (hint.mode !== "collaboration") {
+    return (
+      <div
+        className="border-y border-[var(--color-border-subtle)] py-4"
+        data-testid="interview-hint-notice"
+      >
+        <p className="text-sm text-[var(--color-text-tertiary)]">
+          Hints are not available in interview mode.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <>

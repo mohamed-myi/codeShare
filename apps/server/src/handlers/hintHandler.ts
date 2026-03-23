@@ -266,8 +266,8 @@ async function deliverHint(
         if (generatedHint.length > maxAccumulateChars) break;
       }
 
-      const groqLatencyMs = Date.now() - groqStart;
-      logger.info({ roomCode, groqLatencyMs }, "Groq LLM streaming completed");
+      const durationMs = Date.now() - groqStart;
+      logger.info({ roomCode, service: "groq", durationMs }, "Groq LLM streaming completed");
 
       const fullHint = hintService.sanitizeLLMHint(generatedHint, deps.maxLLMHintChars);
       room.hintsUsed += 1;
@@ -279,8 +279,11 @@ async function deliverHint(
         hintsRemaining,
       } satisfies HintDonePayload);
     } catch (streamErr) {
-      const groqLatencyMs = Date.now() - groqStart;
-      logger.error({ err: streamErr, roomCode, groqLatencyMs }, "LLM hint streaming failed");
+      const durationMs = Date.now() - groqStart;
+      logger.error(
+        { err: streamErr, roomCode, service: "groq", durationMs },
+        "LLM hint streaming failed",
+      );
       socket.emit(SocketEvents.HINT_ERROR, {
         message:
           streamErr instanceof Error && /empty|code|solution/i.test(streamErr.message)

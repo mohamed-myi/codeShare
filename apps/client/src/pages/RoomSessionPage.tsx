@@ -46,6 +46,7 @@ function RoomSessionLayout() {
         mode={state.mode}
         users={state.users}
         connected={connected}
+        currentUserId={state.currentUserId}
       />
       <main className="flex min-h-0 flex-1 flex-col">
         {!connected && (
