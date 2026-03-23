@@ -183,7 +183,7 @@ describe("ScraperService", () => {
     });
 
     await expect(service.importFromUrl("https://example.com/problems/two-sum/")).rejects.toThrow(
-      "URL must match https://leetcode.com/problems/<slug>/",
+      "URL must be a valid LeetCode problem URL.",
     );
   });
 
@@ -247,6 +247,32 @@ describe("ScraperService", () => {
     );
 
     expect(deleteProblem).toHaveBeenCalledWith(createdProblem.id);
+  });
+
+  it("normalizes non-canonical URLs before importing", async () => {
+    fetchImpl.mockResolvedValue({
+      ok: true,
+      json: async () => buildQuestionResponse(),
+    });
+
+    const service = createScraperService({
+      fetchImpl,
+      findBySourceUrl,
+      findBySlug,
+      createProblem,
+      createTestCase,
+      createBoilerplate,
+      deleteProblem,
+    });
+
+    await service.importFromUrl("http://www.leetcode.com/problems/two-sum/description/");
+
+    expect(createProblem).toHaveBeenCalledWith(
+      expect.objectContaining({
+        slug: "two-sum",
+        sourceUrl: "https://leetcode.com/problems/two-sum/",
+      }),
+    );
   });
 
   it("supports overriding the LeetCode GraphQL URL for local E2E stubs", async () => {

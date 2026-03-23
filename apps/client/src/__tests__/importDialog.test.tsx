@@ -78,6 +78,65 @@ describe("ImportDialog", () => {
     ).toBeDefined();
   });
 
+  it("normalizes non-canonical URLs before submitting", () => {
+    const onSubmit = vi.fn();
+
+    render(
+      <ImportDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        onSubmit={onSubmit}
+        importStatus={null}
+        disabledReason={null}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("LeetCode URL"), {
+      target: { value: "leetcode.com/problems/two-sum/description/" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Import Problem" }));
+
+    expect(onSubmit).toHaveBeenCalledWith("https://leetcode.com/problems/two-sum/");
+  });
+
+  it("shows a preview when input differs from canonical form", () => {
+    render(
+      <ImportDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        onSubmit={vi.fn()}
+        importStatus={null}
+        disabledReason={null}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("LeetCode URL"), {
+      target: { value: "leetcode.com/problems/two-sum/description/" },
+    });
+
+    expect(screen.getByTestId("import-url-preview").textContent).toBe(
+      "Will import: https://leetcode.com/problems/two-sum/",
+    );
+  });
+
+  it("does not show a preview when input is already canonical", () => {
+    render(
+      <ImportDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        onSubmit={vi.fn()}
+        importStatus={null}
+        disabledReason={null}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("LeetCode URL"), {
+      target: { value: "https://leetcode.com/problems/two-sum/" },
+    });
+
+    expect(screen.queryByTestId("import-url-preview")).toBeNull();
+  });
+
   it("does not submit while imports are temporarily disabled", () => {
     const onSubmit = vi.fn();
 

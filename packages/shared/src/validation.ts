@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ROOM_CODE } from "./constants.js";
+import { normalizeLeetCodeUrl } from "./leetcodeUrl.js";
 
 const roomCodePattern = new RegExp(
   `^[${ROOM_CODE.ALPHABET}]{${ROOM_CODE.SEGMENT_LENGTH}}-[${ROOM_CODE.ALPHABET}]{${ROOM_CODE.SEGMENT_LENGTH}}$`,
@@ -21,11 +22,18 @@ export const problemSelectSchema = z.object({
 export const problemImportSchema = z.object({
   leetcodeUrl: z
     .string()
-    .url()
-    .regex(
-      /^https:\/\/leetcode\.com\/problems\/[\w-]+\/?$/,
-      "URL must match https://leetcode.com/problems/<slug>/",
-    ),
+    .min(1)
+    .transform((val, ctx) => {
+      const result = normalizeLeetCodeUrl(val);
+      if (!result) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "URL must be a valid LeetCode problem URL (e.g. leetcode.com/problems/two-sum)",
+        });
+        return z.NEVER;
+      }
+      return result.canonicalUrl;
+    }),
 });
 
 export const testcaseAddSchema = z.object({

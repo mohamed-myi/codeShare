@@ -1,4 +1,5 @@
 import type { ImportStatusPayload } from "@codeshare/shared";
+import { normalizeLeetCodeUrl } from "@codeshare/shared";
 import { Info, X } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 
@@ -10,8 +11,6 @@ interface ImportDialogProps {
   disabledReason: string | null;
 }
 
-const LEETCODE_URL_PATTERN = /^https:\/\/leetcode\.com\/problems\/[\w-]+\/?$/;
-
 export function ImportDialog({
   isOpen,
   onClose,
@@ -22,11 +21,13 @@ export function ImportDialog({
   const inputId = useId();
   const [leetcodeUrl, setLeetCodeUrl] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [normalizedPreview, setNormalizedPreview] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isOpen) {
       setLeetCodeUrl("");
       setValidationError(null);
+      setNormalizedPreview(null);
     }
   }, [isOpen]);
 
@@ -52,13 +53,14 @@ export function ImportDialog({
       return;
     }
 
-    if (!LEETCODE_URL_PATTERN.test(trimmedUrl)) {
+    const result = normalizeLeetCodeUrl(trimmedUrl);
+    if (!result) {
       setValidationError("Paste a valid LeetCode problem URL.");
       return;
     }
 
     setValidationError(null);
-    onSubmit(trimmedUrl);
+    onSubmit(result.canonicalUrl);
   }
 
   return (
@@ -99,20 +101,30 @@ export function ImportDialog({
             </label>
             <input
               id={inputId}
-              type="url"
+              type="text"
               aria-label="LeetCode URL"
               data-testid="import-url-input"
               value={leetcodeUrl}
               onChange={(event) => {
-                setLeetCodeUrl(event.target.value);
-                if (validationError) {
-                  setValidationError(null);
-                }
+                const value = event.target.value;
+                setLeetCodeUrl(value);
+                if (validationError) setValidationError(null);
+                const normalized = normalizeLeetCodeUrl(value);
+                setNormalizedPreview(normalized ? normalized.canonicalUrl : null);
               }}
               placeholder="https://leetcode.com/problems/two-sum/"
               className="mt-1 w-full rounded-[var(--radius-sm)] border border-[var(--color-border-strong)] bg-[var(--color-bg-tertiary)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-tertiary)] focus:border-[var(--color-accent)] focus:ring-2 focus:ring-[var(--color-focus-ring)]"
             />
           </div>
+
+          {normalizedPreview && leetcodeUrl.trim() !== normalizedPreview && (
+            <p
+              data-testid="import-url-preview"
+              className="text-xs text-[var(--color-text-tertiary)]"
+            >
+              Will import: {normalizedPreview}
+            </p>
+          )}
 
           <div className="flex items-start gap-2 rounded-[var(--radius-sm)] border border-dashed border-[var(--color-border-strong)] bg-[var(--color-bg-tertiary)] px-3 py-2 text-xs text-[var(--color-text-tertiary)]">
             <Info size={14} className="mt-0.5 shrink-0" />3 imports per room session. Imported

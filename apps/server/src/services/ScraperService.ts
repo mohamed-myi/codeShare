@@ -1,8 +1,7 @@
 import { boilerplateRepository, problemRepository, testCaseRepository } from "@codeshare/db";
 import type { Problem } from "@codeshare/shared";
-import { DEFAULT_TIME_LIMIT_MS } from "@codeshare/shared";
+import { DEFAULT_TIME_LIMIT_MS, normalizeLeetCodeUrl } from "@codeshare/shared";
 
-const LEETCODE_URL_PATTERN = /^https:\/\/leetcode\.com\/problems\/([\w-]+)\/?$/;
 const LEETCODE_GRAPHQL_URL = "https://leetcode.com/graphql";
 
 interface LeetCodeQuestionData {
@@ -29,19 +28,6 @@ interface ScraperServiceDeps {
 interface ExampleBlock {
   input: string;
   output: string;
-}
-
-function normalizeLeetCodeUrl(url: string): { slug: string; canonicalUrl: string } {
-  const match = url.match(LEETCODE_URL_PATTERN);
-  if (!match) {
-    throw new Error("URL must match https://leetcode.com/problems/<slug>/");
-  }
-
-  const slug = match[1];
-  return {
-    slug,
-    canonicalUrl: `https://leetcode.com/problems/${slug}/`,
-  };
 }
 
 function decodeHtmlEntities(text: string): string {
@@ -322,7 +308,11 @@ export function createScraperService(deps: Partial<ScraperServiceDeps> = {}) {
 
   return {
     async importFromUrl(url: string): Promise<Problem> {
-      const { slug, canonicalUrl } = normalizeLeetCodeUrl(url);
+      const normalized = normalizeLeetCodeUrl(url);
+      if (!normalized) {
+        throw new Error("URL must be a valid LeetCode problem URL.");
+      }
+      const { slug, canonicalUrl } = normalized;
 
       const existing =
         (await resolvedDeps.findBySourceUrl(canonicalUrl)) ?? (await resolvedDeps.findBySlug(slug));
