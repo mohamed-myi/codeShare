@@ -60,6 +60,12 @@ const envSchema = z.object({
   GROQ_TEMPERATURE: z.coerce.number().min(0).max(2).default(0.6),
   GROQ_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(15_000),
   LEETCODE_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000),
+  ENABLE_LLM_TEST_GENERATION: booleanFromStringSchema.default("false"),
+  LLM_TEST_GENERATION_MAX_CASES: z.coerce.number().int().positive().default(12),
+  LLM_TEST_GEN_TEMPERATURE: z.coerce.number().min(0).max(2).default(0.3),
+  LLM_TEST_GEN_MAX_TOKENS: z.coerce.number().int().positive().default(4096),
+  LLM_VERIFY_TEMPERATURE: z.coerce.number().min(0).max(2).default(0.1),
+  LLM_VERIFY_MAX_TOKENS: z.coerce.number().int().positive().default(256),
 });
 
 export type Config = z.infer<typeof envSchema>;

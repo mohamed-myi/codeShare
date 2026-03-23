@@ -44,4 +44,57 @@ export const testCaseRepository = {
     );
     return toTestCase(rows[0]);
   },
+
+  async countHidden(problemId: string): Promise<number> {
+    const { rows } = await pool.query<{ count: string }>(
+      `SELECT COUNT(*) AS count FROM test_cases
+       WHERE problem_id = $1 AND is_visible = false`,
+      [problemId],
+    );
+    return Number(rows[0].count);
+  },
+
+  async maxOrderIndex(problemId: string): Promise<number> {
+    const { rows } = await pool.query<{ max: number | null }>(
+      `SELECT MAX(order_index) AS max FROM test_cases
+       WHERE problem_id = $1`,
+      [problemId],
+    );
+    return rows[0].max ?? -1;
+  },
+
+  async createMany(
+    cases: Array<{
+      problemId: string;
+      input: Record<string, unknown>;
+      expectedOutput: unknown;
+      isVisible: boolean;
+      orderIndex: number;
+    }>,
+  ): Promise<void> {
+    if (cases.length === 0) return;
+
+    const values: unknown[] = [];
+    const placeholders: string[] = [];
+    for (let i = 0; i < cases.length; i++) {
+      const offset = i * 5;
+      placeholders.push(
+        `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5})`,
+      );
+      values.push(
+        cases[i].problemId,
+        JSON.stringify(cases[i].input),
+        JSON.stringify(cases[i].expectedOutput),
+        cases[i].isVisible,
+        cases[i].orderIndex,
+      );
+    }
+
+    await pool.query(
+      `INSERT INTO test_cases (problem_id, input, expected_output, is_visible, order_index)
+       VALUES ${placeholders.join(", ")}
+       ON CONFLICT (problem_id, order_index) DO NOTHING`,
+      values,
+    );
+  },
 };

@@ -19,6 +19,7 @@ import { extractClientIp, isOriginAllowed } from "../lib/networkSecurity.js";
 import { normalizeRoomCode } from "../lib/roomCode.js";
 import { createAuthMiddleware } from "../middleware/authMiddleware.js";
 import { roomManager } from "../models/RoomManager.js";
+import type { GenerationContext } from "../services/TestCaseGeneratorService.js";
 
 let activeIpRateLimiter: IpRateLimiter | null = null;
 
@@ -63,6 +64,7 @@ export interface SocketIODeps {
   hintConsentMs?: number;
   importsDailyLimit?: number;
   importProblem?: (url: string) => Promise<{ id: string; sourceUrl: string | null }>;
+  generateTestCases?: (ctx: GenerationContext) => Promise<void>;
 }
 
 /**
@@ -165,6 +167,7 @@ export function setupSocketIO(io: Server, logger: Logger, deps?: SocketIODeps): 
         enableProblemImport: deps?.enableProblemImport ?? true,
         importsDailyLimit: deps?.importsDailyLimit ?? 50,
         importProblem: deps?.importProblem,
+        generateTestCases: deps?.generateTestCases,
       });
     }
     registerTestcaseHandler(io, socket, logger, roomManager, (problemId, language) =>

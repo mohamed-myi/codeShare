@@ -1,13 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Config } from "../../config.js";
-import { createJudge0Client } from "../Judge0Client.js";
+import { createGroqClient } from "../GroqClient.js";
 
 const baseConfig: Config = {
   DATABASE_URL: "https://db.example.com/codeshare",
   JUDGE0_API_URL: "https://judge0-ce.p.rapidapi.com",
   JUDGE0_API_KEY: "judge0-key",
   JUDGE0_DAILY_LIMIT: 100,
-  GROQ_API_KEY: undefined,
+  GROQ_API_KEY: "groq-test-key",
   GROQ_MODEL: "llama-3.3-70b-versatile",
   GROQ_API_URL: "https://api.groq.com/openai/v1/chat/completions",
   LEETCODE_GRAPHQL_URL: "https://leetcode.com/graphql",
@@ -50,56 +50,64 @@ const baseConfig: Config = {
   LLM_VERIFY_MAX_TOKENS: 256,
 };
 
-describe("createJudge0Client", () => {
+describe("GroqClient.complete", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("accepts configurable Judge0 hosts for local stubs", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        stdout: "ok",
-        stderr: null,
-        status: { id: 3, description: "Accepted" },
-        time: "0.01",
-        memory: 1024,
-      }),
-    });
-    vi.stubGlobal("fetch", fetchMock);
-
-    const client = createJudge0Client({
-      ...baseConfig,
-      JUDGE0_API_URL: "http://127.0.0.1:4100/judge0",
-    });
-
-    await expect(client.submit("print('hello')", 5_000)).resolves.toEqual(
-      expect.objectContaining({
-        stdout: "ok",
-        status: { id: 3, description: "Accepted" },
-      }),
-    );
-    expect(fetchMock).toHaveBeenCalledWith(
-      "http://127.0.0.1:4100/judge0/submissions?base64_encoded=false&wait=true",
-      expect.objectContaining({
-        headers: expect.objectContaining({
-          "X-RapidAPI-Key": "judge0-key",
-        }),
-      }),
-    );
-  });
-
-  it("validates the Judge0 response shape", async () => {
+  it("returns content from non-streaming response", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
         ok: true,
-        json: async () => ({ status: { id: "3" } }),
+        json: async () => ({
+          choices: [{ message: { content: '[{"input":{},"expectedOutput":1}]' } }],
+        }),
       }),
     );
 
-    const client = createJudge0Client(baseConfig);
+    const client = createGroqClient(baseConfig);
+    const result = await client.complete([
+      { role: "system", content: "You are a test generator." },
+      { role: "user", content: "Generate tests." },
+    ]);
 
-    await expect(client.submit("print('hello')", 5_000)).rejects.toThrow(/response/i);
+    expect(result).toBe('[{"input":{},"expectedOutput":1}]');
+  });
+
+  it("throws on API error", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 429,
+      }),
+    );
+
+    const client = createGroqClient(baseConfig);
+    await expect(client.complete([{ role: "user", content: "test" }])).rejects.toThrow(
+      "Groq API error: 429",
+    );
+  });
+
+  it("respects temperature and maxTokens overrides", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        choices: [{ message: { content: "42" } }],
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createGroqClient(baseConfig);
+    await client.complete([{ role: "user", content: "test" }], {
+      temperature: 0.1,
+      maxTokens: 256,
+    });
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+    expect(body.temperature).toBe(0.1);
+    expect(body.max_tokens).toBe(256);
+    expect(body.stream).toBe(false);
   });
 });

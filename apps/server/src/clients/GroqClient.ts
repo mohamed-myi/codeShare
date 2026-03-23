@@ -1,6 +1,6 @@
 import type { Config } from "../config.js";
 
-interface GroqMessage {
+export interface GroqMessage {
   role: "system" | "user";
   content: string;
 }
@@ -11,6 +11,44 @@ export function createGroqClient(config: Config) {
   }
 
   return {
+    /**
+     * Non-streaming chat completion. Returns full response text.
+     */
+    async complete(
+      messages: GroqMessage[],
+      options?: { temperature?: number; maxTokens?: number },
+    ): Promise<string> {
+      const response = await fetch(config.GROQ_API_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${config.GROQ_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        redirect: "error",
+        signal: AbortSignal.timeout(config.GROQ_REQUEST_TIMEOUT_MS),
+        body: JSON.stringify({
+          model: config.GROQ_MODEL,
+          messages,
+          stream: false,
+          max_tokens: options?.maxTokens ?? config.GROQ_MAX_TOKENS,
+          temperature: options?.temperature ?? config.GROQ_TEMPERATURE,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Groq API error: ${response.status}`);
+      }
+
+      const json = (await response.json()) as {
+        choices?: Array<{ message?: { content?: string } }>;
+      };
+      const content = json.choices?.[0]?.message?.content;
+      if (!content) {
+        throw new Error("Groq API returned empty response");
+      }
+      return content;
+    },
+
     /**
      * Streams a chat completion from Groq. Yields text chunks.
      */

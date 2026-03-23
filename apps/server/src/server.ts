@@ -1,4 +1,5 @@
 import type http from "node:http";
+import { testCaseRepository } from "@codeshare/db";
 import type { Logger } from "pino";
 import { Server as SocketIOServer } from "socket.io";
 import { createGroqClient } from "./clients/GroqClient.js";
@@ -6,6 +7,7 @@ import { createJudge0Client } from "./clients/Judge0Client.js";
 import type { Config } from "./config.js";
 import { roomManager } from "./models/RoomManager.js";
 import { createScraperService } from "./services/ScraperService.js";
+import { createTestCaseGeneratorService } from "./services/TestCaseGeneratorService.js";
 import { setupSocketIO } from "./ws/socketio.js";
 import { registerUpgradeHandler } from "./ws/upgrade.js";
 import { setupYjsServer } from "./ws/yjs.js";
@@ -48,6 +50,22 @@ export function setupUpgradeRouting(
     graphQlUrl: config.LEETCODE_GRAPHQL_URL,
   });
 
+  const testCaseGenerator =
+    groqClient && config.ENABLE_LLM_TEST_GENERATION
+      ? createTestCaseGeneratorService({
+          groqComplete: (msgs, opts) => groqClient.complete(msgs, opts),
+          countHidden: (problemId) => testCaseRepository.countHidden(problemId),
+          maxOrderIndex: (problemId) => testCaseRepository.maxOrderIndex(problemId),
+          createMany: (cases) => testCaseRepository.createMany(cases),
+          logger,
+          maxCases: config.LLM_TEST_GENERATION_MAX_CASES,
+          genTemperature: config.LLM_TEST_GEN_TEMPERATURE,
+          genMaxTokens: config.LLM_TEST_GEN_MAX_TOKENS,
+          verifyTemperature: config.LLM_VERIFY_TEMPERATURE,
+          verifyMaxTokens: config.LLM_VERIFY_MAX_TOKENS,
+        })
+      : undefined;
+
   setupSocketIO(io, logger, {
     getDoc,
     judge0Client,
@@ -70,6 +88,9 @@ export function setupUpgradeRouting(
     hintConsentMs: config.ROOM_HINT_CONSENT_MS,
     importsDailyLimit: config.IMPORTS_DAILY_LIMIT,
     importProblem: (url) => scraperService.importFromUrl(url),
+    generateTestCases: testCaseGenerator
+      ? (ctx) => testCaseGenerator.generateForProblem(ctx)
+      : undefined,
   });
 
   // Replace Socket.io's default upgrade listener with our unified router

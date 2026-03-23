@@ -13,6 +13,7 @@ import { globalCounters } from "../lib/rateLimitCounters.js";
 import type { Room } from "../models/Room.js";
 import { problemService } from "../services/ProblemService.js";
 import { scraperService } from "../services/ScraperService.js";
+import type { GenerationContext } from "../services/TestCaseGeneratorService.js";
 
 interface RoomLookup {
   getRoom(roomCode: string): Room | undefined;
@@ -30,6 +31,7 @@ export function registerProblemHandler(
     enableProblemImport: boolean;
     importsDailyLimit: number;
     importProblem?: (url: string) => Promise<{ id: string; sourceUrl: string | null }>;
+    generateTestCases?: (ctx: GenerationContext) => Promise<void>;
   },
 ): void {
   async function loadProblemIntoRoom(
@@ -181,6 +183,25 @@ export function registerProblemHandler(
         },
         "Problem imported for room",
       );
+
+      if (deps.generateTestCases && detail.boilerplate) {
+        deps
+          .generateTestCases({
+            problemId: detail.id,
+            title: detail.title,
+            description: detail.description,
+            constraints: detail.constraints,
+            parameterNames: detail.boilerplate.parameterNames,
+            methodName: detail.boilerplate.methodName,
+            visibleTestCases: detail.visibleTestCases.map((tc) => ({
+              input: tc.input,
+              expectedOutput: tc.expectedOutput,
+            })),
+          })
+          .catch((err) => {
+            logger.error({ err, problemId: detail.id }, "Background test case generation failed");
+          });
+      }
     } catch (err) {
       logger.error({ err, roomCode }, "Failed to import problem");
       io.to(roomCode).emit(SocketEvents.PROBLEM_IMPORT_STATUS, {
