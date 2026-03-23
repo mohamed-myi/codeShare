@@ -88,16 +88,16 @@ All socket event payloads are validated with Zod schemas defined in the shared p
 
 ```bash
 git clone <repo-url> && cd codeShare
-pnpm setup        # Copies .env.example, starts DB, runs migrations and seeds, builds packages
-# Edit .env with your JUDGE0_API_KEY
-pnpm dev          # Starts client on localhost:5173 and server on localhost:3001
+pnpm install      # Install workspace dependencies
+# Edit .env with your JUDGE0_API_KEY if needed
+pnpm dev:fresh    # Copies .env if missing, starts DB, runs migrations/seeds, builds, starts dev servers
 ```
 
 ## Scripts
 
 | Script | Description |
 |--------|-------------|
-| `pnpm dev` | Start client and server in dev mode |
+| `pnpm dev` | Start client and server in dev mode (root script loads `.env` first) |
 | `pnpm build` | Build all workspaces |
 | `pnpm test` | Run all tests (Vitest) |
 | `pnpm lint` | Lint all workspaces (Biome) |
@@ -107,9 +107,10 @@ pnpm dev          # Starts client on localhost:5173 and server on localhost:3001
 | `pnpm db:migrate` | Run SQL migrations |
 | `pnpm db:seed` | Seed NeetCode 150 problem set |
 | `pnpm db:reset` | Drop and recreate DB with fresh schema and seed data |
-| `pnpm setup` | First-time bootstrap (env, DB, migrations, seeds, build) |
+| `pnpm bootstrap` | First-time bootstrap (env, DB, migrations, seeds, build) |
+| `pnpm run setup` | Backward-compatible alias for `bootstrap` |
 | `pnpm verify` | Lint, typecheck and test in sequence |
-| `pnpm dev:fresh` | Start DB if stopped, then start dev servers |
+| `pnpm dev:fresh` | One-command local startup: install deps, start DB, migrate, seed, build, start dev servers |
 
 ## Environment Variables
 

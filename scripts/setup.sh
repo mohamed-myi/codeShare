@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+start_dev=false
+if [ "${1-}" = "--start-dev" ]; then
+  start_dev=true
+fi
+
 echo "=== CodeShare Setup ==="
 
 # 1. Copy .env if missing
@@ -31,4 +36,9 @@ echo "[...] Building packages..."
 pnpm build
 
 echo "=== Setup complete ==="
+if [ "$start_dev" = true ]; then
+  echo "[...] Starting dev servers..."
+  exec pnpm dev
+fi
+
 echo "Run 'pnpm dev' to start developing."
