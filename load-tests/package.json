@@ -1,0 +1,25 @@
+{
+  "name": "codeshare-load-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "lt": "tsx src/runner.ts",
+    "lt:quick": "tsx src/runner.ts --scenarios LT-2,LT-3",
+    "lt:soak": "tsx src/runner.ts --scenarios LT-7"
+  },
+  "dependencies": {
+    "@codeshare/shared": "workspace:*",
+    "socket.io-client": "^4.8.3",
+    "yjs": "^13.6.30",
+    "lib0": "^0.2.117",
+    "y-protocols": "^1.0.7",
+    "ws": "^8.20.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "@types/ws": "^8.18.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.8.2"
+  }
+}

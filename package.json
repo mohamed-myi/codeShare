@@ -8,12 +8,15 @@
     "typecheck": "turbo typecheck",
     "lint": "turbo lint",
     "lint:fix": "biome check --write .",
-    "e2e": "playwright test --config e2e/playwright.config.ts",
-    "e2e:ui": "playwright test --config e2e/playwright.config.ts --ui",
+    "e2e": "playwright test --config e2e/playwright.config.ts --grep-invert @live",
+    "e2e:ui": "playwright test --config e2e/playwright.config.ts --grep-invert @live --ui",
+    "e2e:live": "PLAYWRIGHT_LIVE=1 playwright test --config e2e/playwright.config.ts --grep @live",
     "db:migrate": "pnpm --filter @codeshare/db migrate",
     "db:seed": "pnpm --filter @codeshare/db seed",
     "db:up": "docker compose up -d",
-    "db:down": "docker compose down"
+    "db:down": "docker compose down",
+    "load-test": "pnpm --filter codeshare-load-tests lt",
+    "load-test:all": "pnpm --filter codeshare-load-tests lt"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.1",
