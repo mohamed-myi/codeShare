@@ -33,8 +33,13 @@ logs/
 *.sql.bak
 
 # Playwright
+test-results/
+playwright-report/
 e2e/test-results/
 e2e/playwright-report/
+
+# Load testing
+load-tests/results*.json
 
 # Local tooling
 .claude/
@@ -44,5 +49,4 @@ e2e/playwright-report/
 
 # Local Docker overrides
 docker-compose.override.yml
-
 
