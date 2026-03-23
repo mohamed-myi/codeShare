@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { WebsocketProvider } from "y-websocket";
 import * as Y from "yjs";
 import { useRoom } from "../hooks/useRoom.ts";
+import { getRealtimeWsBase } from "../lib/realtimeUrl.ts";
 
 interface YjsContextValue {
   doc: Y.Doc | null;
@@ -31,8 +32,7 @@ export function YjsProvider({ children }: { children: ReactNode }) {
 
     const normalizedRoomCode = roomCode.toLowerCase();
     const ydoc = new Y.Doc();
-    const wsUrl = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws/yjs`;
-    const wsProvider = new WebsocketProvider(wsUrl, normalizedRoomCode, ydoc, {
+    const wsProvider = new WebsocketProvider(`${getRealtimeWsBase()}/ws/yjs`, normalizedRoomCode, ydoc, {
       params: { token: yjsToken },
     });
 

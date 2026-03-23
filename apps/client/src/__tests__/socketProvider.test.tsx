@@ -8,6 +8,10 @@ vi.mock("socket.io-client", () => ({
   io: (...args: unknown[]) => mockIo(...args),
 }));
 
+vi.mock("../lib/realtimeUrl.ts", () => ({
+  getRealtimeHttpBase: () => "http://localhost:3001",
+}));
+
 function TestConsumer() {
   const { socket, connected } = useSocketContext();
   return (
@@ -58,6 +62,7 @@ describe("SocketProvider", () => {
     );
 
     expect(mockIo).toHaveBeenCalledWith(
+      expect.any(String),
       expect.objectContaining({
         query: { roomCode: "abc-xyz" },
       }),
