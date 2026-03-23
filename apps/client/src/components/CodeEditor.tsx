@@ -52,11 +52,13 @@ const handleBeforeMount: BeforeMount = (monaco) => {
 export function CodeEditor({ readOnly = false }: CodeEditorProps) {
   const { doc, provider } = useYjsContext();
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
+  const monacoRef = useRef<Parameters<OnMount>[1] | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [mounted, setMounted] = useState(false);
 
-  const handleMount: OnMount = (editor) => {
+  const handleMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
+    monacoRef.current = monaco;
     window.__codeshareEditor = {
       getValue: () => editor.getValue(),
       setValue: (value: string) => editor.setValue(value),
@@ -91,6 +93,13 @@ export function CodeEditor({ readOnly = false }: CodeEditorProps) {
       delete window.__codeshareEditor;
     };
   }, []);
+
+  useEffect(() => {
+    if (!mounted || !monacoRef.current) return;
+    document.fonts.ready.then(() => {
+      monacoRef.current?.editor.remeasureFonts();
+    });
+  }, [mounted]);
 
   useEffect(() => {
     const container = containerRef.current;
