@@ -1,6 +1,8 @@
 import type { RoomMode, RoomUser } from "@codeshare/shared";
 import { Square } from "lucide-react";
+import { useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { RoomCodeModal } from "./RoomCodeModal.js";
 
 interface HeaderProps {
   roomCode: string;
@@ -13,6 +15,7 @@ export function Header({ roomCode, mode, users, connected }: HeaderProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { roomCode: routeRoomCode } = useParams<{ roomCode: string }>();
+  const [isShareOpen, setIsShareOpen] = useState(false);
 
   const isSolverActive = location.pathname.endsWith("/solve");
   const modeLabel = mode === "interview" ? "Interview" : "Collab";
@@ -34,12 +37,14 @@ export function Header({ roomCode, mode, users, connected }: HeaderProps) {
 
       <span className="text-sm text-[var(--color-text-secondary)]">{modeLabel}</span>
 
-      <span
-        className="font-[var(--font-family-mono)] text-xs text-[var(--color-text-tertiary)]"
+      <button
+        type="button"
+        className="rounded-[var(--radius-sm)] px-1.5 py-0.5 font-[var(--font-family-mono)] text-xs text-[var(--color-text-tertiary)] transition-colors duration-[var(--transition-fast)] hover:bg-[var(--color-hover-overlay)] hover:text-[var(--color-text-secondary)]"
         data-testid="room-code"
+        onClick={() => setIsShareOpen(true)}
       >
         {roomCode}
-      </span>
+      </button>
 
       <div className="flex items-center gap-2">
         {users.map((user) => (
@@ -75,6 +80,12 @@ export function Header({ roomCode, mode, users, connected }: HeaderProps) {
       >
         {isSolverActive ? "Problems" : "Back to Solver"}
       </button>
+
+      <RoomCodeModal
+        isOpen={isShareOpen}
+        onClose={() => setIsShareOpen(false)}
+        roomCode={roomCode}
+      />
     </header>
   );
 }
