@@ -34,6 +34,7 @@ const envSchema = z.object({
   RATE_LIMIT_WS_CONNECT: z.coerce.number().int().positive().default(20),
   RATE_LIMIT_JOIN: z.coerce.number().int().positive().default(30),
   RATE_LIMIT_IMPORT: z.coerce.number().int().positive().default(10),
+  RATE_LIMIT_ROOM_LOOKUP: z.coerce.number().int().positive().default(60),
   TRUSTED_PROXY_IPS: csvStringSchema.default(""),
   ENABLE_PROBLEM_IMPORT: booleanFromStringSchema.default("false"),
   ENABLE_LLM_HINT_FALLBACK: booleanFromStringSchema.default("false"),
@@ -43,8 +44,11 @@ const envSchema = z.object({
   MAX_YJS_MESSAGE_BYTES: z.coerce.number().int().positive().default(32_768),
   MAX_YJS_DOC_BYTES: z.coerce.number().int().positive().default(65_536),
   MAX_LLM_CALLS_PER_ROOM: z.coerce.number().int().positive().default(15),
+  LLM_CALLS_PER_HOUR_PER_IP: z.coerce.number().int().positive().default(20),
+  LLM_DAILY_LIMIT: z.coerce.number().int().positive().default(500),
   MAX_LLM_PROMPT_CHARS: z.coerce.number().int().positive().default(12_000),
   MAX_LLM_HINT_CHARS: z.coerce.number().int().positive().default(1_500),
+  MAX_ACTIVE_ROOMS: z.coerce.number().int().positive().default(500),
   ROOM_GRACE_PERIOD_MS: z.coerce.number().int().positive().default(TIMEOUTS.GRACE_PERIOD_MS),
   ROOM_HINT_CONSENT_MS: z.coerce.number().int().positive().default(TIMEOUTS.HINT_CONSENT_MS),
   ROOM_MAX_SUBMISSIONS: z.coerce.number().int().positive().default(ROOM_LIMITS.MAX_SUBMISSIONS),
@@ -55,6 +59,7 @@ const envSchema = z.object({
     .positive()
     .default(ROOM_LIMITS.MAX_CUSTOM_TEST_CASES),
   IMPORTS_DAILY_LIMIT: z.coerce.number().int().positive().default(GLOBAL_LIMITS.IMPORTS_DAILY),
+  JUDGE0_EXEC_PER_HOUR_PER_IP: z.coerce.number().int().positive().default(30),
   JUDGE0_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(TIMEOUTS.JUDGE0_REQUEST_MS),
   GROQ_MAX_TOKENS: z.coerce.number().int().positive().default(512),
   GROQ_TEMPERATURE: z.coerce.number().min(0).max(2).default(0.6),
@@ -79,5 +84,13 @@ export function loadConfig(): Config {
     }
     process.exit(1);
   }
-  return result.data;
+
+  const config = result.data;
+
+  if (config.NODE_ENV === "production" && config.ALLOWED_ORIGINS.length === 0) {
+    console.error("ALLOWED_ORIGINS must not be empty in production.");
+    process.exit(1);
+  }
+
+  return config;
 }

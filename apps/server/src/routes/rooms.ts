@@ -1,6 +1,7 @@
 import { type RoomInfoResponse, roomCreateSchema } from "@codeshare/shared";
 import type { FastifyInstance } from "fastify";
 import type { Config } from "../config.js";
+import type { Room } from "../models/Room.js";
 import { roomManager } from "../models/RoomManager.js";
 
 export async function roomRoutes(app: FastifyInstance, opts: { config: Config }): Promise<void> {
@@ -19,7 +20,12 @@ export async function roomRoutes(app: FastifyInstance, opts: { config: Config })
       if (!result.success) {
         return reply.status(400).send({ error: result.error.flatten().fieldErrors });
       }
-      const room = roomManager.createRoom(result.data.mode);
+      let room: Room;
+      try {
+        room = roomManager.createRoom(result.data.mode);
+      } catch {
+        return reply.status(503).send({ error: "Server is at capacity. Please try again later." });
+      }
       app.log.info(
         {
           roomCode: room.roomCode,
@@ -33,16 +39,27 @@ export async function roomRoutes(app: FastifyInstance, opts: { config: Config })
     },
   );
 
-  app.get<{ Params: { roomCode: string } }>("/rooms/:roomCode", async (request) => {
-    const room = roomManager.getRoom(request.params.roomCode);
-    if (!room) {
-      return { exists: false } satisfies RoomInfoResponse;
-    }
-    return {
-      exists: true,
-      mode: room.mode,
-      userCount: room.occupiedUserCount(),
-      maxUsers: room.maxUsers,
-    } satisfies RoomInfoResponse;
-  });
+  app.get<{ Params: { roomCode: string } }>(
+    "/rooms/:roomCode",
+    {
+      config: {
+        rateLimit: {
+          max: opts.config.RATE_LIMIT_ROOM_LOOKUP,
+          timeWindow: "1 minute",
+        },
+      },
+    },
+    async (request) => {
+      const room = roomManager.getRoom(request.params.roomCode);
+      if (!room) {
+        return { exists: false } satisfies RoomInfoResponse;
+      }
+      return {
+        exists: true,
+        mode: room.mode,
+        userCount: room.occupiedUserCount(),
+        maxUsers: room.maxUsers,
+      } satisfies RoomInfoResponse;
+    },
+  );
 }

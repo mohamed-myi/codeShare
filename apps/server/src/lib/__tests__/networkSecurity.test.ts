@@ -44,8 +44,8 @@ describe("networkSecurity", () => {
     ).toBe("10.0.0.1");
   });
 
-  it("allows all origins when allowlist is empty", () => {
-    expect(isOriginAllowed("https://anything.com", [])).toBe(true);
+  it("rejects all origins when allowlist is empty", () => {
+    expect(isOriginAllowed("https://anything.com", [])).toBe(false);
   });
 
   it("rejects non-matching origins", () => {

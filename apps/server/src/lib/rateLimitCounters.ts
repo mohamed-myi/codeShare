@@ -5,6 +5,7 @@
 class GlobalCounters {
   private judge0Today = 0;
   private importsToday = 0;
+  private llmCallsToday = 0;
   private dayStart = this.todayStart();
 
   private todayStart(): number {
@@ -18,6 +19,7 @@ class GlobalCounters {
     if (today > this.dayStart) {
       this.judge0Today = 0;
       this.importsToday = 0;
+      this.llmCallsToday = 0;
       this.dayStart = today;
     }
   }
@@ -51,9 +53,20 @@ class GlobalCounters {
     this.importsToday++;
   }
 
+  canCallLLM(dailyLimit: number): boolean {
+    this.rolloverIfNeeded();
+    return this.llmCallsToday < dailyLimit;
+  }
+
+  recordLLMCall(): void {
+    this.rolloverIfNeeded();
+    this.llmCallsToday++;
+  }
+
   reset(): void {
     this.judge0Today = 0;
     this.importsToday = 0;
+    this.llmCallsToday = 0;
     this.dayStart = this.todayStart();
   }
 }

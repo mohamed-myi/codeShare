@@ -97,7 +97,19 @@ export class Room {
   }
 
   findByReconnectToken(token: string): RoomUserInternal | null {
-    return this.users.find((u) => !u.connected && u.reconnectToken === token) ?? null;
+    return (
+      this.users.find((u) => {
+        if (u.connected) return false;
+        try {
+          return crypto.timingSafeEqual(
+            Buffer.from(u.reconnectToken, "hex"),
+            Buffer.from(token, "hex"),
+          );
+        } catch {
+          return false;
+        }
+      }) ?? null
+    );
   }
 
   startGracePeriod(userId: string, onExpire: () => void): void {

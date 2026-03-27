@@ -55,12 +55,15 @@ export interface SocketIODeps {
   allowedOrigins?: string[];
   trustedProxyIps?: string[];
   maxCodeBytes?: number;
+  judge0ExecPerHour?: number;
   enableProblemImport?: boolean;
   enableLLMHintFallback?: boolean;
   enableImportedProblemHints?: boolean;
   maxLLMPromptChars?: number;
   maxLLMHintChars?: number;
   maxLLMCallsPerRoom?: number;
+  llmCallsPerHourPerIp?: number;
+  llmDailyLimit?: number;
   hintConsentMs?: number;
   importsDailyLimit?: number;
   importProblem?: (url: string) => Promise<{ id: string; sourceUrl: string | null }>;
@@ -77,7 +80,7 @@ export function setupSocketIO(io: Server, logger: Logger, deps?: SocketIODeps): 
   const wsConnectionsPerMinute = deps?.rateLimits?.wsConnectionsPerMinute ?? 20;
   const joinAttemptsPerHour = deps?.rateLimits?.joinAttemptsPerHour ?? 30;
   const importsPerHour = deps?.rateLimits?.importsPerHour ?? 10;
-  const allowedOrigins = deps?.allowedOrigins ?? [];
+  const allowedOrigins = deps?.allowedOrigins;
   const trustedProxyIps = deps?.trustedProxyIps ?? [];
 
   io.use((socket, next) => {
@@ -95,7 +98,7 @@ export function setupSocketIO(io: Server, logger: Logger, deps?: SocketIODeps): 
     }
 
     const origin = socket.handshake.headers.origin;
-    if (!isOriginAllowed(origin, allowedOrigins)) {
+    if (allowedOrigins !== undefined && !isOriginAllowed(origin, allowedOrigins)) {
       logger.warn(
         {
           socketId: socket.id,
@@ -183,6 +186,9 @@ export function setupSocketIO(io: Server, logger: Logger, deps?: SocketIODeps): 
       maxLLMHintChars: deps?.maxLLMHintChars ?? 1_500,
       maxLLMCallsPerRoom: deps?.maxLLMCallsPerRoom ?? 15,
       hintConsentMs: deps?.hintConsentMs,
+      ipRateLimiter,
+      llmCallsPerHourPerIp: deps?.llmCallsPerHourPerIp,
+      llmDailyLimit: deps?.llmDailyLimit,
       findStoredHint:
         deps?.findStoredHint ??
         (async (problemId, hintsUsed) => {
@@ -201,6 +207,8 @@ export function setupSocketIO(io: Server, logger: Logger, deps?: SocketIODeps): 
         getDoc: deps.getDoc,
         judge0Client: deps.judge0Client,
         dailyLimit: deps.dailyLimit ?? 100,
+        ipRateLimiter,
+        judge0ExecPerHour: deps?.judge0ExecPerHour,
         findVisible: (problemId) => testCaseRepository.findVisible(problemId),
         findByProblemId: (problemId) => testCaseRepository.findByProblemId(problemId),
         findBoilerplate: (problemId, language) =>

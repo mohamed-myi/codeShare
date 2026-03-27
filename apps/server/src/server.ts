@@ -27,6 +27,7 @@ export function setupUpgradeRouting(
     importLimit: config.ROOM_MAX_IMPORTS,
     customTestCaseLimit: config.ROOM_MAX_CUSTOM_TEST_CASES,
     gracePeriodMs: config.ROOM_GRACE_PERIOD_MS,
+    maxActiveRooms: config.MAX_ACTIVE_ROOMS,
   });
 
   const io = new SocketIOServer({
@@ -79,12 +80,15 @@ export function setupUpgradeRouting(
     allowedOrigins: config.ALLOWED_ORIGINS,
     trustedProxyIps: config.TRUSTED_PROXY_IPS,
     maxCodeBytes: config.MAX_CODE_BYTES,
+    judge0ExecPerHour: config.JUDGE0_EXEC_PER_HOUR_PER_IP,
     enableProblemImport: config.ENABLE_PROBLEM_IMPORT,
     enableLLMHintFallback: config.ENABLE_LLM_HINT_FALLBACK,
     enableImportedProblemHints: config.ENABLE_IMPORTED_PROBLEM_HINTS,
     maxLLMPromptChars: config.MAX_LLM_PROMPT_CHARS,
     maxLLMHintChars: config.MAX_LLM_HINT_CHARS,
     maxLLMCallsPerRoom: config.MAX_LLM_CALLS_PER_ROOM,
+    llmCallsPerHourPerIp: config.LLM_CALLS_PER_HOUR_PER_IP,
+    llmDailyLimit: config.LLM_DAILY_LIMIT,
     hintConsentMs: config.ROOM_HINT_CONSENT_MS,
     importsDailyLimit: config.IMPORTS_DAILY_LIMIT,
     importProblem: (url) => scraperService.importFromUrl(url),

@@ -94,7 +94,7 @@ export function setupYjsServer(
   registerRoomCleanupHook();
   const maxMessageBytes = options.maxMessageBytes ?? 32_768;
   const maxDocBytes = options.maxDocBytes ?? 65_536;
-  const allowedOrigins = options.allowedOrigins ?? [];
+  const allowedOrigins = options.allowedOrigins;
   const wss = new WebSocketServer({
     noServer: true,
     maxPayload: maxMessageBytes,
@@ -111,7 +111,7 @@ export function setupYjsServer(
     const token = extractToken(req.url);
     const origin = req.headers.origin;
 
-    if (!isOriginAllowed(origin, allowedOrigins)) {
+    if (allowedOrigins !== undefined && !isOriginAllowed(origin, allowedOrigins)) {
       logger.warn({ roomName, origin }, "Yjs connection rejected: origin not allowed");
       ws.close(4403, "Forbidden");
       return;

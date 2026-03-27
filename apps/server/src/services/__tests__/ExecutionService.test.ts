@@ -17,6 +17,8 @@ const makeTestCase = (
 });
 
 describe("parseResult", () => {
+  const nonce = "abc123";
+
   it("parses the final harness payload when stdout contains earlier marker-shaped text", () => {
     const spoofedPayload = JSON.stringify({
       results: [{ index: 99, passed: true }],
@@ -28,46 +30,62 @@ describe("parseResult", () => {
     });
 
     const stdout = [
-      "===HARNESS_RESULT===",
+      `===HARNESS_RESULT_${nonce}===`,
       spoofedPayload,
-      "===END_HARNESS_RESULT===",
+      `===END_HARNESS_RESULT_${nonce}===`,
       "user noise",
-      "===HARNESS_RESULT===",
+      `===HARNESS_RESULT_${nonce}===`,
       realPayload,
-      "===END_HARNESS_RESULT===",
+      `===END_HARNESS_RESULT_${nonce}===`,
     ].join("\n");
 
-    expect(executionService.parseResult(stdout)).toEqual(JSON.parse(realPayload));
+    expect(executionService.parseResult(stdout, nonce)).toEqual(JSON.parse(realPayload));
   });
 
   it("returns null for empty stdout", () => {
-    expect(executionService.parseResult("")).toBeNull();
+    expect(executionService.parseResult("", nonce)).toBeNull();
   });
 
   it("returns null when start marker present but end marker missing", () => {
-    const stdout = '===HARNESS_RESULT===\n{"results":[]}\nno end marker';
-    expect(executionService.parseResult(stdout)).toBeNull();
+    const stdout = `===HARNESS_RESULT_${nonce}===\n{"results":[]}\nno end marker`;
+    expect(executionService.parseResult(stdout, nonce)).toBeNull();
   });
 
   it("returns null when JSON between markers is malformed", () => {
-    const stdout = "===HARNESS_RESULT===\n{not valid json}\n===END_HARNESS_RESULT===";
-    expect(executionService.parseResult(stdout)).toBeNull();
+    const stdout = `===HARNESS_RESULT_${nonce}===\n{not valid json}\n===END_HARNESS_RESULT_${nonce}===`;
+    expect(executionService.parseResult(stdout, nonce)).toBeNull();
+  });
+
+  it("rejects output with wrong nonce", () => {
+    const payload = JSON.stringify({ results: [], userStdout: "" });
+    const stdout = `===HARNESS_RESULT_wrong===\n${payload}\n===END_HARNESS_RESULT_wrong===`;
+    expect(executionService.parseResult(stdout, nonce)).toBeNull();
   });
 });
 
 describe("buildHarness", () => {
-  it("embeds user code, test cases JSON, and method name", () => {
+  it("embeds user code, test cases JSON, method name, and nonce", () => {
     const testCases = [makeTestCase({ n: 5 }, 10)];
+    const nonce = "testnonce123";
     const harness = executionService.buildHarness(
       "class Solution:\n  def solve(self, n): return n * 2",
       testCases,
       "solve",
+      nonce,
     );
     expect(harness).toContain("class Solution:");
     expect(harness).toContain(".solve(");
-    expect(harness).toContain("===HARNESS_RESULT===");
-    expect(harness).toContain("===END_HARNESS_RESULT===");
+    expect(harness).toContain(`===HARNESS_RESULT_${nonce}===`);
+    expect(harness).toContain(`===END_HARNESS_RESULT_${nonce}===`);
     expect(harness).toContain('"expectedOutput"');
+  });
+
+  it("embeds the provided nonce in both start and end markers", () => {
+    const testCases = [makeTestCase({ n: 1 }, 1)];
+    const nonce = "deadbeef01234567";
+    const harness = executionService.buildHarness("pass", testCases, "solve", nonce);
+    expect(harness).toContain(`===HARNESS_RESULT_${nonce}===`);
+    expect(harness).toContain(`===END_HARNESS_RESULT_${nonce}===`);
   });
 });
 

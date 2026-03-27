@@ -2,12 +2,20 @@ import type { RoomMode } from "@codeshare/shared";
 import { generateRoomCode, normalizeRoomCode } from "../lib/roomCode.js";
 import { Room, type RoomOptions } from "./Room.js";
 
+export interface RoomManagerConfig {
+  maxActiveRooms?: number;
+}
+
 class RoomManagerSingleton {
   private rooms = new Map<string, Room>();
   private destroyListeners = new Set<(roomCode: string) => void>();
   private roomDefaults: RoomOptions = {};
+  private maxActiveRooms = 500;
 
   createRoom(mode: RoomMode): Room {
+    if (this.rooms.size >= this.maxActiveRooms) {
+      throw new Error("Maximum active rooms limit reached.");
+    }
     const activeCodes = new Set(this.rooms.keys());
     const roomCode = generateRoomCode(activeCodes);
     const room = new Room(roomCode, mode, this.roomDefaults);
@@ -15,8 +23,11 @@ class RoomManagerSingleton {
     return room;
   }
 
-  configureDefaults(defaults: RoomOptions): void {
+  configureDefaults(defaults: RoomOptions & RoomManagerConfig): void {
     this.roomDefaults = { ...defaults };
+    if (defaults.maxActiveRooms !== undefined) {
+      this.maxActiveRooms = defaults.maxActiveRooms;
+    }
   }
 
   resetDefaults(): void {

@@ -3,6 +3,8 @@ import { SocketEvents, TIMEOUTS } from "@codeshare/shared";
 import type { Logger } from "pino";
 import type { Server, Socket } from "socket.io";
 import type * as Y from "yjs";
+import type { IpRateLimiter } from "../lib/ipRateLimiter.js";
+import { globalCounters } from "../lib/rateLimitCounters.js";
 import type { Room } from "../models/Room.js";
 import { hintService } from "../services/HintService.js";
 
@@ -24,6 +26,10 @@ export interface HintHandlerDeps {
   maxLLMHintChars: number;
   maxLLMCallsPerRoom: number;
   hintConsentMs?: number;
+  hintCooldownMs?: number;
+  ipRateLimiter?: IpRateLimiter;
+  llmCallsPerHourPerIp?: number;
+  llmDailyLimit?: number;
   findStoredHint: (problemId: string, hintsUsed: number) => Promise<Hint | null>;
   findProblem: (problemId: string) => Promise<Problem | null>;
 }
@@ -60,10 +66,22 @@ export function registerHintHandler(
   logger: Logger,
   deps: HintHandlerDeps,
 ): void {
+  const hintCooldownMs = deps.hintCooldownMs ?? 5_000;
+
   socket.on(SocketEvents.HINT_REQUEST, async () => {
     const roomCode = socket.data.roomCode as string;
     const room = deps.roomLookup.getRoom(roomCode);
     if (!room) return;
+
+    const now = Date.now();
+    const lastRequest = (socket.data.lastHintRequestTime as number | undefined) ?? 0;
+    if (now - lastRequest < hintCooldownMs) {
+      socket.emit(SocketEvents.HINT_ERROR, {
+        message: "Please wait a few seconds before requesting another hint.",
+      });
+      return;
+    }
+    socket.data.lastHintRequestTime = now;
 
     if (!room.problemId) {
       socket.emit(SocketEvents.HINT_ERROR, {
@@ -218,6 +236,29 @@ async function deliverHint(
       return;
     }
 
+    if (!globalCounters.canCallLLM(deps.llmDailyLimit ?? 500)) {
+      socket.emit(SocketEvents.HINT_ERROR, {
+        message: "Daily AI hint limit reached. Please try again tomorrow.",
+      });
+      return;
+    }
+
+    if (deps.ipRateLimiter) {
+      const clientIp = (socket.data.clientIp as string | undefined) ?? "unknown";
+      const ipCheck = deps.ipRateLimiter.consume(
+        "llm-hint",
+        clientIp,
+        deps.llmCallsPerHourPerIp ?? 20,
+        3_600_000,
+      );
+      if (!ipCheck.allowed) {
+        socket.emit(SocketEvents.HINT_ERROR, {
+          message: `Too many hint requests. Try again in ${ipCheck.retryAfterSeconds}s.`,
+        });
+        return;
+      }
+    }
+
     if (!deps.groqClient) {
       socket.emit(SocketEvents.HINT_ERROR, {
         message: "AI hint fallback is unavailable because Groq is not configured.",
@@ -272,6 +313,7 @@ async function deliverHint(
       const fullHint = hintService.sanitizeLLMHint(generatedHint, deps.maxLLMHintChars);
       room.hintsUsed += 1;
       room.llmCallsUsed += 1;
+      globalCounters.recordLLMCall();
       room.hintHistory.push(fullHint);
       const hintsRemaining = room.hintLimit - room.hintsUsed;
       io.to(roomCode).emit(SocketEvents.HINT_DONE, {

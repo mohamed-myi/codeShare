@@ -24,6 +24,7 @@ await app.register(healthRoutes);
 await app.register(roomRoutes, { prefix: "/api", config });
 await app.register(problemRoutes, { prefix: "/api" });
 if (config.NODE_ENV === "test") {
+  logger.warn("Test routes are enabled (NODE_ENV=test). Do not use in production.");
   await app.register(testRoutes);
 }
 

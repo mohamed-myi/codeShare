@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import type { CaseResult, RunResult, SubmitResult, TestCase } from "@codeshare/shared";
 import { TIMEOUTS } from "@codeshare/shared";
 
@@ -45,13 +46,17 @@ for i, tc in enumerate(test_cases):
         })
     _user_stdout.write(_case_stdout.getvalue())
 
-_real_stdout.write("===HARNESS_RESULT===\\n")
+_real_stdout.write("===HARNESS_RESULT_{nonce}===\\n")
 _real_stdout.write(json.dumps({"results": results, "userStdout": _user_stdout.getvalue()}))
-_real_stdout.write("\\n===END_HARNESS_RESULT===\\n")
+_real_stdout.write("\\n===END_HARNESS_RESULT_{nonce}===\\n")
 _real_stdout.flush()`;
 
 export const executionService = {
-  buildHarness(userCode: string, testCases: TestCase[], methodName: string): string {
+  generateNonce(): string {
+    return crypto.randomBytes(8).toString("hex");
+  },
+
+  buildHarness(userCode: string, testCases: TestCase[], methodName: string, nonce: string): string {
     const testCasesJson = JSON.stringify(
       testCases.map((tc) => ({
         input: tc.input,
@@ -60,17 +65,24 @@ export const executionService = {
     );
     return HARNESS_TEMPLATE.replace("{user_code}", userCode)
       .replace("{test_cases_json}", testCasesJson)
-      .replace("{method_name}", methodName);
+      .replace("{method_name}", methodName)
+      .replaceAll("{nonce}", nonce);
   },
 
-  parseResult(stdout: string): { results: unknown[]; userStdout: string } | null {
-    const startMarker = "===HARNESS_RESULT===\n";
-    const endMarker = "\n===END_HARNESS_RESULT===";
-    const startIdx = stdout.lastIndexOf(startMarker);
-    const endIdx = startIdx === -1 ? -1 : stdout.indexOf(endMarker, startIdx + startMarker.length);
-    if (startIdx === -1 || endIdx === -1) return null;
+  parseResult(stdout: string, nonce: string): { results: unknown[]; userStdout: string } | null {
+    const tag = `===HARNESS_RESULT_${nonce}===`;
+    const endTag = `===END_HARNESS_RESULT_${nonce}===`;
 
-    const jsonStr = stdout.slice(startIdx + startMarker.length, endIdx).trim();
+    const startIdx = stdout.lastIndexOf(tag);
+    if (startIdx === -1) return null;
+
+    const startMarkerEnd = stdout.indexOf("\n", startIdx);
+    if (startMarkerEnd === -1) return null;
+
+    const endIdx = stdout.indexOf(endTag, startMarkerEnd);
+    if (endIdx === -1) return null;
+
+    const jsonStr = stdout.slice(startMarkerEnd + 1, endIdx).trim();
     try {
       return JSON.parse(jsonStr);
     } catch {

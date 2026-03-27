@@ -95,9 +95,30 @@ vi.mock("../../services/ProblemService.js", () => ({
 
 const logger = createLogger("silent");
 
-function makeSuccessStdout(results: unknown[]): string {
+function extractNonceFromHarness(harnessSource: string): string {
+  const match = harnessSource.match(/===HARNESS_RESULT_([a-f0-9]+)===/);
+  return match?.[1] ?? "unknown";
+}
+
+function makeSuccessStdout(results: unknown[], nonce: string): string {
   const payload = JSON.stringify({ results, userStdout: "" });
-  return `===HARNESS_RESULT===\n${payload}\n===END_HARNESS_RESULT===\n`;
+  return `===HARNESS_RESULT_${nonce}===\n${payload}\n===END_HARNESS_RESULT_${nonce}===\n`;
+}
+
+function mockJudge0Success(
+  results: unknown[],
+  overrides?: Partial<{ stderr: string | null; time: string | null; memory: number | null }>,
+) {
+  return (harnessSource: string) => {
+    const nonce = extractNonceFromHarness(harnessSource);
+    return Promise.resolve({
+      stdout: makeSuccessStdout(results, nonce),
+      stderr: overrides?.stderr ?? null,
+      status: { id: 3, description: "Accepted" },
+      time: overrides?.time ?? "0.01",
+      memory: overrides?.memory ?? 9000,
+    });
+  };
 }
 
 describe("Execution handler", () => {
@@ -176,15 +197,9 @@ describe("Execution handler", () => {
       const { server, room } = await setup();
       room.problemId = VALID_UUID;
 
-      mockSubmit.mockResolvedValue({
-        stdout: makeSuccessStdout([
-          { index: 0, passed: true, elapsed_ms: 10, got: null, expected: null },
-        ]),
-        stderr: null,
-        status: { id: 3, description: "Accepted" },
-        time: "0.01",
-        memory: 9000,
-      });
+      mockSubmit.mockImplementation(
+        mockJudge0Success([{ index: 0, passed: true, elapsed_ms: 10, got: null, expected: null }]),
+      );
 
       const alice = connectClient(server.port, room.roomCode);
       const bob = connectClient(server.port, room.roomCode);
@@ -214,16 +229,12 @@ describe("Execution handler", () => {
       room.problemId = VALID_UUID;
       room.customTestCases = [{ input: { nums: [1, 3], target: 4 }, expectedOutput: [0, 1] }];
 
-      mockSubmit.mockResolvedValue({
-        stdout: makeSuccessStdout([
+      mockSubmit.mockImplementation(
+        mockJudge0Success([
           { index: 0, passed: true, elapsed_ms: 10, got: null, expected: null },
           { index: 1, passed: true, elapsed_ms: 5, got: null, expected: null },
         ]),
-        stderr: null,
-        status: { id: 3, description: "Accepted" },
-        time: "0.02",
-        memory: 9000,
-      });
+      );
 
       const alice = connectClient(server.port, room.roomCode);
       await waitForEvent(alice, "connect");
@@ -241,10 +252,13 @@ describe("Execution handler", () => {
       room.problemId = VALID_UUID;
 
       let resolveSubmit!: (value: unknown) => void;
-      const submitPromise = new Promise((resolve) => {
-        resolveSubmit = resolve;
+      let capturedNonce = "unknown";
+      mockSubmit.mockImplementation((harnessSource: string) => {
+        capturedNonce = extractNonceFromHarness(harnessSource);
+        return new Promise((resolve) => {
+          resolveSubmit = resolve;
+        });
       });
-      mockSubmit.mockReturnValue(submitPromise);
 
       const alice = connectClient(server.port, room.roomCode);
       await waitForEvent(alice, "connect");
@@ -255,9 +269,10 @@ describe("Execution handler", () => {
       expect(room.executionInProgress).toBe(true);
 
       resolveSubmit({
-        stdout: makeSuccessStdout([
-          { index: 0, passed: true, elapsed_ms: 10, got: null, expected: null },
-        ]),
+        stdout: makeSuccessStdout(
+          [{ index: 0, passed: true, elapsed_ms: 10, got: null, expected: null }],
+          capturedNonce,
+        ),
         stderr: null,
         status: { id: 3, description: "Accepted" },
         time: "0.01",
@@ -274,16 +289,12 @@ describe("Execution handler", () => {
       const { server, room } = await setup();
       room.problemId = VALID_UUID;
 
-      mockSubmit.mockResolvedValue({
-        stdout: makeSuccessStdout([
+      mockSubmit.mockImplementation(
+        mockJudge0Success([
           { index: 0, passed: true, elapsed_ms: 10, got: null, expected: null },
           { index: 1, passed: false, elapsed_ms: 9, got: "[0, 2]", expected: "[1, 2]" },
         ]),
-        stderr: null,
-        status: { id: 3, description: "Accepted" },
-        time: "0.02",
-        memory: 9000,
-      });
+      );
 
       const alice = connectClient(server.port, room.roomCode);
       await waitForEvent(alice, "connect");
@@ -308,16 +319,12 @@ describe("Execution handler", () => {
       const { server, room } = await setup();
       room.problemId = VALID_UUID;
 
-      mockSubmit.mockResolvedValue({
-        stdout: makeSuccessStdout([
+      mockSubmit.mockImplementation(
+        mockJudge0Success([
           { index: 0, passed: true, elapsed_ms: 10, got: null, expected: null },
           { index: 1, passed: true, elapsed_ms: 8, got: null, expected: null },
         ]),
-        stderr: null,
-        status: { id: 3, description: "Accepted" },
-        time: "0.02",
-        memory: 9000,
-      });
+      );
 
       const alice = connectClient(server.port, room.roomCode);
       await waitForEvent(alice, "connect");
@@ -338,16 +345,12 @@ describe("Execution handler", () => {
       room.problemId = VALID_UUID;
       room.customTestCases = [{ input: { nums: [99], target: 99 }, expectedOutput: 99 }];
 
-      mockSubmit.mockResolvedValue({
-        stdout: makeSuccessStdout([
+      mockSubmit.mockImplementation(
+        mockJudge0Success([
           { index: 0, passed: true, elapsed_ms: 10, got: null, expected: null },
           { index: 1, passed: true, elapsed_ms: 8, got: null, expected: null },
         ]),
-        stderr: null,
-        status: { id: 3, description: "Accepted" },
-        time: "0.02",
-        memory: 9000,
-      });
+      );
 
       const alice = connectClient(server.port, room.roomCode);
       await waitForEvent(alice, "connect");

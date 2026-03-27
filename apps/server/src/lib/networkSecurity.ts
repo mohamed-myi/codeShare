@@ -11,7 +11,7 @@ export function isOriginAllowed(
   allowedOrigins: readonly string[],
 ): boolean {
   if (allowedOrigins.length === 0) {
-    return true;
+    return false;
   }
 
   if (!origin) {
