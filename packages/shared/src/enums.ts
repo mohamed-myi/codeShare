@@ -39,6 +39,7 @@ export const ExecutionErrorType = {
   PARSE_ERROR: "parse_error",
   ROOM_LIMIT: "room_limit",
   GLOBAL_LIMIT: "global_limit",
+  IP_LIMIT: "ip_limit",
 } as const;
 export type ExecutionErrorType = (typeof ExecutionErrorType)[keyof typeof ExecutionErrorType];
 
