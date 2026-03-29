@@ -45,7 +45,7 @@ export class Room {
   importLimit: number;
   customTestCaseLimit: number;
   gracePeriodMs: number;
-  readonly yjsToken: string;
+  private _yjsToken: string;
   createdAt: Date;
   lastActivityAt: Date;
   gracePeriodTimers = new Map<string, NodeJS.Timeout>();
@@ -57,9 +57,18 @@ export class Room {
     this.importLimit = options.importLimit ?? ROOM_LIMITS.MAX_IMPORTS;
     this.customTestCaseLimit = options.customTestCaseLimit ?? ROOM_LIMITS.MAX_CUSTOM_TEST_CASES;
     this.gracePeriodMs = options.gracePeriodMs ?? 5 * 60 * 1000;
-    this.yjsToken = crypto.randomBytes(16).toString("hex");
+    this._yjsToken = crypto.randomBytes(16).toString("hex");
     this.createdAt = new Date();
     this.lastActivityAt = new Date();
+  }
+
+  get yjsToken(): string {
+    return this._yjsToken;
+  }
+
+  rotateYjsToken(): string {
+    this._yjsToken = crypto.randomBytes(16).toString("hex");
+    return this._yjsToken;
   }
 
   addUser(displayName: string, role: UserRole, socketId: string): RoomUserInternal {

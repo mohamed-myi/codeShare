@@ -313,4 +313,30 @@ describe("Room", () => {
       expect(room.occupiedUserCount()).toBe(2);
     });
   });
+
+  describe("rotateYjsToken", () => {
+    it("returns a new token different from the original", () => {
+      const original = room.yjsToken;
+      const rotated = room.rotateYjsToken();
+      expect(rotated).not.toBe(original);
+    });
+
+    it("updates the yjsToken getter", () => {
+      const rotated = room.rotateYjsToken();
+      expect(room.yjsToken).toBe(rotated);
+    });
+
+    it("produces a 32-character hex string", () => {
+      const token = room.rotateYjsToken();
+      expect(token).toMatch(/^[0-9a-f]{32}$/);
+    });
+
+    it("produces unique tokens on successive rotations", () => {
+      const tokens = new Set<string>();
+      for (let i = 0; i < 10; i++) {
+        tokens.add(room.rotateYjsToken());
+      }
+      expect(tokens.size).toBe(10);
+    });
+  });
 });

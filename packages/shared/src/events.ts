@@ -45,6 +45,9 @@ export const SocketEvents = {
   // Auth / validation
   EVENT_REJECTED: "event:rejected", // S -> C
 
+  // Yjs token rotation
+  YJS_TOKEN_ROTATED: "yjs:token:rotated", // S -> A (remaining users)
+
   // Forward compatibility (post-MVP)
   LANGUAGE_CHANGE: "language:change", // C -> S
   LANGUAGE_CHANGED: "language:changed", // S -> A

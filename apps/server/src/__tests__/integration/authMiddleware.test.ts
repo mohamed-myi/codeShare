@@ -1,6 +1,6 @@
 import { SocketEvents } from "@codeshare/shared";
 import type { Socket as ClientSocket } from "socket.io-client";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLogger } from "../../lib/logger.js";
 import { createAuthMiddleware } from "../../middleware/authMiddleware.js";
 import { roomManager } from "../../models/RoomManager.js";
@@ -80,6 +80,11 @@ describe("Auth middleware", () => {
 
   it("passes events from room member with correct role", async () => {
     const { server, room } = await setup();
+    const downstreamHandler = vi.fn();
+
+    server.io.on("connection", (socket) => {
+      socket.on(SocketEvents.CODE_RUN, downstreamHandler);
+    });
 
     const client = createTestClient(server.port, room.roomCode);
     clients.push(client);
@@ -97,6 +102,7 @@ describe("Auth middleware", () => {
 
     await new Promise((r) => setTimeout(r, 200));
     expect(rejected).toBe(false);
+    expect(downstreamHandler).toHaveBeenCalledTimes(1);
   });
 
   it("rejects problem:select from candidate in interview mode", async () => {
@@ -121,6 +127,11 @@ describe("Auth middleware", () => {
 
   it("rejects code:run when executionInProgress is true", async () => {
     const { server, room } = await setup();
+    const downstreamHandler = vi.fn();
+
+    server.io.on("connection", (socket) => {
+      socket.on(SocketEvents.CODE_RUN, downstreamHandler);
+    });
 
     const client = createTestClient(server.port, room.roomCode);
     clients.push(client);
@@ -139,6 +150,8 @@ describe("Auth middleware", () => {
 
     expect(rejection.event).toBe(SocketEvents.CODE_RUN);
     expect(rejection.reason).toContain("progress");
+    await new Promise((r) => setTimeout(r, 100));
+    expect(downstreamHandler).not.toHaveBeenCalled();
   });
 
   it("rejects hint:request in interview mode", async () => {

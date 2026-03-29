@@ -44,7 +44,12 @@ describe("authMiddleware logging", () => {
     perEventFn([SocketEvents.CODE_RUN], next);
 
     expect(logger.warn).toHaveBeenCalledWith(
-      expect.objectContaining({ socketId: "sock-1", eventName: SocketEvents.CODE_RUN }),
+      expect.objectContaining({
+        event: "socket_event_rejected",
+        socket_id: "sock-1",
+        event_name: SocketEvents.CODE_RUN,
+        reason: "missing_room_code",
+      }),
       "Auth middleware: missing roomCode",
     );
     expect(next).toHaveBeenCalledWith(expect.any(Error));
@@ -62,9 +67,11 @@ describe("authMiddleware logging", () => {
 
     expect(logger.warn).toHaveBeenCalledWith(
       expect.objectContaining({
-        socketId: "sock-1",
-        eventName: SocketEvents.CODE_RUN,
-        roomCode: "abc-xyz",
+        event: "socket_event_rejected",
+        socket_id: "sock-1",
+        event_name: SocketEvents.CODE_RUN,
+        room_code_hash: expect.any(String),
+        reason: "room_not_found",
       }),
       "Auth middleware: room not found",
     );
@@ -82,7 +89,13 @@ describe("authMiddleware logging", () => {
     perEventFn([SocketEvents.CODE_RUN], next);
 
     expect(logger.warn).toHaveBeenCalledWith(
-      expect.objectContaining({ socketId: "sock-1", roomCode: "abc-xyz" }),
+      expect.objectContaining({
+        event: "socket_event_rejected",
+        socket_id: "sock-1",
+        event_name: SocketEvents.CODE_RUN,
+        room_code_hash: expect.any(String),
+        reason: "user_not_in_room",
+      }),
       "Auth middleware: user not in room",
     );
   });
@@ -103,11 +116,13 @@ describe("authMiddleware logging", () => {
 
     expect(logger.info).toHaveBeenCalledWith(
       expect.objectContaining({
-        socketId: "sock-1",
-        eventName: SocketEvents.PROBLEM_SELECT,
-        roomCode: "abc-xyz",
-        userId: "u1",
+        event: "socket_event_rejected",
+        socket_id: "sock-1",
+        event_name: SocketEvents.PROBLEM_SELECT,
+        room_code_hash: expect.any(String),
+        user_id: "u1",
         role: "candidate",
+        reason: "interviewer_only_event",
       }),
       "Auth middleware: interviewer-only event rejected",
     );
@@ -115,6 +130,7 @@ describe("authMiddleware logging", () => {
       SocketEvents.EVENT_REJECTED,
       expect.objectContaining({ event: SocketEvents.PROBLEM_SELECT }),
     );
+    expect(next).not.toHaveBeenCalled();
   });
 
   it("logs info when hint request is blocked in interview mode", () => {
@@ -132,9 +148,16 @@ describe("authMiddleware logging", () => {
     perEventFn([SocketEvents.HINT_REQUEST], next);
 
     expect(logger.info).toHaveBeenCalledWith(
-      expect.objectContaining({ socketId: "sock-1", roomCode: "abc-xyz" }),
+      expect.objectContaining({
+        event: "socket_event_rejected",
+        socket_id: "sock-1",
+        event_name: SocketEvents.HINT_REQUEST,
+        room_code_hash: expect.any(String),
+        reason: "blocked_in_interview_mode",
+      }),
       "Auth middleware: blocked in interview mode",
     );
+    expect(next).not.toHaveBeenCalled();
   });
 
   it("works without logger (backward compatible)", () => {
@@ -148,5 +171,129 @@ describe("authMiddleware logging", () => {
     perEventFn([SocketEvents.CODE_RUN], next);
 
     expect(next).toHaveBeenCalledWith();
+  });
+
+  it("does not call next when execution is rejected by room state", () => {
+    const room = mockRoom({
+      canExecute: () => ({ allowed: false, reason: "Execution already in progress." }),
+    });
+    const roomLookup = { getRoom: vi.fn().mockReturnValue(room) };
+    const middleware = createAuthMiddleware(roomLookup);
+    const socket = mockSocket();
+    const next = vi.fn();
+
+    const perEventFn = middleware(socket);
+    perEventFn([SocketEvents.CODE_RUN], next);
+
+    expect(socket.emit).toHaveBeenCalledWith(SocketEvents.EVENT_REJECTED, {
+      event: SocketEvents.CODE_RUN,
+      reason: "Execution already in progress.",
+    });
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("does not call next when problem switching is rejected by room state", () => {
+    const room = mockRoom({
+      canSwitchProblem: () => ({
+        allowed: false,
+        reason: "Cannot switch problems while code is running.",
+      }),
+    });
+    const roomLookup = { getRoom: vi.fn().mockReturnValue(room) };
+    const middleware = createAuthMiddleware(roomLookup);
+    const socket = mockSocket();
+    const next = vi.fn();
+
+    const perEventFn = middleware(socket);
+    perEventFn([SocketEvents.PROBLEM_IMPORT], next);
+
+    expect(socket.emit).toHaveBeenCalledWith(SocketEvents.EVENT_REJECTED, {
+      event: SocketEvents.PROBLEM_IMPORT,
+      reason: "Cannot switch problems while code is running.",
+    });
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("calls next for an allowed guarded event", () => {
+    const room = mockRoom();
+    const roomLookup = { getRoom: vi.fn().mockReturnValue(room) };
+    const middleware = createAuthMiddleware(roomLookup);
+    const socket = mockSocket();
+    const next = vi.fn();
+
+    const perEventFn = middleware(socket);
+    perEventFn([SocketEvents.CODE_RUN], next);
+
+    expect(socket.emit).not.toHaveBeenCalled();
+    expect(next).toHaveBeenCalledWith();
+  });
+});
+
+describe("authMiddleware requestId", () => {
+  it("assigns UUID requestId to socket.data on every event", () => {
+    const room = mockRoom();
+    const roomLookup = { getRoom: vi.fn().mockReturnValue(room) };
+    const middleware = createAuthMiddleware(roomLookup);
+    const socket = mockSocket();
+    const next = vi.fn();
+
+    const perEventFn = middleware(socket);
+    perEventFn([SocketEvents.CODE_RUN], next);
+
+    expect(socket.data.requestId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+    );
+  });
+
+  it("assigns requestId for bypass events (USER_JOIN)", () => {
+    const roomLookup = { getRoom: vi.fn() };
+    const middleware = createAuthMiddleware(roomLookup);
+    const socket = mockSocket();
+    const next = vi.fn();
+
+    const perEventFn = middleware(socket);
+    perEventFn([SocketEvents.USER_JOIN], next);
+
+    expect(socket.data.requestId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+    );
+    expect(next).toHaveBeenCalledWith();
+  });
+
+  it("each event gets a unique requestId", () => {
+    const room = mockRoom();
+    const roomLookup = { getRoom: vi.fn().mockReturnValue(room) };
+    const middleware = createAuthMiddleware(roomLookup);
+    const socket = mockSocket();
+    const next = vi.fn();
+
+    const perEventFn = middleware(socket);
+    perEventFn([SocketEvents.CODE_RUN], next);
+    const firstId = socket.data.requestId;
+
+    perEventFn([SocketEvents.CODE_RUN], next);
+    const secondId = socket.data.requestId;
+
+    expect(firstId).not.toBe(secondId);
+  });
+
+  it("requestId appears in rejection log entries", () => {
+    const logger = mockLogger();
+    const roomLookup = { getRoom: vi.fn().mockReturnValue(undefined) };
+    const middleware = createAuthMiddleware(roomLookup, logger as never);
+    const socket = mockSocket();
+    const next = vi.fn();
+
+    const perEventFn = middleware(socket);
+    perEventFn([SocketEvents.CODE_RUN], next);
+
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        request_id: expect.stringMatching(
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+        ),
+      }),
+      expect.any(String),
+    );
   });
 });

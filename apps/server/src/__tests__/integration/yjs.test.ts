@@ -1,6 +1,8 @@
 import http from "node:http";
+import * as encoding from "lib0/encoding";
 import { afterEach, describe, expect, it } from "vitest";
 import WebSocket from "ws";
+import * as syncProtocol from "y-protocols/sync.js";
 import { WebsocketProvider } from "y-websocket";
 import * as Y from "yjs";
 import { createLogger } from "../../lib/logger.js";
@@ -252,6 +254,59 @@ describe("y-websocket server", () => {
 
     ws.on("error", () => {});
     ws.send(Buffer.alloc(128, 1));
+
+    const closeCode = await new Promise<number>((resolve) => {
+      ws.on("close", (code) => resolve(code));
+    });
+
+    expect(closeCode).toBe(1009);
+  });
+
+  it("rejects malformed Yjs protocol messages", async () => {
+    const server = await startServer();
+    cleanup = server.cleanup;
+    const { roomCode, yjsToken } = createTestRoom();
+
+    const ws = new WebSocket(`ws://${TEST_HOST}:${server.port}/${roomCode}?token=${yjsToken}`);
+
+    await new Promise<void>((resolve, reject) => {
+      ws.on("open", () => resolve());
+      ws.on("error", (error) => reject(error));
+    });
+
+    ws.on("error", () => {});
+    ws.send(Buffer.from([0xff]));
+
+    const closeCode = await new Promise<number>((resolve) => {
+      ws.on("close", (code) => resolve(code));
+    });
+
+    expect(closeCode).toBe(1003);
+  });
+
+  it("rejects document updates that exceed the configured max document size", async () => {
+    const server = await startServer({
+      maxDocBytes: 64,
+    });
+    cleanup = server.cleanup;
+    const { roomCode, yjsToken } = createTestRoom();
+
+    const ws = new WebSocket(`ws://${TEST_HOST}:${server.port}/${roomCode}?token=${yjsToken}`);
+
+    await new Promise<void>((resolve, reject) => {
+      ws.on("open", () => resolve());
+      ws.on("error", (error) => reject(error));
+    });
+
+    const doc = new Y.Doc();
+    doc.getText("monaco").insert(0, "x".repeat(512));
+
+    const encoder = encoding.createEncoder();
+    encoding.writeVarUint(encoder, 0);
+    syncProtocol.writeUpdate(encoder, Y.encodeStateAsUpdate(doc));
+
+    ws.on("error", () => {});
+    ws.send(Buffer.from(encoding.toUint8Array(encoder)));
 
     const closeCode = await new Promise<number>((resolve) => {
       ws.on("close", (code) => resolve(code));

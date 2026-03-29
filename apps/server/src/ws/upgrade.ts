@@ -31,7 +31,14 @@ export function registerUpgradeHandler(
         }
       ).handleUpgrade(req, socket, head);
     } else {
-      logger.warn({ pathname }, "Rejecting WebSocket upgrade for unknown path");
+      logger.warn(
+        {
+          event: "websocket_upgrade_rejected",
+          pathname,
+          reason: "unknown_path",
+        },
+        "Rejecting WebSocket upgrade for unknown path",
+      );
       socket.destroy();
     }
   });

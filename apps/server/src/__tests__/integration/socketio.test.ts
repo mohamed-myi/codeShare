@@ -144,4 +144,33 @@ describe("Socket.io server setup", () => {
     await waitForEvent(client, "connect");
     expect(client.connected).toBe(true);
   });
+
+  it("applies websocket connection limits using trusted proxy forwarded addresses", async () => {
+    const server = await createTestServer();
+    cleanup = server.cleanup;
+
+    setupSocketIO(server.io, logger, {
+      rateLimits: {
+        wsConnectionsPerMinute: 1,
+      },
+      trustedProxyIps: ["127.0.0.1", "::1", "::ffff:127.0.0.1"],
+    });
+
+    const first = createTestClient(server.port, "room-aaa", {
+      extraHeaders: {
+        "x-forwarded-for": "203.0.113.10",
+      },
+    });
+    const second = createTestClient(server.port, "room-bbb", {
+      extraHeaders: {
+        "x-forwarded-for": "203.0.113.10",
+      },
+    });
+    clients.push(first, second);
+
+    await waitForEvent(first, "connect");
+
+    const error = await waitForEvent<Error>(second, "connect_error");
+    expect(error.message).toContain("Too many websocket connections");
+  });
 });

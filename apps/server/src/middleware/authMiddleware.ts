@@ -1,6 +1,8 @@
+import crypto from "node:crypto";
 import { SocketEvents } from "@codeshare/shared";
 import type { Logger } from "pino";
 import type { Socket } from "socket.io";
+import { roomCodeLogFields } from "../lib/logger.js";
 import type { Room } from "../models/Room.js";
 
 interface RoomLookup {
@@ -37,6 +39,8 @@ const HINT_RESPONSE_EVENTS = new Set<string>([SocketEvents.HINT_APPROVE, SocketE
 export function createAuthMiddleware(roomLookup: RoomLookup, logger?: Logger) {
   return (socket: Socket) => {
     return (event: [string, ...unknown[]], next: (err?: Error) => void): void => {
+      const requestId = crypto.randomUUID();
+      socket.data.requestId = requestId;
       const eventName = event[0];
 
       if (BYPASS_EVENTS.has(eventName)) {
@@ -46,7 +50,16 @@ export function createAuthMiddleware(roomLookup: RoomLookup, logger?: Logger) {
 
       const roomCode = socket.data.roomCode as string | undefined;
       if (!roomCode) {
-        logger?.warn({ socketId: socket.id, eventName }, "Auth middleware: missing roomCode");
+        logger?.warn(
+          {
+            event: "socket_event_rejected",
+            request_id: requestId,
+            socket_id: socket.id,
+            event_name: eventName,
+            reason: "missing_room_code",
+          },
+          "Auth middleware: missing roomCode",
+        );
         next(new Error("silent"));
         return;
       }
@@ -54,7 +67,14 @@ export function createAuthMiddleware(roomLookup: RoomLookup, logger?: Logger) {
       const room = roomLookup.getRoom(roomCode);
       if (!room) {
         logger?.warn(
-          { socketId: socket.id, eventName, roomCode },
+          {
+            event: "socket_event_rejected",
+            request_id: requestId,
+            socket_id: socket.id,
+            event_name: eventName,
+            ...roomCodeLogFields(roomCode),
+            reason: "room_not_found",
+          },
           "Auth middleware: room not found",
         );
         next(new Error("silent"));
@@ -64,7 +84,14 @@ export function createAuthMiddleware(roomLookup: RoomLookup, logger?: Logger) {
       const user = room.users.find((u) => u.socketId === socket.id);
       if (!user) {
         logger?.warn(
-          { socketId: socket.id, eventName, roomCode },
+          {
+            event: "socket_event_rejected",
+            request_id: requestId,
+            socket_id: socket.id,
+            event_name: eventName,
+            ...roomCodeLogFields(roomCode),
+            reason: "user_not_in_room",
+          },
           "Auth middleware: user not in room",
         );
         next(new Error("silent"));
@@ -74,7 +101,14 @@ export function createAuthMiddleware(roomLookup: RoomLookup, logger?: Logger) {
       // Role-based checks for interview mode
       if (eventName === SocketEvents.SOLUTION_REVEAL && room.mode !== "interview") {
         logger?.info(
-          { socketId: socket.id, eventName, roomCode },
+          {
+            event: "socket_event_rejected",
+            request_id: requestId,
+            socket_id: socket.id,
+            event_name: eventName,
+            ...roomCodeLogFields(roomCode),
+            reason: "solution_reveal_outside_interview_mode",
+          },
           "Auth middleware: solution reveal outside interview mode",
         );
         socket.emit(SocketEvents.EVENT_REJECTED, {
@@ -87,7 +121,16 @@ export function createAuthMiddleware(roomLookup: RoomLookup, logger?: Logger) {
       if (room.mode === "interview") {
         if (INTERVIEWER_ONLY_EVENTS.has(eventName) && user.role !== "interviewer") {
           logger?.info(
-            { socketId: socket.id, eventName, roomCode, userId: user.id, role: user.role },
+            {
+              event: "socket_event_rejected",
+              request_id: requestId,
+              socket_id: socket.id,
+              event_name: eventName,
+              ...roomCodeLogFields(roomCode),
+              user_id: user.id,
+              role: user.role,
+              reason: "interviewer_only_event",
+            },
             "Auth middleware: interviewer-only event rejected",
           );
           socket.emit(SocketEvents.EVENT_REJECTED, {
@@ -99,7 +142,14 @@ export function createAuthMiddleware(roomLookup: RoomLookup, logger?: Logger) {
 
         if (BLOCKED_IN_INTERVIEW.has(eventName)) {
           logger?.info(
-            { socketId: socket.id, eventName, roomCode },
+            {
+              event: "socket_event_rejected",
+              request_id: requestId,
+              socket_id: socket.id,
+              event_name: eventName,
+              ...roomCodeLogFields(roomCode),
+              reason: "blocked_in_interview_mode",
+            },
             "Auth middleware: blocked in interview mode",
           );
           socket.emit(SocketEvents.EVENT_REJECTED, {

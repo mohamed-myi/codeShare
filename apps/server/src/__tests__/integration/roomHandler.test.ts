@@ -1,4 +1,9 @@
-import type { ProblemDetail, RoomState, UserJoinedPayload } from "@codeshare/shared";
+import type {
+  ProblemDetail,
+  RoomState,
+  UserJoinedPayload,
+  YjsTokenRotatedPayload,
+} from "@codeshare/shared";
 import { SocketEvents } from "@codeshare/shared";
 import type { Socket as ClientSocket } from "socket.io-client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -66,6 +71,7 @@ describe("Room handler", () => {
     clients.length = 0;
     for (const code of roomCodes) roomManager.destroyRoom(code);
     roomCodes.length = 0;
+    roomManager.resetDefaults();
     if (cleanup) {
       await cleanup();
       cleanup = undefined;
@@ -172,6 +178,23 @@ describe("Room handler", () => {
       expect(room.users).toHaveLength(2);
 
       await expect(unexpectedBroadcast).rejects.toThrow(/Timed out/);
+    });
+
+    it("rejects invalid join payloads without mutating the room", async () => {
+      const { server, room } = await setup();
+      const client = connectClient(server.port, room.roomCode);
+      await waitForEvent(client, "connect");
+
+      client.emit(SocketEvents.USER_JOIN, { reconnectToken: "deadbeefdeadbeefdeadbeefdeadbeef" });
+
+      const rejected = await waitForEvent<{ event: string; reason: string }>(
+        client,
+        SocketEvents.EVENT_REJECTED,
+      );
+
+      expect(rejected.event).toBe(SocketEvents.USER_JOIN);
+      expect(rejected.reason).toBe("Invalid join payload.");
+      expect(room.users).toHaveLength(0);
     });
   });
 
@@ -340,6 +363,112 @@ describe("Room handler", () => {
       expect(problemLoaded.parameterNames).toEqual(["nums", "target"]);
       expect(mockGetById).toHaveBeenCalledWith(activeProblem.id);
     });
+
+    it("keeps the user in the room when they reconnect before grace period expiry", async () => {
+      roomManager.configureDefaults({ gracePeriodMs: 1_000 });
+      const room = roomManager.createRoom("collaboration");
+      roomCodes.push(room.roomCode);
+      const server = await createTestServer({
+        pingInterval: 60_000,
+        pingTimeout: 60_000,
+      });
+      cleanup = server.cleanup;
+      setupSocketIO(server.io, logger);
+
+      const alice = connectClient(server.port, room.roomCode);
+      const bob = connectClient(server.port, room.roomCode);
+      await Promise.all([waitForEvent(alice, "connect"), waitForEvent(bob, "connect")]);
+
+      alice.emit(SocketEvents.USER_JOIN, { displayName: "Alice" });
+      const aliceJoined = await waitForEvent<UserJoinedPayload>(alice, SocketEvents.USER_JOINED);
+
+      bob.emit(SocketEvents.USER_JOIN, { displayName: "Bob" });
+      await waitForEvent<UserJoinedPayload>(bob, SocketEvents.USER_JOINED);
+      await waitForEvent<UserJoinedPayload>(alice, SocketEvents.USER_JOINED);
+
+      alice.disconnect();
+      await waitForEvent<{ userId: string }>(bob, SocketEvents.USER_LEFT);
+
+      const alice2 = connectClient(server.port, room.roomCode);
+      await waitForEvent(alice2, "connect");
+
+      alice2.emit(SocketEvents.USER_JOIN, {
+        displayName: "Alice",
+        reconnectToken: aliceJoined.reconnectToken,
+      });
+      const rejoined = await waitForEvent<UserJoinedPayload>(alice2, SocketEvents.USER_JOINED);
+
+      expect(rejoined.userId).toBe(aliceJoined.userId);
+
+      vi.advanceTimersByTime(1_100);
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      expect(room.users).toHaveLength(2);
+      expect(room.users.find((user) => user.id === aliceJoined.userId)?.connected).toBe(true);
+    });
+
+    it("still joins as a new user when a valid-format reconnect token does not match a disconnected user", async () => {
+      const { server, room } = await setup();
+
+      const alice = connectClient(server.port, room.roomCode);
+      await waitForEvent(alice, "connect");
+
+      alice.emit(SocketEvents.USER_JOIN, {
+        displayName: "Alice",
+        reconnectToken: "deadbeefdeadbeefdeadbeefdeadbeef",
+      });
+
+      const payload = await waitForEvent<UserJoinedPayload>(alice, SocketEvents.USER_JOINED);
+      expect(payload.displayName).toBe("Alice");
+      expect(room.users).toHaveLength(1);
+      expect(room.users[0]?.id).toBe(payload.userId);
+    });
+
+    it("completes join hydration even when the active problem can no longer be loaded", async () => {
+      mockGetById.mockResolvedValue(null);
+      const { server, room } = await setup();
+      room.problemId = activeProblem.id;
+
+      const alice = connectClient(server.port, room.roomCode);
+      await waitForEvent(alice, "connect");
+
+      const joinedPromise = waitForEvent<UserJoinedPayload>(alice, SocketEvents.USER_JOINED);
+      const syncPromise = waitForEvent<RoomState>(alice, SocketEvents.ROOM_SYNC);
+      const unexpectedProblemLoaded = waitForEvent(alice, SocketEvents.PROBLEM_LOADED, 150);
+
+      alice.emit(SocketEvents.USER_JOIN, { displayName: "Alice" });
+
+      const joined = await joinedPromise;
+      const sync = await syncPromise;
+
+      expect(joined.displayName).toBe("Alice");
+      expect(sync.problemId).toBe(activeProblem.id);
+      await expect(unexpectedProblemLoaded).rejects.toThrow(/Timed out/);
+      expect(mockGetById).toHaveBeenCalledWith(activeProblem.id);
+    });
+
+    it("completes join hydration even when active problem loading throws", async () => {
+      mockGetById.mockRejectedValue(new Error("database unavailable"));
+      const { server, room } = await setup();
+      room.problemId = activeProblem.id;
+
+      const alice = connectClient(server.port, room.roomCode);
+      await waitForEvent(alice, "connect");
+
+      const joinedPromise = waitForEvent<UserJoinedPayload>(alice, SocketEvents.USER_JOINED);
+      const syncPromise = waitForEvent<RoomState>(alice, SocketEvents.ROOM_SYNC);
+      const unexpectedProblemLoaded = waitForEvent(alice, SocketEvents.PROBLEM_LOADED, 150);
+
+      alice.emit(SocketEvents.USER_JOIN, { displayName: "Alice" });
+
+      const joined = await joinedPromise;
+      const sync = await syncPromise;
+
+      expect(joined.displayName).toBe("Alice");
+      expect(sync.problemId).toBe(activeProblem.id);
+      await expect(unexpectedProblemLoaded).rejects.toThrow(/Timed out/);
+      expect(mockGetById).toHaveBeenCalledWith(activeProblem.id);
+    });
   });
 
   // --- 7e: Reconnection with invalid token ---
@@ -465,6 +594,77 @@ describe("Room handler", () => {
 
       vi.advanceTimersByTime(5 * 60 * 1000 + 100);
       await new Promise((r) => setTimeout(r, 100));
+
+      expect(roomManager.getRoom(room.roomCode)).toBeUndefined();
+    });
+  });
+
+  // --- Yjs token rotation on user removal ---
+
+  describe("Yjs token rotation", () => {
+    it("emits YJS_TOKEN_ROTATED to remaining user after grace period removal", async () => {
+      roomManager.configureDefaults({ gracePeriodMs: 500 });
+      const room = roomManager.createRoom("collaboration");
+      roomCodes.push(room.roomCode);
+      const server = await createTestServer({
+        pingInterval: 60_000,
+        pingTimeout: 60_000,
+      });
+      cleanup = server.cleanup;
+      setupSocketIO(server.io, logger);
+
+      const alice = connectClient(server.port, room.roomCode);
+      const bob = connectClient(server.port, room.roomCode);
+      await Promise.all([waitForEvent(alice, "connect"), waitForEvent(bob, "connect")]);
+
+      alice.emit(SocketEvents.USER_JOIN, { displayName: "Alice" });
+      await waitForEvent<UserJoinedPayload>(alice, SocketEvents.USER_JOINED);
+
+      bob.emit(SocketEvents.USER_JOIN, { displayName: "Bob" });
+      await waitForEvent<UserJoinedPayload>(bob, SocketEvents.USER_JOINED);
+      await waitForEvent<UserJoinedPayload>(alice, SocketEvents.USER_JOINED);
+
+      const originalToken = room.yjsToken;
+
+      const tokenRotatedPromise = waitForEvent<YjsTokenRotatedPayload>(
+        bob,
+        SocketEvents.YJS_TOKEN_ROTATED,
+      );
+
+      alice.disconnect();
+      await waitForEvent<{ userId: string }>(bob, SocketEvents.USER_LEFT);
+
+      vi.advanceTimersByTime(600);
+      await new Promise((r) => setTimeout(r, 200));
+
+      const rotatedPayload = await tokenRotatedPromise;
+      expect(rotatedPayload.yjsToken).toBeDefined();
+      expect(rotatedPayload.yjsToken).not.toBe(originalToken);
+      expect(room.yjsToken).toBe(rotatedPayload.yjsToken);
+    });
+
+    it("does not emit YJS_TOKEN_ROTATED when last user is removed (room destroyed)", async () => {
+      roomManager.configureDefaults({ gracePeriodMs: 500 });
+      const room = roomManager.createRoom("collaboration");
+      roomCodes.push(room.roomCode);
+      const server = await createTestServer({
+        pingInterval: 60_000,
+        pingTimeout: 60_000,
+      });
+      cleanup = server.cleanup;
+      setupSocketIO(server.io, logger);
+
+      const alice = connectClient(server.port, room.roomCode);
+      await waitForEvent(alice, "connect");
+
+      alice.emit(SocketEvents.USER_JOIN, { displayName: "Alice" });
+      await waitForEvent<UserJoinedPayload>(alice, SocketEvents.USER_JOINED);
+
+      alice.disconnect();
+      await new Promise((r) => setTimeout(r, 100));
+
+      vi.advanceTimersByTime(600);
+      await new Promise((r) => setTimeout(r, 200));
 
       expect(roomManager.getRoom(room.roomCode)).toBeUndefined();
     });
