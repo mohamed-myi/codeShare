@@ -1,3 +1,4 @@
+import { Writable } from "node:stream";
 import type {
   BoilerplateTemplate,
   ExecutionError,
@@ -6,10 +7,11 @@ import type {
   SubmitResult,
   TestCase,
 } from "@codeshare/shared";
-import { SocketEvents } from "@codeshare/shared";
+import { ExecutionErrorType, SocketEvents } from "@codeshare/shared";
 import type { Socket as ClientSocket } from "socket.io-client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as Y from "yjs";
+import type { IpRateLimiter } from "../../lib/ipRateLimiter.js";
 import { createLogger } from "../../lib/logger.js";
 import { globalCounters } from "../../lib/rateLimitCounters.js";
 import { roomManager } from "../../models/RoomManager.js";
@@ -93,7 +95,26 @@ vi.mock("../../services/ProblemService.js", () => ({
   },
 }));
 
-const logger = createLogger("silent");
+function createMemoryStream(chunks: string[]): Writable {
+  return new Writable({
+    write(chunk, _encoding, callback) {
+      chunks.push(String(chunk));
+      callback();
+    },
+  });
+}
+
+function parseLogEntries(chunks: string[]): Array<Record<string, unknown>> {
+  return chunks
+    .join("")
+    .trim()
+    .split("\n")
+    .filter(Boolean)
+    .map((entry) => JSON.parse(entry) as Record<string, unknown>);
+}
+
+let logger = createLogger("silent");
+let logChunks: string[] = [];
 
 function extractNonceFromHarness(harnessSource: string): string {
   const match = harnessSource.match(/===HARNESS_RESULT_([a-f0-9]+)===/);
@@ -132,6 +153,14 @@ describe("Execution handler", () => {
   }
 
   beforeEach(() => {
+    logChunks = [];
+    logger = createLogger("info", {
+      environment: "test",
+      stream: createMemoryStream(logChunks),
+      enablePretty: false,
+      enableFileLogging: false,
+    });
+    globalCounters.reset();
     mockSubmit.mockReset();
     mockFindVisible.mockReset();
     mockFindByProblemId.mockReset();
@@ -157,7 +186,12 @@ describe("Execution handler", () => {
     }
   });
 
-  async function setup() {
+  async function setup(opts?: {
+    dailyLimit?: number;
+    ipRateLimiter?: IpRateLimiter;
+    judge0ExecPerHour?: number;
+    maxCodeBytes?: number;
+  }) {
     const room = roomManager.createRoom("collaboration");
     roomCodes.push(room.roomCode);
 
@@ -173,7 +207,10 @@ describe("Execution handler", () => {
     setupSocketIO(server.io, logger, {
       getDoc,
       judge0Client: { submit: mockSubmit },
-      dailyLimit: 100,
+      dailyLimit: opts?.dailyLimit ?? 100,
+      ipRateLimiter: opts?.ipRateLimiter,
+      judge0ExecPerHour: opts?.judge0ExecPerHour,
+      maxCodeBytes: opts?.maxCodeBytes,
     });
 
     return { server, room, doc };
@@ -419,6 +456,42 @@ describe("Execution handler", () => {
       expect(errPayload.errorType).toBe("api_error");
     });
 
+    it("logs Judge0 dependency metadata once at the execution ownership layer", async () => {
+      const { server, room } = await setup();
+      room.problemId = VALID_UUID;
+
+      const dependencyError = Object.assign(new Error("Judge0 API error: 429"), {
+        dependency: "judge0",
+        operation: "submit",
+        errorType: "http_error",
+        statusCode: 429,
+        isTimeout: false,
+      });
+      mockSubmit.mockRejectedValue(dependencyError);
+
+      const alice = connectClient(server.port, room.roomCode);
+      await waitForEvent(alice, "connect");
+      await joinUser(alice, "Alice");
+
+      const error = waitForEvent<ExecutionError>(alice, SocketEvents.EXECUTION_ERROR);
+      alice.emit(SocketEvents.CODE_RUN);
+      await error;
+
+      await new Promise((resolve) => logger.flush(resolve));
+      const executionFailure = parseLogEntries(logChunks).find(
+        (entry) => entry.event === "execution_failed",
+      );
+
+      expect(executionFailure).toBeDefined();
+      expect(executionFailure).toMatchObject({
+        dependency: "judge0",
+        operation: "submit",
+        error_type: "http_error",
+        status_code: 429,
+        is_timeout: false,
+      });
+    });
+
     it("Judge0 timeout (AbortError) -> api_timeout", async () => {
       const { server, room } = await setup();
       room.problemId = VALID_UUID;
@@ -543,6 +616,87 @@ describe("Execution handler", () => {
       expect(errPayload.errorType).toBe("api_error");
       expect(mockSubmit).not.toHaveBeenCalled();
       expect(room.submissionsUsed).toBe(0);
+    });
+
+    it("counts a submission after reservation even when Judge0 returns a compilation error", async () => {
+      const { server, room } = await setup();
+      room.problemId = VALID_UUID;
+      room.submissionsUsed = 0;
+
+      mockSubmit.mockResolvedValue({
+        stdout: null,
+        stderr: "SyntaxError: invalid syntax",
+        status: { id: 6, description: "Compilation Error" },
+        time: null,
+        memory: null,
+      });
+
+      const alice = connectClient(server.port, room.roomCode);
+      await waitForEvent(alice, "connect");
+      await joinUser(alice, "Alice");
+
+      const error = waitForEvent<ExecutionError>(alice, SocketEvents.EXECUTION_ERROR);
+      alice.emit(SocketEvents.CODE_RUN);
+      const errPayload = await error;
+
+      expect(errPayload.errorType).toBe(ExecutionErrorType.COMPILATION_ERROR);
+      expect(room.submissionsUsed).toBe(1);
+    });
+
+    it("returns parse_error when harness output fails schema validation", async () => {
+      const { server, room } = await setup();
+      room.problemId = VALID_UUID;
+
+      mockSubmit.mockImplementation((harnessSource: string) => {
+        const nonce = extractNonceFromHarness(harnessSource);
+        return Promise.resolve({
+          stdout: `===HARNESS_RESULT_${nonce}===\n{"results":"bad","userStdout":""}\n===END_HARNESS_RESULT_${nonce}===\n`,
+          stderr: null,
+          status: { id: 3, description: "Accepted" },
+          time: "0.01",
+          memory: 9000,
+        });
+      });
+
+      const alice = connectClient(server.port, room.roomCode);
+      await waitForEvent(alice, "connect");
+      await joinUser(alice, "Alice");
+
+      const error = waitForEvent<ExecutionError>(alice, SocketEvents.EXECUTION_ERROR);
+      alice.emit(SocketEvents.CODE_RUN);
+      const errPayload = await error;
+
+      expect(errPayload.errorType).toBe(ExecutionErrorType.PARSE_ERROR);
+      expect(errPayload.message).toBe("Execution results failed validation.");
+    });
+
+    it("rejects execution when the per-IP Judge0 limit is reached", async () => {
+      const ipRateLimiter = {
+        clear: vi.fn(),
+        consume: vi.fn((bucket: string) => {
+          if (bucket === "judge0-exec") {
+            return { allowed: false, retryAfterSeconds: 17 };
+          }
+          return { allowed: true, retryAfterSeconds: 0 };
+        }),
+      } as unknown as IpRateLimiter;
+      const { server, room } = await setup({
+        ipRateLimiter,
+        judge0ExecPerHour: 1,
+      });
+      room.problemId = VALID_UUID;
+
+      const alice = connectClient(server.port, room.roomCode);
+      await waitForEvent(alice, "connect");
+      await joinUser(alice, "Alice");
+
+      const error = waitForEvent<ExecutionError>(alice, SocketEvents.EXECUTION_ERROR);
+      alice.emit(SocketEvents.CODE_RUN);
+      const errPayload = await error;
+
+      expect(errPayload.errorType).toBe(ExecutionErrorType.IP_LIMIT);
+      expect(errPayload.message).toBe("Too many executions. Try again in 17s.");
+      expect(mockSubmit).not.toHaveBeenCalled();
     });
 
     it("global daily limit -> EXECUTION_ERROR global_limit (no STARTED)", async () => {
