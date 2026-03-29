@@ -9,7 +9,7 @@ const roomCodePattern = new RegExp(
 // --- Socket Event Payload Schemas ---
 
 export const userJoinSchema = z.object({
-  displayName: z.string().min(1).max(30).trim(),
+  displayName: z.string().trim().min(1).max(30),
   reconnectToken: z.string().optional(),
 });
 
@@ -49,7 +49,7 @@ export const hintChunkSchema = z.object({
 
 export const roomCreateSchema = z.object({
   mode: z.enum(["collaboration", "interview"]),
-  displayName: z.string().min(1).max(30).trim(),
+  displayName: z.string().trim().min(1).max(30),
 });
 
 // --- API Response Schemas ---
