@@ -65,15 +65,31 @@ describe("ScraperService", () => {
   const fetchImpl = vi.fn();
   const findBySourceUrl = vi.fn();
   const findBySlug = vi.fn();
+  const restoreProblem = vi.fn();
   const createProblem = vi.fn();
   const createTestCase = vi.fn();
   const createBoilerplate = vi.fn();
   const deleteProblem = vi.fn();
 
+  function buildService(overrides: Parameters<typeof createScraperService>[0] = {}) {
+    return createScraperService({
+      fetchImpl,
+      findBySourceUrl,
+      findBySlug,
+      restoreProblem,
+      createProblem,
+      createTestCase,
+      createBoilerplate,
+      deleteProblem,
+      ...overrides,
+    });
+  }
+
   beforeEach(() => {
     fetchImpl.mockReset();
     findBySourceUrl.mockReset();
     findBySlug.mockReset();
+    restoreProblem.mockReset();
     createProblem.mockReset();
     createTestCase.mockReset();
     createBoilerplate.mockReset();
@@ -81,6 +97,7 @@ describe("ScraperService", () => {
 
     findBySourceUrl.mockResolvedValue(null);
     findBySlug.mockResolvedValue(null);
+    restoreProblem.mockResolvedValue(undefined);
     createProblem.mockResolvedValue(createdProblem);
     createTestCase.mockResolvedValue(null);
     createBoilerplate.mockResolvedValue(null);
@@ -93,15 +110,7 @@ describe("ScraperService", () => {
       json: async () => buildQuestionResponse(),
     });
 
-    const service = createScraperService({
-      fetchImpl,
-      findBySourceUrl,
-      findBySlug,
-      createProblem,
-      createTestCase,
-      createBoilerplate,
-      deleteProblem,
-    });
+    const service = buildService();
 
     const result = await service.importFromUrl("https://leetcode.com/problems/two-sum/");
 
@@ -154,15 +163,7 @@ describe("ScraperService", () => {
   it("returns an existing problem without fetching when sourceUrl already exists", async () => {
     findBySourceUrl.mockResolvedValue(createdProblem);
 
-    const service = createScraperService({
-      fetchImpl,
-      findBySourceUrl,
-      findBySlug,
-      createProblem,
-      createTestCase,
-      createBoilerplate,
-      deleteProblem,
-    });
+    const service = buildService();
 
     const result = await service.importFromUrl("https://leetcode.com/problems/two-sum/");
 
@@ -171,16 +172,25 @@ describe("ScraperService", () => {
     expect(createProblem).not.toHaveBeenCalled();
   });
 
+  it("restores and returns an existing deleted problem without fetching", async () => {
+    const deletedProblem = {
+      ...createdProblem,
+      deletedAt: "2026-01-02T00:00:00Z",
+    };
+    findBySourceUrl.mockResolvedValue(deletedProblem);
+
+    const service = buildService();
+
+    const result = await service.importFromUrl("https://leetcode.com/problems/two-sum/");
+
+    expect(result).toEqual(deletedProblem);
+    expect(restoreProblem).toHaveBeenCalledWith(createdProblem.id);
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(createProblem).not.toHaveBeenCalled();
+  });
+
   it("rejects invalid LeetCode URLs", async () => {
-    const service = createScraperService({
-      fetchImpl,
-      findBySourceUrl,
-      findBySlug,
-      createProblem,
-      createTestCase,
-      createBoilerplate,
-      deleteProblem,
-    });
+    const service = buildService();
 
     await expect(service.importFromUrl("https://example.com/problems/two-sum/")).rejects.toThrow(
       "URL must be a valid LeetCode problem URL.",
@@ -206,15 +216,7 @@ describe("ScraperService", () => {
       }),
     });
 
-    const service = createScraperService({
-      fetchImpl,
-      findBySourceUrl,
-      findBySlug,
-      createProblem,
-      createTestCase,
-      createBoilerplate,
-      deleteProblem,
-    });
+    const service = buildService();
 
     await expect(service.importFromUrl("https://leetcode.com/problems/two-sum/")).rejects.toThrow(
       "Failed to parse imported example inputs.",
@@ -232,15 +234,7 @@ describe("ScraperService", () => {
       .mockResolvedValueOnce(null)
       .mockRejectedValueOnce(new Error("insert test case failed"));
 
-    const service = createScraperService({
-      fetchImpl,
-      findBySourceUrl,
-      findBySlug,
-      createProblem,
-      createTestCase,
-      createBoilerplate,
-      deleteProblem,
-    });
+    const service = buildService();
 
     await expect(service.importFromUrl("https://leetcode.com/problems/two-sum/")).rejects.toThrow(
       "insert test case failed",
@@ -255,15 +249,7 @@ describe("ScraperService", () => {
       json: async () => buildQuestionResponse(),
     });
 
-    const service = createScraperService({
-      fetchImpl,
-      findBySourceUrl,
-      findBySlug,
-      createProblem,
-      createTestCase,
-      createBoilerplate,
-      deleteProblem,
-    });
+    const service = buildService();
 
     await service.importFromUrl("http://www.leetcode.com/problems/two-sum/description/");
 
@@ -281,14 +267,7 @@ describe("ScraperService", () => {
       json: async () => buildQuestionResponse(),
     });
 
-    const service = createScraperService({
-      fetchImpl,
-      findBySourceUrl,
-      findBySlug,
-      createProblem,
-      createTestCase,
-      createBoilerplate,
-      deleteProblem,
+    const service = buildService({
       graphQlUrl: "http://127.0.0.1:4100/graphql",
     });
 
@@ -300,5 +279,156 @@ describe("ScraperService", () => {
         method: "POST",
       }),
     );
+  });
+
+  it("surfaces typed dependency metadata when the LeetCode fetch fails", async () => {
+    fetchImpl.mockResolvedValue({
+      ok: false,
+      status: 429,
+    });
+
+    const service = buildService();
+
+    const error = await service
+      .importFromUrl("https://leetcode.com/problems/two-sum/")
+      .catch((caught) => caught);
+
+    expect(error).toMatchObject({
+      dependency: "leetcode",
+      operation: "fetch_question",
+      errorType: "http_error",
+      statusCode: 429,
+      isTimeout: false,
+    });
+  });
+
+  it("surfaces typed dependency metadata when imported examples cannot be parsed", async () => {
+    fetchImpl.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: {
+          question: {
+            ...buildQuestionResponse().data.question,
+            content: `
+              <p><strong class="example">Example 1:</strong></p>
+              <pre>
+                <strong>Input:</strong> nums, target
+                <strong>Output:</strong> [0,1]
+              </pre>
+            `,
+          },
+        },
+      }),
+    });
+
+    const service = buildService();
+
+    const error = await service
+      .importFromUrl("https://leetcode.com/problems/two-sum/")
+      .catch((caught) => caught);
+
+    expect(error).toMatchObject({
+      dependency: "leetcode",
+      operation: "parse_examples",
+      errorType: "parse_error",
+      isTimeout: false,
+    });
+  });
+
+  it("parses nested arrays, objects, and quoted commas in imported examples", async () => {
+    fetchImpl.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: {
+          question: {
+            ...buildQuestionResponse().data.question,
+            content: `
+              <p><strong class="example">Example 1:</strong></p>
+              <pre>
+                <strong>Input:</strong> grid = [[1,2],[3,4]], config = {"label":"a,b","limits":[1,2]}
+                <strong>Output:</strong> {"pairs":["x,y"],"size":2}
+              </pre>
+            `,
+            metaData: JSON.stringify({
+              name: "solveGrid",
+              params: [{ name: "grid" }, { name: "config" }],
+            }),
+          },
+        },
+      }),
+    });
+
+    const service = buildService();
+
+    await service.importFromUrl("https://leetcode.com/problems/two-sum/");
+
+    expect(createTestCase).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: {
+          grid: [
+            [1, 2],
+            [3, 4],
+          ],
+          config: { label: "a,b", limits: [1, 2] },
+        },
+        expectedOutput: { pairs: ["x,y"], size: 2 },
+      }),
+    );
+  });
+
+  it("surfaces typed dependency metadata when callable metadata is missing", async () => {
+    fetchImpl.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: {
+          question: {
+            ...buildQuestionResponse().data.question,
+            metaData: JSON.stringify({ params: [{ name: "nums" }] }),
+          },
+        },
+      }),
+    });
+
+    const service = buildService();
+
+    const error = await service
+      .importFromUrl("https://leetcode.com/problems/two-sum/")
+      .catch((caught) => caught);
+
+    expect(error).toMatchObject({
+      dependency: "leetcode",
+      operation: "parse_metadata",
+      errorType: "parse_error",
+      isTimeout: false,
+    });
+    expect(createProblem).not.toHaveBeenCalled();
+  });
+
+  it("surfaces typed dependency metadata when Python boilerplate is unavailable", async () => {
+    fetchImpl.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: {
+          question: {
+            ...buildQuestionResponse().data.question,
+            codeSnippets: [{ langSlug: "javascript", code: "function twoSum() {}" }],
+          },
+        },
+      }),
+    });
+
+    const service = buildService();
+
+    const error = await service
+      .importFromUrl("https://leetcode.com/problems/two-sum/")
+      .catch((caught) => caught);
+
+    expect(error).toMatchObject({
+      dependency: "leetcode",
+      operation: "select_boilerplate",
+      errorType: "parse_error",
+      isTimeout: false,
+    });
+    expect(createBoilerplate).not.toHaveBeenCalled();
   });
 });

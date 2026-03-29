@@ -1,3 +1,4 @@
+import { Writable } from "node:stream";
 import type { ProblemDetail, ProblemLoadedPayload } from "@codeshare/shared";
 import { ROOM_LIMITS, SocketEvents } from "@codeshare/shared";
 import type { Socket as ClientSocket } from "socket.io-client";
@@ -61,7 +62,26 @@ vi.mock("../../services/ScraperService.js", () => ({
   },
 }));
 
-const logger = createLogger("silent");
+function createMemoryStream(chunks: string[]): Writable {
+  return new Writable({
+    write(chunk, _encoding, callback) {
+      chunks.push(String(chunk));
+      callback();
+    },
+  });
+}
+
+function parseLogEntries(chunks: string[]): Array<Record<string, unknown>> {
+  return chunks
+    .join("")
+    .trim()
+    .split("\n")
+    .filter(Boolean)
+    .map((entry) => JSON.parse(entry) as Record<string, unknown>);
+}
+
+let logger = createLogger("silent");
+let logChunks: string[] = [];
 
 describe("Problem handler", () => {
   let cleanup: (() => Promise<void>) | undefined;
@@ -74,6 +94,14 @@ describe("Problem handler", () => {
   }
 
   beforeEach(() => {
+    logChunks = [];
+    logger = createLogger("info", {
+      environment: "test",
+      stream: createMemoryStream(logChunks),
+      enablePretty: false,
+      enableFileLogging: false,
+    });
+    globalCounters.reset();
     mockGetById.mockReset();
     mockImportFromUrl.mockReset();
     vi.restoreAllMocks();
@@ -414,6 +442,59 @@ describe("Problem handler", () => {
       expect(doc.getText("monaco").toString()).toBe("def twoSum(nums, target):\n    pass");
     });
 
+    it("starts background testcase generation after a successful import", async () => {
+      const importedProblem = {
+        id: VALID_UUID,
+        slug: "two-sum",
+        title: "Two Sum",
+        difficulty: "easy" as const,
+        category: "Algorithms",
+        description: "Imported description",
+        constraints: ["2 <= nums.length <= 10^4"],
+        solution: null,
+        timeLimitMs: 5000,
+        source: "user_submitted" as const,
+        sourceUrl: "https://leetcode.com/problems/two-sum/",
+        createdAt: "2026-01-01T00:00:00Z",
+        updatedAt: "2026-01-01T00:00:00Z",
+      };
+      const generateTestCases = vi.fn().mockResolvedValue(undefined);
+      mockImportFromUrl.mockResolvedValue(importedProblem);
+      mockGetById.mockResolvedValue({
+        ...mockProblemDetail,
+        ...importedProblem,
+      });
+
+      const { server, room } = await setupWithOptions({
+        importProblem: mockImportFromUrl,
+        generateTestCases,
+      });
+
+      const alice = connectClient(server.port, room.roomCode);
+      await waitForEvent(alice, "connect");
+      await joinUser(alice, "Alice");
+
+      const loaded = waitForEvent<ProblemLoadedPayload>(alice, SocketEvents.PROBLEM_LOADED);
+      alice.emit(SocketEvents.PROBLEM_IMPORT, {
+        leetcodeUrl: "https://leetcode.com/problems/two-sum/",
+      });
+      await loaded;
+
+      await vi.waitFor(() => {
+        expect(generateTestCases).toHaveBeenCalledOnce();
+      });
+
+      expect(generateTestCases).toHaveBeenCalledWith({
+        problemId: VALID_UUID,
+        title: "Two Sum",
+        description: "Imported description",
+        constraints: ["2 <= nums.length <= 10^4"],
+        parameterNames: ["nums", "target"],
+        methodName: "twoSum",
+        visibleTestCases: [{ input: { nums: [2, 7, 11, 15], target: 9 }, expectedOutput: [0, 1] }],
+      });
+    });
+
     it("rejects import when the room import limit is exhausted", async () => {
       const { server, room } = await setup();
       room.importsUsed = ROOM_LIMITS.MAX_IMPORTS;
@@ -546,6 +627,54 @@ describe("Problem handler", () => {
       expect(mockImportFromUrl).toHaveBeenCalledOnce();
     });
 
+    it("broadcasts failed status when the imported problem cannot be reloaded", async () => {
+      const importedProblem = {
+        id: VALID_UUID,
+        sourceUrl: "https://leetcode.com/problems/two-sum/",
+      };
+      mockImportFromUrl.mockResolvedValue(importedProblem);
+      mockGetById.mockResolvedValue(null);
+      const recordImportSpy = vi.spyOn(globalCounters, "recordImport");
+      const { server, room } = await setup();
+
+      const alice = connectClient(server.port, room.roomCode);
+      const bob = connectClient(server.port, room.roomCode);
+      await Promise.all([waitForEvent(alice, "connect"), waitForEvent(bob, "connect")]);
+
+      await joinUser(alice, "Alice");
+      await joinUser(bob, "Bob");
+      await waitForEvent(alice, SocketEvents.USER_JOINED);
+
+      const aliceStatuses: Array<{ status: string; message?: string }> = [];
+      const bobStatuses: Array<{ status: string; message?: string }> = [];
+      alice.on(
+        SocketEvents.PROBLEM_IMPORT_STATUS,
+        (payload: { status: string; message?: string }) => {
+          aliceStatuses.push(payload);
+        },
+      );
+      bob.on(
+        SocketEvents.PROBLEM_IMPORT_STATUS,
+        (payload: { status: string; message?: string }) => {
+          bobStatuses.push(payload);
+        },
+      );
+
+      alice.emit(SocketEvents.PROBLEM_IMPORT, {
+        leetcodeUrl: "https://leetcode.com/problems/two-sum/",
+      });
+
+      await vi.waitFor(() => {
+        expect(aliceStatuses.map((payload) => payload.status)).toEqual(["scraping", "failed"]);
+        expect(bobStatuses.map((payload) => payload.status)).toEqual(["scraping", "failed"]);
+      });
+
+      expect(aliceStatuses[1]?.message).toBe("Imported problem could not be loaded.");
+      expect(bobStatuses[1]?.message).toBe("Imported problem could not be loaded.");
+      expect(room.importsUsed).toBe(0);
+      expect(recordImportSpy).not.toHaveBeenCalled();
+    });
+
     it("broadcasts failed status to the whole room after a scraping error", async () => {
       mockImportFromUrl.mockRejectedValue(new Error("LeetCode import failed"));
       vi.spyOn(globalCounters, "canImport").mockReturnValue(true);
@@ -576,6 +705,105 @@ describe("Problem handler", () => {
         expect(aliceStatuses).toEqual(["scraping", "failed"]);
         expect(bobStatuses).toEqual(["scraping", "failed"]);
       });
+    });
+
+    it("logs dependency metadata when imported problem scraping fails", async () => {
+      const dependencyError = Object.assign(new Error("LeetCode import failed"), {
+        dependency: "leetcode",
+        operation: "import_problem",
+        errorType: "http_error",
+        statusCode: 429,
+        isTimeout: false,
+      });
+      mockImportFromUrl.mockRejectedValue(dependencyError);
+      vi.spyOn(globalCounters, "canImport").mockReturnValue(true);
+      const { server, room } = await setup();
+
+      const alice = connectClient(server.port, room.roomCode);
+      await waitForEvent(alice, "connect");
+      await joinUser(alice, "Alice");
+
+      const statuses: string[] = [];
+      alice.on(SocketEvents.PROBLEM_IMPORT_STATUS, (payload: { status: string }) => {
+        statuses.push(payload.status);
+      });
+
+      alice.emit(SocketEvents.PROBLEM_IMPORT, {
+        leetcodeUrl: "https://leetcode.com/problems/two-sum/",
+      });
+
+      await vi.waitFor(() => {
+        expect(statuses).toEqual(["scraping", "failed"]);
+      });
+      await new Promise((resolve) => logger.flush(resolve));
+      const importFailure = parseLogEntries(logChunks).find(
+        (entry) => entry.event === "problem_import_failed",
+      );
+
+      expect(importFailure).toBeDefined();
+      expect(importFailure).toMatchObject({
+        dependency: "leetcode",
+        operation: "import_problem",
+        error_type: "http_error",
+        status_code: 429,
+        is_timeout: false,
+      });
+    });
+
+    it("keeps the successful import flow intact when background testcase generation fails", async () => {
+      const importedProblem = {
+        id: VALID_UUID,
+        slug: "two-sum",
+        title: "Two Sum",
+        difficulty: "easy" as const,
+        category: "Algorithms",
+        description: "Imported description",
+        constraints: ["2 <= nums.length <= 10^4"],
+        solution: null,
+        timeLimitMs: 5000,
+        source: "user_submitted" as const,
+        sourceUrl: "https://leetcode.com/problems/two-sum/",
+        createdAt: "2026-01-01T00:00:00Z",
+        updatedAt: "2026-01-01T00:00:00Z",
+      };
+      const generationError = new Error("Generation failed");
+      const generateTestCases = vi.fn().mockRejectedValue(generationError);
+      mockImportFromUrl.mockResolvedValue(importedProblem);
+      mockGetById.mockResolvedValue({
+        ...mockProblemDetail,
+        ...importedProblem,
+      });
+
+      const { server, room } = await setupWithOptions({
+        importProblem: mockImportFromUrl,
+        generateTestCases,
+      });
+
+      const alice = connectClient(server.port, room.roomCode);
+      await waitForEvent(alice, "connect");
+      await joinUser(alice, "Alice");
+
+      const statuses: string[] = [];
+      alice.on(SocketEvents.PROBLEM_IMPORT_STATUS, (payload: { status: string }) => {
+        statuses.push(payload.status);
+      });
+
+      const loaded = waitForEvent<ProblemLoadedPayload>(alice, SocketEvents.PROBLEM_LOADED);
+      alice.emit(SocketEvents.PROBLEM_IMPORT, {
+        leetcodeUrl: "https://leetcode.com/problems/two-sum/",
+      });
+      await loaded;
+
+      await vi.waitFor(async () => {
+        expect(statuses).toEqual(["scraping", "saved"]);
+        await new Promise((resolve) => logger.flush(resolve));
+        expect(
+          parseLogEntries(logChunks).find((entry) => entry.event === "test_case_generation_failed"),
+        ).toBeDefined();
+      });
+
+      expect(room.importsUsed).toBe(1);
+      expect(room.problemId).toBe(VALID_UUID);
     });
   });
 });

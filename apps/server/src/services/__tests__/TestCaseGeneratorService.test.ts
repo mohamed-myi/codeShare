@@ -182,8 +182,10 @@ describe("TestCaseGeneratorService", () => {
 
     expect(deps.createMany).not.toHaveBeenCalled();
     expect(deps.logger.warn).toHaveBeenCalledWith(
-      expect.objectContaining({ raw: expect.any(String) }),
-      "Verification LLM returned invalid JSON",
+      expect.objectContaining({
+        event: "testcase_verification_response_invalid",
+        raw_preview: expect.any(String),
+      }),
     );
   });
 

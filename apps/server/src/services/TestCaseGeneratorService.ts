@@ -58,20 +58,33 @@ export function createTestCaseGeneratorService(deps: TestCaseGeneratorDeps) {
   async function attemptGeneration(ctx: GenerationContext): Promise<void> {
     const hidden = await countHidden(ctx.problemId);
     if (hidden > 0) {
-      logger.info({ problemId: ctx.problemId }, "Hidden cases already exist, skipping generation");
+      logger.info({
+        event: "testcase_generation_skipped",
+        problem_id: ctx.problemId,
+        hidden_case_count: hidden,
+        reason: "hidden_cases_already_exist",
+      });
       return;
     }
 
     const rawCases = await generateCases(ctx);
     const validated = structuralValidation(rawCases, ctx);
     if (validated.length === 0) {
-      logger.warn({ problemId: ctx.problemId }, "No structurally valid cases after generation");
+      logger.warn({
+        event: "testcase_generation_validation_failed",
+        problem_id: ctx.problemId,
+        reason: "no_structurally_valid_cases",
+      });
       return;
     }
 
     const verified = await verifyCases(validated, ctx);
     if (verified.length === 0) {
-      logger.warn({ problemId: ctx.problemId }, "No cases passed dual verification");
+      logger.warn({
+        event: "testcase_generation_verification_failed",
+        problem_id: ctx.problemId,
+        reason: "no_cases_passed_dual_verification",
+      });
       return;
     }
 
@@ -85,10 +98,11 @@ export function createTestCaseGeneratorService(deps: TestCaseGeneratorDeps) {
     }));
 
     await createMany(rows);
-    logger.info(
-      { problemId: ctx.problemId, count: rows.length },
-      "Saved LLM-generated hidden test cases",
-    );
+    logger.info({
+      event: "testcase_generation_completed",
+      problem_id: ctx.problemId,
+      generated_case_count: rows.length,
+    });
   }
 
   const GEN_TAGS = ["DESCRIPTION", "CONSTRAINTS", "VISIBLE_EXAMPLES"];
@@ -224,7 +238,10 @@ export function createTestCaseGeneratorService(deps: TestCaseGeneratorDeps) {
     try {
       verifiedOutput = JSON.parse(raw.trim());
     } catch {
-      logger.warn({ raw: raw.slice(0, 200) }, "Verification LLM returned invalid JSON");
+      logger.warn({
+        event: "testcase_verification_response_invalid",
+        raw_preview: raw.slice(0, 200),
+      });
       return false;
     }
     return JSON.stringify(verifiedOutput) === JSON.stringify(testCase.expectedOutput);
@@ -239,16 +256,20 @@ export function createTestCaseGeneratorService(deps: TestCaseGeneratorDeps) {
           return;
         } catch (err) {
           lastError = err;
-          logger.warn(
-            { err, problemId: ctx.problemId, attempt },
-            "Test case generation attempt failed",
-          );
+          logger.warn({
+            event: "testcase_generation_attempt_failed",
+            err,
+            problem_id: ctx.problemId,
+            attempt: attempt + 1,
+          });
         }
       }
-      logger.error(
-        { err: lastError, problemId: ctx.problemId },
-        "Test case generation failed after retries",
-      );
+      logger.error({
+        event: "testcase_generation_failed",
+        err: lastError,
+        problem_id: ctx.problemId,
+        max_attempts: 2,
+      });
     },
   };
 }
