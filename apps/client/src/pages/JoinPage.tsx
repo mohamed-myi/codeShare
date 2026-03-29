@@ -1,12 +1,15 @@
 import type { RoomInfoResponse } from "@codeshare/shared";
+import { CLIENT_LOG_EVENTS } from "@codeshare/shared";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { checkRoom } from "../lib/api.js";
+import { getBrowserLogger } from "../lib/logger.ts";
 
 export function JoinPage() {
   const { roomCode } = useParams<{ roomCode: string }>();
   const navigate = useNavigate();
+  const logger = getBrowserLogger(window.location.pathname);
   const [displayName, setDisplayName] = useState("");
   const [roomInfo, setRoomInfo] = useState<RoomInfoResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -44,8 +47,18 @@ export function JoinPage() {
   function handleJoin() {
     const trimmed = displayName.trim();
     if (!trimmed || !roomCode) return;
-    sessionStorage.setItem("displayName", trimmed);
-    navigate(`/room/${roomCode}/session`);
+    try {
+      sessionStorage.setItem("displayName", trimmed);
+      navigate(`/room/${roomCode}/session`);
+    } catch (error) {
+      void logger.error({
+        event: CLIENT_LOG_EVENTS.CLIENT_SESSION_PERSIST_FAILED,
+        error: error instanceof Error ? error : new Error("Failed to store display name."),
+        context: {
+          storage_key: "displayName",
+        },
+      });
+    }
   }
 
   if (loading) {

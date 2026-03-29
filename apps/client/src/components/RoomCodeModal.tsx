@@ -1,5 +1,7 @@
+import { CLIENT_LOG_EVENTS } from "@codeshare/shared";
 import { Check, Copy, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { getBrowserLogger } from "../lib/logger.ts";
 
 interface RoomCodeModalProps {
   isOpen: boolean;
@@ -11,6 +13,7 @@ type CopiedField = "code" | "url" | null;
 
 export function RoomCodeModal({ isOpen, onClose, roomCode }: RoomCodeModalProps) {
   const [copiedField, setCopiedField] = useState<CopiedField>(null);
+  const logger = getBrowserLogger(window.location.pathname);
 
   useEffect(() => {
     if (!isOpen) setCopiedField(null);
@@ -37,8 +40,15 @@ export function RoomCodeModal({ isOpen, onClose, roomCode }: RoomCodeModalProps)
     try {
       await navigator.clipboard.writeText(text);
       setCopiedField(field);
-    } catch {
-      // Clipboard API unavailable
+    } catch (error) {
+      await logger.warn({
+        event: CLIENT_LOG_EVENTS.CLIENT_CLIPBOARD_COPY_FAILED,
+        roomCode,
+        error: error instanceof Error ? error : new Error("Clipboard copy failed."),
+        context: {
+          copied_field: field,
+        },
+      });
     }
   }
 

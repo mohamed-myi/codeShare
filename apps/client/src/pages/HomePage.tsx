@@ -1,9 +1,11 @@
 import type { RoomMode } from "@codeshare/shared";
+import { CLIENT_LOG_EVENTS } from "@codeshare/shared";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Select } from "../components/Select.tsx";
 import { checkRoom, createRoom } from "../lib/api.js";
+import { getBrowserLogger } from "../lib/logger.ts";
 import {
   formatRoomCode,
   isRoomCodeComplete,
@@ -15,6 +17,7 @@ type Tab = "create" | "join";
 
 export function HomePage() {
   const navigate = useNavigate();
+  const logger = getBrowserLogger(window.location.pathname);
   const [displayName, setDisplayName] = useState("");
   const [mode, setMode] = useState<RoomMode>("collaboration");
   const [loading, setLoading] = useState(false);
@@ -44,7 +47,18 @@ export function HomePage() {
 
     try {
       const { roomCode } = await createRoom(mode, trimmed);
-      sessionStorage.setItem("displayName", trimmed);
+      try {
+        sessionStorage.setItem("displayName", trimmed);
+      } catch (error) {
+        await logger.error({
+          event: CLIENT_LOG_EVENTS.CLIENT_SESSION_PERSIST_FAILED,
+          error: error instanceof Error ? error : new Error("Failed to store display name."),
+          context: {
+            storage_key: "displayName",
+          },
+        });
+        throw error;
+      }
       navigate(`/room/${roomCode}/session`);
     } catch {
       setError("Failed to create room. Please try again.");
@@ -81,7 +95,18 @@ export function HomePage() {
         setLoading(false);
         return;
       }
-      sessionStorage.setItem("displayName", trimmed);
+      try {
+        sessionStorage.setItem("displayName", trimmed);
+      } catch (error) {
+        await logger.error({
+          event: CLIENT_LOG_EVENTS.CLIENT_SESSION_PERSIST_FAILED,
+          error: error instanceof Error ? error : new Error("Failed to store display name."),
+          context: {
+            storage_key: "displayName",
+          },
+        });
+        throw error;
+      }
       navigate(`/room/${normalized}/session`);
     } catch {
       setError("Failed to join room. Please try again.");

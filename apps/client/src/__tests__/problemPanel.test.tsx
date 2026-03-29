@@ -93,6 +93,14 @@ describe("ProblemPanel - Hint integration", () => {
     expect(screen.queryByText(/Get Hint/)).toBeNull();
   });
 
+  it("shows request hint button and calls onRequestHint when available", () => {
+    const onRequestHint = vi.fn();
+    render(<ProblemPanel problem={mockProblem} hint={{ ...baseHintProps, onRequestHint }} />);
+
+    fireEvent.click(screen.getByTestId("request-hint-button"));
+    expect(onRequestHint).toHaveBeenCalledOnce();
+  });
+
   it("does not show hint button when hints exhausted", () => {
     render(
       <ProblemPanel

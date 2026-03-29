@@ -1,4 +1,6 @@
+import { CLIENT_LOG_EVENTS } from "@codeshare/shared";
 import { useCallback, useState } from "react";
+import { getBrowserLogger } from "../lib/logger.ts";
 
 type ResultsTab = "testcases" | "results";
 
@@ -35,7 +37,14 @@ function readFromStorage(): LayoutState {
       return parsed as LayoutState;
     }
     return DEFAULT_STATE;
-  } catch {
+  } catch (error) {
+    void getBrowserLogger(window.location.pathname).warn({
+      event: CLIENT_LOG_EVENTS.CLIENT_STORAGE_READ_FAILED,
+      error: error instanceof Error ? error : new Error("Failed to read local storage."),
+      context: {
+        storage_key: STORAGE_KEY,
+      },
+    });
     return DEFAULT_STATE;
   }
 }
@@ -43,8 +52,14 @@ function readFromStorage(): LayoutState {
 function writeToStorage(state: LayoutState): void {
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch {
-    // window.localStorage may be full or unavailable
+  } catch (error) {
+    void getBrowserLogger(window.location.pathname).warn({
+      event: CLIENT_LOG_EVENTS.CLIENT_STORAGE_WRITE_FAILED,
+      error: error instanceof Error ? error : new Error("Failed to write local storage."),
+      context: {
+        storage_key: STORAGE_KEY,
+      },
+    });
   }
 }
 

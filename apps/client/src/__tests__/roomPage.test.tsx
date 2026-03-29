@@ -1,6 +1,7 @@
 import { type PendingHintRequest, SocketEvents } from "@codeshare/shared";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createMockLocalStorage } from "./utils/mock-localStorage.js";
 
 const mockRoomState = vi.hoisted(() => ({
   state: {
@@ -95,6 +96,17 @@ vi.mock("react-resizable-panels", () => ({
 
 import { SolverPage } from "../pages/SolverPage.tsx";
 
+const { mock: mockLocalStorage } = createMockLocalStorage();
+
+beforeEach(() => {
+  vi.stubGlobal("localStorage", mockLocalStorage);
+  Object.defineProperty(window, "localStorage", {
+    value: mockLocalStorage,
+    writable: true,
+    configurable: true,
+  });
+});
+
 afterEach(() => {
   mockRoomState.state.users = [];
   mockRoomState.state.roomCode = "abc-xyz";
@@ -114,6 +126,8 @@ afterEach(() => {
   mockHints.approveHint.mockReset();
   mockHints.denyHint.mockReset();
   mockSocket.emit.mockReset();
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 describe("SolverPage", () => {
@@ -270,6 +284,14 @@ describe("SolverPage", () => {
     expect(screen.getByText("Select a problem to begin.")).toBeDefined();
   });
 
+  it("auto-switches to the results tab when execution starts", () => {
+    mockRoomState.state.executionInProgress = true;
+
+    render(<SolverPage />);
+
+    expect(screen.getByTestId("execution-running-state")).toBeDefined();
+  });
+
   it("opens import dialog and emits problem:import", () => {
     mockRoomState.state.currentUserId = "u1";
     mockRoomState.state.users = [
@@ -288,5 +310,23 @@ describe("SolverPage", () => {
     expect(mockSocket.emit).toHaveBeenCalledWith(SocketEvents.PROBLEM_IMPORT, {
       leetcodeUrl: "https://leetcode.com/problems/two-sum/",
     });
+  });
+
+  it("closes the import dialog after a successful import", () => {
+    mockRoomState.state.currentUserId = "u1";
+    mockRoomState.state.users = [
+      { id: "u1", displayName: "Alice", role: "peer", connected: true },
+      { id: "u2", displayName: "Bob", role: "peer", connected: true },
+    ];
+
+    const view = render(<SolverPage />);
+
+    fireEvent.click(screen.getByText("Import"));
+    expect(screen.getByTestId("import-dialog")).toBeDefined();
+
+    mockRoomState.state.importStatus = { status: "saved" };
+    view.rerender(<SolverPage />);
+
+    expect(screen.queryByTestId("import-dialog")).toBeNull();
   });
 });

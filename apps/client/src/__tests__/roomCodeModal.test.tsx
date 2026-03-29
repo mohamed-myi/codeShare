@@ -1,11 +1,25 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const mockBrowserLogger = vi.hoisted(() => ({
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+}));
+
+vi.mock("../lib/logger.ts", () => ({
+  getBrowserLogger: () => mockBrowserLogger,
+}));
+
 import { RoomCodeModal } from "../components/RoomCodeModal.js";
 
 const mockWriteText = vi.fn().mockResolvedValue(undefined);
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  mockBrowserLogger.info.mockReset();
+  mockBrowserLogger.warn.mockReset();
+  mockBrowserLogger.error.mockReset();
   Object.assign(navigator, {
     clipboard: { writeText: mockWriteText },
   });
@@ -47,6 +61,22 @@ describe("RoomCodeModal", () => {
     renderModal();
     fireEvent.click(screen.getByTestId("copy-url-button"));
     expect(mockWriteText).toHaveBeenCalledWith(expect.stringContaining("/room/abc-xyz"));
+  });
+
+  it("logs clipboard failures", async () => {
+    mockWriteText.mockRejectedValueOnce(new Error("clipboard denied"));
+
+    renderModal();
+    fireEvent.click(screen.getByTestId("copy-code-button"));
+
+    await waitFor(() => {
+      expect(mockBrowserLogger.warn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: "client_clipboard_copy_failed",
+          error: expect.objectContaining({ message: "clipboard denied" }),
+        }),
+      );
+    });
   });
 
   it("closes when X button is clicked", () => {

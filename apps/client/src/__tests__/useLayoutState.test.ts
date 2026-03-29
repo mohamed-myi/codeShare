@@ -1,7 +1,18 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { useLayoutState } from "../hooks/useLayoutState.ts";
 import { createMockLocalStorage } from "./utils/mock-localStorage.js";
+
+const mockBrowserLogger = vi.hoisted(() => ({
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+}));
+
+vi.mock("../lib/logger.ts", () => ({
+  getBrowserLogger: () => mockBrowserLogger,
+}));
+
+import { useLayoutState } from "../hooks/useLayoutState.ts";
 
 const STORAGE_KEY = "codeshare:layout";
 const { store, mock: mockStorage } = createMockLocalStorage();
@@ -18,6 +29,10 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  mockBrowserLogger.info.mockReset();
+  mockBrowserLogger.warn.mockReset();
+  mockBrowserLogger.error.mockReset();
+  vi.restoreAllMocks();
 });
 
 describe("useLayoutState", () => {
@@ -150,5 +165,39 @@ describe("useLayoutState", () => {
       resultsCollapsed: false,
       activeResultsTab: "testcases",
     });
+  });
+
+  it("logs localStorage read failures", () => {
+    vi.spyOn(mockStorage, "getItem").mockImplementation(() => {
+      throw new Error("storage unavailable");
+    });
+
+    renderHook(() => useLayoutState());
+
+    expect(mockBrowserLogger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: "client_storage_read_failed",
+        error: expect.objectContaining({ message: "storage unavailable" }),
+      }),
+    );
+  });
+
+  it("logs localStorage write failures", () => {
+    vi.spyOn(mockStorage, "setItem").mockImplementation(() => {
+      throw new Error("quota exceeded");
+    });
+
+    const { result } = renderHook(() => useLayoutState());
+
+    act(() => {
+      result.current.toggleProblemPanel();
+    });
+
+    expect(mockBrowserLogger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: "client_storage_write_failed",
+        error: expect.objectContaining({ message: "quota exceeded" }),
+      }),
+    );
   });
 });
