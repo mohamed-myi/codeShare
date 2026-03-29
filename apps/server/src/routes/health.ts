@@ -1,9 +1,29 @@
 import { pool } from "@codeshare/db";
-import type { HealthResponse } from "@codeshare/shared";
+import type { DependencyHealth, HealthResponse } from "@codeshare/shared";
 import type { FastifyInstance } from "fastify";
+import type { CircuitState } from "../lib/circuitBreaker.js";
 import { roomManager } from "../models/RoomManager.js";
 
-export async function healthRoutes(app: FastifyInstance): Promise<void> {
+export interface HealthRouteDeps {
+  getJudge0State?: () => CircuitState | undefined;
+  getGroqState?: () => CircuitState | undefined;
+}
+
+function toDependencyHealth(circuitState: CircuitState | undefined): DependencyHealth | undefined {
+  if (circuitState === undefined) return undefined;
+  return {
+    available: circuitState !== "open",
+    circuitState,
+  };
+}
+
+export async function healthRoutes(
+  app: FastifyInstance,
+  options?: { deps?: HealthRouteDeps },
+): Promise<void> {
+  const deps = options?.deps;
+  let previousState: HealthResponse["status"] | null = null;
+
   app.get("/api/health", async (request): Promise<HealthResponse> => {
     let dbConnected = true;
     try {
@@ -12,11 +32,36 @@ export async function healthRoutes(app: FastifyInstance): Promise<void> {
       dbConnected = false;
     }
 
+    const judge0State = deps?.getJudge0State?.();
+    const groqState = deps?.getGroqState?.();
+
+    const judge0 = toDependencyHealth(judge0State);
+    const groq = toDependencyHealth(groqState);
+
+    const isDegraded = !dbConnected || judge0State === "open";
+
     const response: HealthResponse = {
-      status: dbConnected ? "ok" : "degraded",
+      status: isDegraded ? "degraded" : "ok",
       roomCount: roomManager.getRoomCount(),
       dbConnected,
     };
+
+    if (judge0 !== undefined) response.judge0 = judge0;
+    if (groq !== undefined) response.groq = groq;
+
+    if (previousState !== null && previousState !== response.status) {
+      request.log.warn(
+        {
+          event: "service_health_state_changed",
+          dependency: "postgres",
+          previous_state: previousState,
+          next_state: response.status,
+          db_connected: dbConnected,
+        },
+        "Service health state changed",
+      );
+    }
+    previousState = response.status;
 
     const query = request.query as Record<string, string>;
     if (query.metrics === "memory") {

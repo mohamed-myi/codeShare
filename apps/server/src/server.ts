@@ -2,15 +2,25 @@ import type http from "node:http";
 import { testCaseRepository } from "@codeshare/db";
 import type { Logger } from "pino";
 import { Server as SocketIOServer } from "socket.io";
+import type { WebSocketServer } from "ws";
 import { createGroqClient } from "./clients/GroqClient.js";
 import { createJudge0Client } from "./clients/Judge0Client.js";
 import type { Config } from "./config.js";
+import type { CircuitState } from "./lib/circuitBreaker.js";
+import { roomCodeLogFields } from "./lib/logger.js";
 import { roomManager } from "./models/RoomManager.js";
 import { createScraperService } from "./services/ScraperService.js";
 import { createTestCaseGeneratorService } from "./services/TestCaseGeneratorService.js";
 import { setupSocketIO } from "./ws/socketio.js";
 import { registerUpgradeHandler } from "./ws/upgrade.js";
 import { setupYjsServer } from "./ws/yjs.js";
+
+export interface ServerResources {
+  io: SocketIOServer;
+  wss: WebSocketServer;
+  judge0Client: { getCircuitState(): CircuitState };
+  groqClient?: { getCircuitState(): CircuitState };
+}
 
 /**
  * Sets up the HTTP upgrade routing for dual WebSocket channels.
@@ -21,7 +31,7 @@ export function setupUpgradeRouting(
   httpServer: http.Server,
   config: Config,
   logger: Logger,
-): SocketIOServer {
+): ServerResources {
   roomManager.configureDefaults({
     submissionLimit: config.ROOM_MAX_SUBMISSIONS,
     importLimit: config.ROOM_MAX_IMPORTS,
@@ -102,8 +112,14 @@ export function setupUpgradeRouting(
   registerUpgradeHandler(httpServer, wss, io, logger);
 
   logger.info(
-    "WebSocket upgrade routing configured: /ws/socket (Socket.io), /ws/yjs (y-websocket)",
+    {
+      event: "websocket_upgrade_routing_configured",
+      socketio_path: "/ws/socket",
+      yjs_path: "/ws/yjs",
+      ...roomCodeLogFields(undefined),
+    },
+    "WebSocket upgrade routing configured",
   );
 
-  return io;
+  return { io, wss, judge0Client, groqClient };
 }

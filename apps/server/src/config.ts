@@ -1,5 +1,6 @@
 import { GLOBAL_LIMITS, ROOM_LIMITS, TIMEOUTS } from "@codeshare/shared";
 import { z } from "zod";
+import { writeBootstrapLog } from "./lib/logger.js";
 
 const optionalSecretSchema = z
   .string()
@@ -65,6 +66,10 @@ const envSchema = z.object({
   GROQ_TEMPERATURE: z.coerce.number().min(0).max(2).default(0.6),
   GROQ_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(15_000),
   LEETCODE_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000),
+  JUDGE0_CB_FAILURE_THRESHOLD: z.coerce.number().int().positive().default(5),
+  JUDGE0_CB_RESET_TIMEOUT_MS: z.coerce.number().int().positive().default(30_000),
+  GROQ_CB_FAILURE_THRESHOLD: z.coerce.number().int().positive().default(5),
+  GROQ_CB_RESET_TIMEOUT_MS: z.coerce.number().int().positive().default(30_000),
   ENABLE_LLM_TEST_GENERATION: booleanFromStringSchema.default("false"),
   LLM_TEST_GENERATION_MAX_CASES: z.coerce.number().int().positive().default(12),
   LLM_TEST_GEN_TEMPERATURE: z.coerce.number().min(0).max(2).default(0.3),
@@ -78,17 +83,28 @@ export type Config = z.infer<typeof envSchema>;
 export function loadConfig(): Config {
   const result = envSchema.safeParse(process.env);
   if (!result.success) {
-    console.error("Invalid environment variables:");
-    for (const issue of result.error.issues) {
-      console.error(`  ${issue.path.join(".")}: ${issue.message}`);
-    }
+    writeBootstrapLog({
+      level: "error",
+      event: "bootstrap_validation_failed",
+      invalid_fields: result.error.issues.map((issue) => issue.path.join(".")),
+      validation_errors: result.error.issues.map((issue) => ({
+        field: issue.path.join("."),
+        message: issue.message,
+      })),
+    });
     process.exit(1);
   }
 
   const config = result.data;
 
   if (config.NODE_ENV === "production" && config.ALLOWED_ORIGINS.length === 0) {
-    console.error("ALLOWED_ORIGINS must not be empty in production.");
+    writeBootstrapLog({
+      level: "error",
+      event: "bootstrap_configuration_rejected",
+      environment: config.NODE_ENV,
+      invalid_fields: ["ALLOWED_ORIGINS"],
+      reason: "production_origins_empty",
+    });
     process.exit(1);
   }
 

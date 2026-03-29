@@ -87,27 +87,46 @@ describe("loadConfig", () => {
   it("still fails when required non-Groq variables are missing", () => {
     setEnv({ JUDGE0_API_KEY: undefined });
 
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const stderrWrites: string[] = [];
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(((
+      chunk: string | Uint8Array,
+    ) => {
+      stderrWrites.push(String(chunk));
+      return true;
+    }) as typeof process.stderr.write);
     const exitSpy = vi.spyOn(process, "exit").mockImplementation(((code?: number) => {
       throw new Error(`process.exit:${code}`);
     }) as never);
 
     expect(() => loadConfig()).toThrow("process.exit:1");
     expect(exitSpy).toHaveBeenCalledWith(1);
-    expect(errorSpy).toHaveBeenCalled();
+    const logEntry = JSON.parse(stderrWrites.join("").trim()) as Record<string, unknown>;
+    expect(stderrSpy).toHaveBeenCalled();
+    expect(logEntry.event).toBe("bootstrap_validation_failed");
+    expect(logEntry.service).toBe("codeshare-server");
+    expect(logEntry.invalid_fields).toContain("JUDGE0_API_KEY");
   });
 
   it("rejects empty JUDGE0_API_KEY", () => {
     setEnv({ JUDGE0_API_KEY: "" });
 
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const stderrWrites: string[] = [];
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(((
+      chunk: string | Uint8Array,
+    ) => {
+      stderrWrites.push(String(chunk));
+      return true;
+    }) as typeof process.stderr.write);
     const exitSpy = vi.spyOn(process, "exit").mockImplementation(((code?: number) => {
       throw new Error(`process.exit:${code}`);
     }) as never);
 
     expect(() => loadConfig()).toThrow("process.exit:1");
     expect(exitSpy).toHaveBeenCalledWith(1);
-    expect(errorSpy).toHaveBeenCalled();
+    const logEntry = JSON.parse(stderrWrites.join("").trim()) as Record<string, unknown>;
+    expect(stderrSpy).toHaveBeenCalled();
+    expect(logEntry.event).toBe("bootstrap_validation_failed");
+    expect(logEntry.invalid_fields).toContain("JUDGE0_API_KEY");
   });
 
   it("parses stricter security settings", () => {
@@ -145,5 +164,33 @@ describe("loadConfig", () => {
     expect(config.ROOM_MAX_IMPORTS).toBe(2);
     expect(config.ROOM_MAX_CUSTOM_TEST_CASES).toBe(3);
     expect(config.IMPORTS_DAILY_LIMIT).toBe(8);
+  });
+
+  it("emits a structured configuration rejection when production origins are empty", () => {
+    setEnv({
+      NODE_ENV: "production",
+      ALLOWED_ORIGINS: " , ",
+      JUDGE0_API_KEY: "super-secret-key",
+    });
+
+    const stderrWrites: string[] = [];
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(((
+      chunk: string | Uint8Array,
+    ) => {
+      stderrWrites.push(String(chunk));
+      return true;
+    }) as typeof process.stderr.write);
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation(((code?: number) => {
+      throw new Error(`process.exit:${code}`);
+    }) as never);
+
+    expect(() => loadConfig()).toThrow("process.exit:1");
+    expect(exitSpy).toHaveBeenCalledWith(1);
+
+    const logEntry = JSON.parse(stderrWrites.join("").trim()) as Record<string, unknown>;
+    expect(stderrSpy).toHaveBeenCalled();
+    expect(logEntry.event).toBe("bootstrap_configuration_rejected");
+    expect(logEntry.invalid_fields).toEqual(["ALLOWED_ORIGINS"]);
+    expect(JSON.stringify(logEntry)).not.toContain("super-secret-key");
   });
 });

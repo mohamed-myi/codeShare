@@ -176,6 +176,10 @@ export interface EventRejectedPayload {
   retryAfterSeconds?: number;
 }
 
+export interface YjsTokenRotatedPayload {
+  yjsToken: string;
+}
+
 // --- API Response Types ---
 
 export interface ProblemListItem {
@@ -191,10 +195,17 @@ export interface ProblemDetail extends Problem {
   boilerplate: BoilerplateTemplate | null;
 }
 
+export interface DependencyHealth {
+  available: boolean;
+  circuitState: "closed" | "open" | "half_open";
+}
+
 export interface HealthResponse {
   status: "ok" | "degraded";
   roomCount: number;
   dbConnected: boolean;
+  judge0?: DependencyHealth;
+  groq?: DependencyHealth;
   heapUsedMB?: number;
   heapTotalMB?: number;
   rssMB?: number;
