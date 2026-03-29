@@ -1,23 +1,11 @@
-import type { PendingHintRequest, Problem, RoomMode } from "@codeshare/shared";
-
-interface HintProps {
-  hintsUsed: number;
-  hintLimit: number;
-  pendingHintRequest: PendingHintRequest | null;
-  isHintStreaming: boolean;
-  executionInProgress: boolean;
-  hintText: string;
-  currentUserId: string | null;
-  mode: RoomMode;
-  onRequestHint: () => void;
-  onApproveHint: () => void;
-  onDenyHint: () => void;
-}
+import type { Problem } from "@codeshare/shared";
+import type { ReactNode } from "react";
+import { ProblemHintStatus, type ProblemHintStatusProps } from "./ProblemHintStatus.tsx";
 
 interface ProblemPanelProps {
   problem: Problem | null;
   emptyMessage?: string;
-  hint?: HintProps;
+  hint?: ProblemHintStatusProps;
 }
 
 const DIFFICULTY_STYLES: Record<string, string> = {
@@ -58,7 +46,7 @@ export function ProblemPanel({
         </span>
       </div>
 
-      {hint && <HintStatus hint={hint} />}
+      {hint && <ProblemHintStatus {...hint} />}
 
       <div className="whitespace-pre-wrap text-sm leading-7 text-[var(--color-text-secondary)]">
         {renderDescription(problem.description)}
@@ -94,134 +82,24 @@ export function ProblemPanel({
   );
 }
 
-function HintStatus({ hint }: { hint: HintProps }) {
-  const isRequester = hint.pendingHintRequest?.requestedBy === hint.currentUserId;
-  const hasCompletedHint = !hint.isHintStreaming && hint.hintText.trim().length > 0;
-  const hintsRemaining = remainingHints(hint.hintsUsed, hint.hintLimit);
-  const canRequestHint =
-    !hint.pendingHintRequest &&
-    !hint.isHintStreaming &&
-    !hint.executionInProgress &&
-    hintsRemaining > 0;
-
-  if (hint.mode !== "collaboration") {
-    return (
-      <div
-        className="border-y border-[var(--color-border-subtle)] py-4"
-        data-testid="interview-hint-notice"
-      >
-        <p className="text-sm text-[var(--color-text-tertiary)]">
-          Hints are not available in interview mode.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <>
-      <div className="flex items-center justify-between gap-3 border-y border-[var(--color-border-subtle)] py-4">
-        <p className="text-sm text-[var(--color-text-secondary)]">
-          Hints remaining: {hintsRemaining}/{hint.hintLimit}
-        </p>
-        <button
-          type="button"
-          data-testid="request-hint-button"
-          className="ui-flat-button px-3 py-1.5 text-xs"
-          disabled={!canRequestHint}
-          onClick={hint.onRequestHint}
-        >
-          Request Hint
-        </button>
-      </div>
-
-      {hint.pendingHintRequest && isRequester && (
-        <div className="border-l border-[var(--color-warning)] pl-4 text-sm text-[var(--color-warning-text)]">
-          Waiting for partner&apos;s approval...
-        </div>
-      )}
-
-      {hint.pendingHintRequest && !isRequester && (
-        <div className="border-l border-[var(--color-info)] pl-4">
-          <div data-testid="hint-consent-card">
-            <p className="text-sm text-[var(--color-info-text)]">Your partner wants a hint.</p>
-            <div className="mt-3 flex gap-4">
-              <button
-                type="button"
-                data-testid="approve-hint-button"
-                className="ui-flat-button px-3 py-1.5 text-xs"
-                onClick={hint.onApproveHint}
-              >
-                Approve
-              </button>
-              <button
-                type="button"
-                data-testid="deny-hint-button"
-                className="ui-ghost-button px-0 py-1.5 text-xs text-[var(--color-info-text)]"
-                onClick={hint.onDenyHint}
-              >
-                Deny
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {hint.isHintStreaming && (
-        <div
-          className="border-l border-[var(--color-border-subtle)] pl-4 text-sm leading-7 text-[var(--color-text-secondary)]"
-          data-testid="hint-output"
-        >
-          <span>{hint.hintText}</span>
-          <span
-            aria-hidden="true"
-            className="ml-1 inline-block h-4 w-2 animate-pulse rounded-sm bg-[var(--color-accent)] align-middle"
-          />
-        </div>
-      )}
-
-      {hasCompletedHint && (
-        <div
-          className="border-l border-[var(--color-border-subtle)] pl-4 text-sm leading-7 text-[var(--color-text-secondary)]"
-          data-testid="hint-output"
-        >
-          {hint.hintText}
-        </div>
-      )}
-
-      {!hint.pendingHintRequest && !hint.isHintStreaming && hintsRemaining === 0 && (
-        <p className="text-sm text-[var(--color-text-tertiary)]">All hints used</p>
-      )}
-
-      {hint.executionInProgress && !hint.pendingHintRequest && !hint.isHintStreaming && (
-        <p className="text-sm text-[var(--color-text-tertiary)]">
-          Finish the current execution before requesting a hint.
-        </p>
-      )}
-    </>
-  );
-}
-
-function remainingHints(hintsUsed: number, hintLimit: number): number {
-  return Math.max(hintLimit - hintsUsed, 0);
-}
-
-function renderDescription(text: string): React.ReactNode {
+function renderDescription(text: string): ReactNode {
   const parts = text.split(/(`[^`]+`)/g);
-  return parts.map((part, index) => {
+  let offset = 0;
+
+  return parts.map((part) => {
+    const key = `${part.startsWith("`") && part.endsWith("`") ? "code" : "text"}-${offset}`;
+    offset += part.length;
+
     if (part.startsWith("`") && part.endsWith("`")) {
       return (
-        // biome-ignore lint/suspicious/noArrayIndexKey: stable split() output, never reordered
         <code
-          key={`${part}-${index}`}
+          key={key}
           className="border-b border-[var(--color-border-subtle)] px-0.5 font-[var(--font-family-mono)] text-xs text-[var(--color-text-primary)]"
         >
           {part.slice(1, -1)}
         </code>
       );
     }
-    return (
-      // biome-ignore lint/suspicious/noArrayIndexKey: stable split() output, never reordered
-      <span key={`text-${index}`}>{part}</span>
-    );
+    return <span key={key}>{part}</span>;
   });
 }
