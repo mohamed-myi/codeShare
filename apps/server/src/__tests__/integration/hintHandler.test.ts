@@ -1,8 +1,10 @@
+import { Writable } from "node:stream";
 import type { HintDonePayload, HintPendingPayload } from "@codeshare/shared";
 import { SocketEvents, TIMEOUTS } from "@codeshare/shared";
 import type { Socket as ClientSocket } from "socket.io-client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as Y from "yjs";
+import type { IpRateLimiter } from "../../lib/ipRateLimiter.js";
 import { createLogger } from "../../lib/logger.js";
 import { roomManager } from "../../models/RoomManager.js";
 import { setupSocketIO } from "../../ws/socketio.js";
@@ -45,7 +47,26 @@ vi.mock("../../services/HintService.js", () => ({
   },
 }));
 
-const logger = createLogger("silent");
+function createMemoryStream(chunks: string[]): Writable {
+  return new Writable({
+    write(chunk, _encoding, callback) {
+      chunks.push(String(chunk));
+      callback();
+    },
+  });
+}
+
+function parseLogEntries(chunks: string[]): Array<Record<string, unknown>> {
+  return chunks
+    .join("")
+    .trim()
+    .split("\n")
+    .filter(Boolean)
+    .map((entry) => JSON.parse(entry) as Record<string, unknown>);
+}
+
+let logger = createLogger("silent");
+let logChunks: string[] = [];
 
 const VALID_UUID = "00000000-0000-4000-8000-000000000001";
 
@@ -63,6 +84,16 @@ describe("Hint handler guards", () => {
       await cleanup();
       cleanup = undefined;
     }
+  });
+
+  beforeEach(() => {
+    logChunks = [];
+    logger = createLogger("info", {
+      environment: "test",
+      stream: createMemoryStream(logChunks),
+      enablePretty: false,
+      enableFileLogging: false,
+    });
   });
 
   async function setup() {
@@ -168,6 +199,16 @@ describe("Hint handler - single user stored hint delivery", () => {
     mockFindHintsByProblemId.mockReset();
   });
 
+  beforeEach(() => {
+    logChunks = [];
+    logger = createLogger("info", {
+      environment: "test",
+      stream: createMemoryStream(logChunks),
+      enablePretty: false,
+      enableFileLogging: false,
+    });
+  });
+
   async function setup() {
     const room = roomManager.createRoom("collaboration");
     roomCodes.push(room.roomCode);
@@ -232,6 +273,29 @@ describe("Hint handler - single user stored hint delivery", () => {
     expect(payload.hintsRemaining).toBe(1);
     expect(room.hintsUsed).toBe(2);
   });
+
+  it("rejects a second request during the cooldown window", async () => {
+    const { room, client } = await setup();
+    room.problemId = VALID_UUID;
+    room.hintsUsed = 0;
+    room.hintLimit = 3;
+
+    mockFindHintsByProblemId.mockResolvedValue([
+      { id: "h1", problemId: VALID_UUID, hintText: "First hint", orderIndex: 1 },
+      { id: "h2", problemId: VALID_UUID, hintText: "Second hint", orderIndex: 2 },
+    ]);
+
+    const doneP = waitForEvent<HintDonePayload>(client, SocketEvents.HINT_DONE);
+    client.emit(SocketEvents.HINT_REQUEST);
+    await doneP;
+
+    const errorP = waitForEvent<{ message: string }>(client, SocketEvents.HINT_ERROR);
+    client.emit(SocketEvents.HINT_REQUEST);
+    const payload = await errorP;
+
+    expect(payload.message).toBe("Please wait a few seconds before requesting another hint.");
+    expect(room.hintsUsed).toBe(1);
+  });
 });
 
 const mockProblem = {
@@ -268,6 +332,16 @@ describe("Hint handler - single user LLM streaming fallback", () => {
     mockFindProblemById.mockReset();
   });
 
+  beforeEach(() => {
+    logChunks = [];
+    logger = createLogger("info", {
+      environment: "test",
+      stream: createMemoryStream(logChunks),
+      enablePretty: false,
+      enableFileLogging: false,
+    });
+  });
+
   async function* mockStream(chunks: string[]): AsyncGenerator<string> {
     for (const chunk of chunks) yield chunk;
   }
@@ -276,6 +350,8 @@ describe("Hint handler - single user LLM streaming fallback", () => {
     groqClient?: { streamCompletion: ReturnType<typeof vi.fn> };
     enableLLMHintFallback?: boolean;
     enableImportedProblemHints?: boolean;
+    ipRateLimiter?: IpRateLimiter;
+    llmDailyLimit?: number;
   }) {
     const room = roomManager.createRoom("collaboration");
     roomCodes.push(room.roomCode);
@@ -293,6 +369,8 @@ describe("Hint handler - single user LLM streaming fallback", () => {
       groqClient: opts?.groqClient,
       enableLLMHintFallback: opts?.enableLLMHintFallback,
       enableImportedProblemHints: opts?.enableImportedProblemHints,
+      ipRateLimiter: opts?.ipRateLimiter,
+      llmDailyLimit: opts?.llmDailyLimit,
     });
 
     const client = createTestClient(server.port, room.roomCode);
@@ -365,6 +443,78 @@ describe("Hint handler - single user LLM streaming fallback", () => {
     expect(room.hintStreaming).toBe(false);
   });
 
+  it("maps policy-blocked stream errors to the blocked output message", async () => {
+    async function* failingStream(): AsyncGenerator<string> {
+      yield "";
+      throw new Error("Generated solution included code");
+    }
+    const mockGroqClient = {
+      streamCompletion: vi.fn().mockReturnValue(failingStream()),
+    };
+    const { room, client } = await setup({
+      groqClient: mockGroqClient,
+      enableLLMHintFallback: true,
+    });
+    room.problemId = VALID_UUID;
+    room.hintsUsed = 0;
+    room.hintLimit = 2;
+
+    mockFindHintsByProblemId.mockResolvedValue([]);
+    mockFindProblemById.mockResolvedValue(mockProblem);
+
+    const errorP = waitForEvent<{ message: string }>(client, SocketEvents.HINT_ERROR);
+    client.emit(SocketEvents.HINT_REQUEST);
+    const payload = await errorP;
+
+    expect(payload.message).toBe("Generated hint was blocked by the output policy.");
+    expect(room.hintsUsed).toBe(0);
+    expect(room.hintStreaming).toBe(false);
+  });
+
+  it("logs Groq dependency metadata when hint streaming fails", async () => {
+    async function* failingStream(): AsyncGenerator<string> {
+      yield "";
+      throw Object.assign(new Error("Groq API error: 429"), {
+        dependency: "groq",
+        operation: "stream_completion",
+        errorType: "http_error",
+        statusCode: 429,
+        isTimeout: false,
+      });
+    }
+    const mockGroqClient = {
+      streamCompletion: vi.fn().mockReturnValue(failingStream()),
+    };
+    const { room, client } = await setup({
+      groqClient: mockGroqClient,
+      enableLLMHintFallback: true,
+    });
+    room.problemId = VALID_UUID;
+    room.hintsUsed = 0;
+    room.hintLimit = 2;
+
+    mockFindHintsByProblemId.mockResolvedValue([]);
+    mockFindProblemById.mockResolvedValue(mockProblem);
+
+    const errorP = waitForEvent<{ message: string }>(client, SocketEvents.HINT_ERROR);
+    client.emit(SocketEvents.HINT_REQUEST);
+    await errorP;
+
+    await new Promise((resolve) => logger.flush(resolve));
+    const hintFailure = parseLogEntries(logChunks).find(
+      (entry) => entry.event === "hint_stream_failed",
+    );
+
+    expect(hintFailure).toBeDefined();
+    expect(hintFailure).toMatchObject({
+      dependency: "groq",
+      operation: "stream_completion",
+      error_type: "http_error",
+      status_code: 429,
+      is_timeout: false,
+    });
+  });
+
   it("emits HINT_ERROR when groqClient is not configured and fallback is needed", async () => {
     // No groqClient passed to setup
     const { room, client } = await setup({ enableLLMHintFallback: true });
@@ -383,6 +533,30 @@ describe("Hint handler - single user LLM streaming fallback", () => {
     expect(room.hintStreaming).toBe(false);
   });
 
+  it("rejects fallback when the problem lookup returns null", async () => {
+    const mockGroqClient = {
+      streamCompletion: vi.fn().mockReturnValue(mockStream(["Hello"])),
+    };
+    const { room, client } = await setup({
+      groqClient: mockGroqClient,
+      enableLLMHintFallback: true,
+    });
+    room.problemId = VALID_UUID;
+    room.hintsUsed = 0;
+    room.hintLimit = 2;
+
+    mockFindHintsByProblemId.mockResolvedValue([]);
+    mockFindProblemById.mockResolvedValue(null);
+
+    const errorP = waitForEvent<{ message: string }>(client, SocketEvents.HINT_ERROR);
+    client.emit(SocketEvents.HINT_REQUEST);
+    const payload = await errorP;
+
+    expect(payload.message).toBe("Problem not found.");
+    expect(room.hintsUsed).toBe(0);
+    expect(mockGroqClient.streamCompletion).not.toHaveBeenCalled();
+  });
+
   it("rejects fallback when llm hint fallback is disabled", async () => {
     const { room, client } = await setup({ enableLLMHintFallback: false });
     room.problemId = VALID_UUID;
@@ -396,6 +570,61 @@ describe("Hint handler - single user LLM streaming fallback", () => {
     const payload = await errorP;
 
     expect(payload.message).toBe("No more curated hints available for this problem.");
+  });
+
+  it("rejects fallback when the global LLM daily limit is reached", async () => {
+    const mockGroqClient = {
+      streamCompletion: vi.fn().mockReturnValue(mockStream(["Hello"])),
+    };
+    const { room, client } = await setup({
+      groqClient: mockGroqClient,
+      enableLLMHintFallback: true,
+      llmDailyLimit: 0,
+    });
+    room.problemId = VALID_UUID;
+    room.hintsUsed = 0;
+    room.hintLimit = 2;
+
+    mockFindHintsByProblemId.mockResolvedValue([]);
+
+    const errorP = waitForEvent<{ message: string }>(client, SocketEvents.HINT_ERROR);
+    client.emit(SocketEvents.HINT_REQUEST);
+    const payload = await errorP;
+
+    expect(payload.message).toBe("Daily AI hint limit reached. Please try again tomorrow.");
+    expect(mockGroqClient.streamCompletion).not.toHaveBeenCalled();
+  });
+
+  it("rejects fallback when the IP limiter denies the request", async () => {
+    const ipRateLimiter = {
+      clear: vi.fn(),
+      consume: vi.fn((bucket: string) => {
+        if (bucket === "llm-hint") {
+          return { allowed: false, retryAfterSeconds: 42 };
+        }
+        return { allowed: true, retryAfterSeconds: 0 };
+      }),
+    } as unknown as IpRateLimiter;
+    const mockGroqClient = {
+      streamCompletion: vi.fn().mockReturnValue(mockStream(["Hello"])),
+    };
+    const { room, client } = await setup({
+      groqClient: mockGroqClient,
+      enableLLMHintFallback: true,
+      ipRateLimiter,
+    });
+    room.problemId = VALID_UUID;
+    room.hintsUsed = 0;
+    room.hintLimit = 2;
+
+    mockFindHintsByProblemId.mockResolvedValue([]);
+
+    const errorP = waitForEvent<{ message: string }>(client, SocketEvents.HINT_ERROR);
+    client.emit(SocketEvents.HINT_REQUEST);
+    const payload = await errorP;
+
+    expect(payload.message).toBe("Too many hint requests. Try again in 42s.");
+    expect(mockGroqClient.streamCompletion).not.toHaveBeenCalled();
   });
 
   it("rejects LLM hint when per-room LLM call limit is reached", async () => {
@@ -488,6 +717,16 @@ describe("Hint handler - two-user mutual consent flow", () => {
       cleanup = undefined;
     }
     mockFindHintsByProblemId.mockReset();
+  });
+
+  beforeEach(() => {
+    logChunks = [];
+    logger = createLogger("info", {
+      environment: "test",
+      stream: createMemoryStream(logChunks),
+      enablePretty: false,
+      enableFileLogging: false,
+    });
   });
 
   async function setup() {

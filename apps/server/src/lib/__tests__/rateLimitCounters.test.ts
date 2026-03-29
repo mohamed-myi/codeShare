@@ -49,17 +49,33 @@ describe("GlobalCounters", () => {
     });
   });
 
+  describe("canCallLLM / recordLLMCall", () => {
+    it("allows llm calls under the daily limit", () => {
+      expect(globalCounters.canCallLLM(5)).toBe(true);
+    });
+
+    it("recordLLMCall increments and blocks at the limit", () => {
+      globalCounters.recordLLMCall();
+      globalCounters.recordLLMCall();
+
+      expect(globalCounters.canCallLLM(2)).toBe(false);
+    });
+  });
+
   describe("daily rollover", () => {
     it("resets counters when the day changes", () => {
       globalCounters.reserveSubmission(1);
       globalCounters.recordImport();
+      globalCounters.recordLLMCall();
       expect(globalCounters.canSubmit(1)).toBe(false);
       expect(globalCounters.canImport(1)).toBe(false);
+      expect(globalCounters.canCallLLM(1)).toBe(false);
 
       // Advance 48h to guarantee a local-day boundary in any timezone
       vi.setSystemTime(new Date("2099-01-03T12:00:00Z"));
       expect(globalCounters.canSubmit(1)).toBe(true);
       expect(globalCounters.canImport(1)).toBe(true);
+      expect(globalCounters.canCallLLM(1)).toBe(true);
     });
 
     it("does not reset counters within the same day", () => {
