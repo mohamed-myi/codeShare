@@ -1,5 +1,5 @@
 import { SocketEvents } from "@codeshare/shared";
-import { requestIdLogField, roomCodeLogFields } from "../lib/logger.js";
+import { handlerLogContext } from "../lib/handlerContext.js";
 import type { Room } from "../models/Room.js";
 import type { RoomHandlerContext } from "./roomHandlerCore.js";
 
@@ -30,8 +30,7 @@ export function handleDisconnect(context: RoomHandlerContext): void {
   context.logger.info(
     {
       event: "room_user_disconnected",
-      ...roomCodeLogFields(room.roomCode),
-      ...requestIdLogField(context.socket),
+      ...handlerLogContext(room.roomCode, context.socket),
       user_id: user.id,
     },
     "User disconnected, grace period started",
@@ -48,8 +47,7 @@ function removeDisconnectedUser(context: RoomHandlerContext, room: Room, userId:
   context.logger.info(
     {
       event: "room_user_removed_after_grace_period",
-      ...roomCodeLogFields(room.roomCode),
-      ...requestIdLogField(context.socket),
+      ...handlerLogContext(room.roomCode, context.socket),
       user_id: userId,
     },
     "User removed after grace period",
@@ -61,8 +59,7 @@ function removeDisconnectedUser(context: RoomHandlerContext, room: Room, userId:
     context.logger.info(
       {
         event: "yjs_token_rotated",
-        ...roomCodeLogFields(room.roomCode),
-        ...requestIdLogField(context.socket),
+        ...handlerLogContext(room.roomCode, context.socket),
         reason: "user_removed",
       },
       "Yjs token rotated after user removal",
@@ -75,8 +72,7 @@ function removeDisconnectedUser(context: RoomHandlerContext, room: Room, userId:
   context.logger.info(
     {
       event: "room_destroyed",
-      ...roomCodeLogFields(room.roomCode),
-      ...requestIdLogField(context.socket),
+      ...handlerLogContext(room.roomCode, context.socket),
       duration_ms: durationMs,
       submissions_used: room.submissionsUsed,
     },

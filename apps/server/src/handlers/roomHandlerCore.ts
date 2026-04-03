@@ -7,9 +7,11 @@ import type {
 import { SocketEvents, userJoinSchema } from "@codeshare/shared";
 import type { Logger } from "pino";
 import type { Server, Socket } from "socket.io";
+import { handlerLogContext } from "../lib/handlerContext.js";
 import type { IpRateLimiter } from "../lib/ipRateLimiter.js";
-import { requestIdLogField, roomCodeLogFields } from "../lib/logger.js";
+import { getClientIp } from "../lib/ipUtils.js";
 import { normalizeRoomCode } from "../lib/roomCode.js";
+import { validatePayloadOrReject } from "../lib/validation.js";
 import type { Room } from "../models/Room.js";
 import { problemService } from "../services/ProblemService.js";
 
@@ -40,22 +42,30 @@ export async function handleUserJoin(
   context: RoomHandlerContext,
   rawPayload: unknown,
 ): Promise<void> {
-  const parsed = userJoinSchema.safeParse(rawPayload);
-  if (!parsed.success) {
-    rejectJoin(context, undefined, "invalid_payload", "Invalid join payload.");
+  const parsed = validatePayloadOrReject(
+    context.socket,
+    context.logger,
+    userJoinSchema,
+    rawPayload,
+    {
+      eventType: "room_join",
+      invalidMessage: "Invalid join payload.",
+      onReject: (message) => emitJoinRejected(context.socket, message),
+    },
+  );
+  if (!parsed) {
     return;
   }
 
   const roomCode = getSocketRoomCode(context.socket);
   const room = context.roomLookup.getRoom(roomCode);
-  const { displayName, reconnectToken } = parsed.data as UserJoinPayload;
+  const { displayName, reconnectToken } = parsed as UserJoinPayload;
 
   context.logger.debug(
     {
       event: "room_join_processing",
       socket_id: context.socket.id,
-      ...roomCodeLogFields(roomCode),
-      ...requestIdLogField(context.socket),
+      ...handlerLogContext(roomCode, context.socket),
       reconnecting: Boolean(reconnectToken),
     },
     "Processing user join",
@@ -72,8 +82,7 @@ export async function handleUserJoin(
     context.logger.info(
       {
         event: "room_join_duplicate_ignored",
-        ...roomCodeLogFields(roomCode),
-        ...requestIdLogField(context.socket),
+        ...handlerLogContext(roomCode, context.socket),
         user_id: existingSocketUser.id,
         socket_id: context.socket.id,
       },
@@ -95,8 +104,7 @@ export async function handleUserJoin(
       {
         event: "room_join_rejected",
         socket_id: context.socket.id,
-        ...roomCodeLogFields(roomCode),
-        ...requestIdLogField(context.socket),
+        ...handlerLogContext(roomCode, context.socket),
         reason: "room_full",
       },
       "Rejected user join: room full",
@@ -115,8 +123,7 @@ export async function handleUserJoin(
   context.logger.info(
     {
       event: "room_user_joined",
-      ...roomCodeLogFields(roomCode),
-      ...requestIdLogField(context.socket),
+      ...handlerLogContext(roomCode, context.socket),
       user_id: user.id,
       role,
     },
@@ -134,21 +141,25 @@ function rejectJoin(
     {
       event: "room_join_rejected",
       socket_id: context.socket.id,
-      ...roomCodeLogFields(roomCode),
-      ...requestIdLogField(context.socket),
+      ...handlerLogContext(roomCode, context.socket),
       reason: rejectionReason,
     },
     `Rejected user join: ${rejectionReason.replaceAll("_", " ")}`,
   );
+  emitJoinRejected(context.socket, clientReason);
+}
+
+function emitJoinRejected(socket: Socket, clientReason: string, retryAfterSeconds?: number): void {
   const payload: EventRejectedPayload = {
     event: SocketEvents.USER_JOIN,
     reason: clientReason,
+    retryAfterSeconds,
   };
-  context.socket.emit(SocketEvents.EVENT_REJECTED, payload);
+  socket.emit(SocketEvents.EVENT_REJECTED, payload);
 }
 
 function isJoinRateLimited(context: RoomHandlerContext, roomCode: string): boolean {
-  const clientIp = (context.socket.data.clientIp as string | undefined) ?? "unknown";
+  const clientIp = getClientIp(context.socket);
   const joinCheck = context.deps.ipRateLimiter.consume(
     "join-attempt",
     clientIp,
@@ -163,20 +174,18 @@ function isJoinRateLimited(context: RoomHandlerContext, roomCode: string): boole
     {
       event: "room_join_rejected",
       socket_id: context.socket.id,
-      ...roomCodeLogFields(roomCode),
-      ...requestIdLogField(context.socket),
+      ...handlerLogContext(roomCode, context.socket),
       client_ip: clientIp,
       retry_after_seconds: joinCheck.retryAfterSeconds,
       reason: "rate_limited",
     },
     "Rejected user join: rate limited",
   );
-  const payload: EventRejectedPayload = {
-    event: SocketEvents.USER_JOIN,
-    reason: `Too many join attempts. Try again in ${joinCheck.retryAfterSeconds}s.`,
-    retryAfterSeconds: joinCheck.retryAfterSeconds,
-  };
-  context.socket.emit(SocketEvents.EVENT_REJECTED, payload);
+  emitJoinRejected(
+    context.socket,
+    `Too many join attempts. Try again in ${joinCheck.retryAfterSeconds}s.`,
+    joinCheck.retryAfterSeconds,
+  );
   return true;
 }
 
@@ -191,8 +200,7 @@ async function tryReconnectUser(
       {
         event: "room_reconnect_token_invalid",
         socket_id: context.socket.id,
-        ...roomCodeLogFields(roomCode),
-        ...requestIdLogField(context.socket),
+        ...handlerLogContext(roomCode, context.socket),
       },
       "Invalid reconnect token format",
     );
@@ -215,8 +223,7 @@ async function tryReconnectUser(
   context.logger.info(
     {
       event: "room_user_reconnected",
-      ...roomCodeLogFields(roomCode),
-      ...requestIdLogField(context.socket),
+      ...handlerLogContext(roomCode, context.socket),
       user_id: reconnectedUser.id,
     },
     "User reconnected",
@@ -255,8 +262,7 @@ async function emitRoomHydration(socket: Socket, logger: Logger, room: Room): Pr
       logger.warn(
         {
           event: "room_hydration_problem_missing",
-          ...roomCodeLogFields(room.roomCode),
-          ...requestIdLogField(socket),
+          ...handlerLogContext(room.roomCode, socket),
           problem_id: room.problemId,
         },
         "Active problem could not be loaded during room hydration",
@@ -276,8 +282,7 @@ async function emitRoomHydration(socket: Socket, logger: Logger, room: Room): Pr
       {
         event: "room_hydration_failed",
         err,
-        ...roomCodeLogFields(room.roomCode),
-        ...requestIdLogField(socket),
+        ...handlerLogContext(room.roomCode, socket),
         problem_id: room.problemId,
       },
       "Failed to hydrate active problem during room join",

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { problemImportSchema, roomCodeSchema, roomCreateSchema, userJoinSchema } from "../validation.js";
+import {
+  problemImportSchema,
+  roomCodeSchema,
+  roomCreateSchema,
+  userJoinSchema,
+} from "../validation.js";
 
 describe("userJoinSchema", () => {
   it("rejects display names that are only whitespace", () => {

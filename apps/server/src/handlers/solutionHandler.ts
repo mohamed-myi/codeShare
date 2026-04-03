@@ -2,7 +2,8 @@ import type { Problem } from "@codeshare/shared";
 import { SocketEvents } from "@codeshare/shared";
 import type { Logger } from "pino";
 import type { Server, Socket } from "socket.io";
-import { requestIdLogField, roomCodeLogFields } from "../lib/logger.js";
+import { emitMessageEvent } from "../lib/errorEmitter.js";
+import { handlerLogContext } from "../lib/handlerContext.js";
 import type { Room } from "../models/Room.js";
 
 interface RoomLookup {
@@ -34,26 +35,24 @@ export function registerSolutionHandler(
       if (room.mode !== "interview") {
         logger.info({
           event: "solution_reveal_rejected",
-          ...roomCodeLogFields(roomCode),
-          ...requestIdLogField(socket),
+          ...handlerLogContext(roomCode, socket),
           reason: "not_interview_mode",
         });
-        socket.emit(SocketEvents.HINT_ERROR, {
-          message: "Solutions can only be revealed in interview mode.",
-        });
+        emitMessageEvent(
+          { socket },
+          SocketEvents.HINT_ERROR,
+          "Solutions can only be revealed in interview mode.",
+        );
         return;
       }
 
       if (!room.problemId) {
         logger.info({
           event: "solution_reveal_rejected",
-          ...roomCodeLogFields(roomCode),
-          ...requestIdLogField(socket),
+          ...handlerLogContext(roomCode, socket),
           reason: "problem_not_selected",
         });
-        socket.emit(SocketEvents.HINT_ERROR, {
-          message: "Select a problem first.",
-        });
+        emitMessageEvent({ socket }, SocketEvents.HINT_ERROR, "Select a problem first.");
         return;
       }
 
@@ -61,36 +60,33 @@ export function registerSolutionHandler(
       if (!problem) {
         logger.warn({
           event: "solution_reveal_rejected",
-          ...roomCodeLogFields(roomCode),
-          ...requestIdLogField(socket),
+          ...handlerLogContext(roomCode, socket),
           problem_id: room.problemId,
           reason: "problem_not_found",
         });
-        socket.emit(SocketEvents.HINT_ERROR, {
-          message: "Problem not found.",
-        });
+        emitMessageEvent({ socket }, SocketEvents.HINT_ERROR, "Problem not found.");
         return;
       }
 
       if (!problem.solution) {
         logger.info({
           event: "solution_reveal_rejected",
-          ...roomCodeLogFields(roomCode),
-          ...requestIdLogField(socket),
+          ...handlerLogContext(roomCode, socket),
           problem_id: room.problemId,
           reason: "solution_missing",
         });
-        socket.emit(SocketEvents.HINT_ERROR, {
-          message: "No solution available for this problem.",
-        });
+        emitMessageEvent(
+          { socket },
+          SocketEvents.HINT_ERROR,
+          "No solution available for this problem.",
+        );
         return;
       }
 
       logger.info(
         {
           event: "solution_revealed",
-          ...roomCodeLogFields(roomCode),
-          ...requestIdLogField(socket),
+          ...handlerLogContext(roomCode, socket),
           problem_id: room.problemId,
         },
         "Solution revealed",
@@ -104,15 +100,16 @@ export function registerSolutionHandler(
         {
           event: "solution_reveal_failed",
           err,
-          ...roomCodeLogFields(roomCode),
-          ...requestIdLogField(socket),
+          ...handlerLogContext(roomCode, socket),
           problem_id: room.problemId,
         },
         "Failed to reveal solution",
       );
-      socket.emit(SocketEvents.HINT_ERROR, {
-        message: "Failed to reveal solution. Please try again.",
-      });
+      emitMessageEvent(
+        { socket },
+        SocketEvents.HINT_ERROR,
+        "Failed to reveal solution. Please try again.",
+      );
     }
   });
 }

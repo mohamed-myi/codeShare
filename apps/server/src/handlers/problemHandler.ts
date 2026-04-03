@@ -9,9 +9,13 @@ import type { Logger } from "pino";
 import type { Server, Socket } from "socket.io";
 import type * as Y from "yjs";
 import { dependencyErrorLogFields } from "../lib/dependencyError.js";
+import { emitMessageEvent } from "../lib/errorEmitter.js";
+import { handlerLogContext } from "../lib/handlerContext.js";
 import type { IpRateLimiter } from "../lib/ipRateLimiter.js";
-import { requestIdLogField, roomCodeLogFields } from "../lib/logger.js";
+import { getClientIp } from "../lib/ipUtils.js";
 import { globalCounters } from "../lib/rateLimitCounters.js";
+import { createHandlerSession } from "../lib/sessionFactory.js";
+import { validatePayloadOrReject } from "../lib/validation.js";
 import type { Room } from "../models/Room.js";
 import { problemService } from "../services/ProblemService.js";
 import { scraperService } from "../services/ScraperService.js";
@@ -56,18 +60,17 @@ function createSession(
   getDoc: (roomCode: string) => Y.Doc | undefined,
   deps: ProblemHandlerDeps,
 ): ProblemSession | null {
-  const roomCode = socket.data.roomCode as string;
-  const room = roomLookup.getRoom(roomCode);
-
-  if (!room) {
-    return null;
-  }
-
-  return { io, socket, logger, room, roomCode, getDoc, deps };
+  return createHandlerSession(socket, io, logger, roomLookup, () => ({
+    io,
+    socket,
+    logger,
+    getDoc,
+    deps,
+  }));
 }
 
-function emitProblemLoadError(socket: Socket, message: string): void {
-  socket.emit(SocketEvents.PROBLEM_ERROR, { message });
+function emitProblemLoadError(session: ProblemSession, message: string): void {
+  emitMessageEvent({ socket: session.socket }, SocketEvents.PROBLEM_ERROR, message);
 }
 
 function emitImportStatusToSender(
@@ -90,8 +93,7 @@ function logProblemImportRejection(
 ): void {
   const payload = {
     event: "problem_import_rejected",
-    ...roomCodeLogFields(session.roomCode),
-    ...requestIdLogField(session.socket),
+    ...handlerLogContext(session.roomCode, session.socket),
     ...rejection.extra,
     reason: rejection.reason,
   };
@@ -130,24 +132,27 @@ function loadProblemIntoRoom(session: ProblemSession, detail: ProblemDetail): vo
 }
 
 async function handleProblemSelect(session: ProblemSession, data: unknown): Promise<void> {
-  const parsed = problemSelectSchema.safeParse(data);
-  if (!parsed.success) {
-    session.logger.warn({
-      event: "problem_select_rejected",
-      ...roomCodeLogFields(session.roomCode),
-      ...requestIdLogField(session.socket),
-      reason: "invalid_payload",
-    });
-    emitProblemLoadError(session.socket, "Invalid problem selection payload.");
+  const parsed = validatePayloadOrReject(
+    session.socket,
+    session.logger,
+    problemSelectSchema,
+    data,
+    {
+      roomCode: session.roomCode,
+      eventType: "problem_select",
+      invalidMessage: "Invalid problem selection payload.",
+      onReject: (message) => emitProblemLoadError(session, message),
+    },
+  );
+  if (!parsed) {
     return;
   }
-
-  const { problemId } = parsed.data;
+  const { problemId } = parsed;
 
   try {
     const detail = await problemService.getById(problemId);
     if (!detail) {
-      emitProblemLoadError(session.socket, "Problem not found.");
+      emitProblemLoadError(session, "Problem not found.");
       return;
     }
 
@@ -155,8 +160,7 @@ async function handleProblemSelect(session: ProblemSession, data: unknown): Prom
     session.logger.info(
       {
         event: "problem_loaded",
-        ...roomCodeLogFields(session.roomCode),
-        ...requestIdLogField(session.socket),
+        ...handlerLogContext(session.roomCode, session.socket),
         problem_id: problemId,
       },
       "Problem loaded for room",
@@ -166,18 +170,13 @@ async function handleProblemSelect(session: ProblemSession, data: unknown): Prom
       {
         event: "problem_load_failed",
         err,
-        ...roomCodeLogFields(session.roomCode),
-        ...requestIdLogField(session.socket),
+        ...handlerLogContext(session.roomCode, session.socket),
         problem_id: problemId,
       },
       "Failed to load problem",
     );
-    emitProblemLoadError(session.socket, "Failed to load problem. Please try again.");
+    emitProblemLoadError(session, "Failed to load problem. Please try again.");
   }
-}
-
-function getClientIp(socket: Socket): string {
-  return (socket.data.clientIp as string | undefined) ?? "unknown";
 }
 
 function validateProblemImport(
@@ -196,17 +195,23 @@ function validateProblemImport(
     return null;
   }
 
-  const parsed = problemImportSchema.safeParse(data);
-  if (!parsed.success) {
-    logProblemImportRejection(session, {
-      reason: "invalid_payload",
-      message: "Invalid problem import payload.",
-      level: "warn",
-    });
-    emitImportStatusToSender(session.socket, {
-      status: "failed",
-      message: "Invalid problem import payload.",
-    });
+  const parsed = validatePayloadOrReject(
+    session.socket,
+    session.logger,
+    problemImportSchema,
+    data,
+    {
+      roomCode: session.roomCode,
+      eventType: "problem_import",
+      invalidMessage: "Invalid problem import payload.",
+      onReject: (message) =>
+        emitImportStatusToSender(session.socket, {
+          status: "failed",
+          message,
+        }),
+    },
+  );
+  if (!parsed) {
     return null;
   }
 
@@ -267,7 +272,7 @@ function validateProblemImport(
     return null;
   }
 
-  return parsed.data;
+  return parsed;
 }
 
 function startBackgroundTestCaseGeneration(session: ProblemSession, detail: ProblemDetail): void {
@@ -312,8 +317,7 @@ async function handleProblemImport(session: ProblemSession, data: unknown): Prom
   session.logger.info(
     {
       event: "problem_import_started",
-      ...roomCodeLogFields(session.roomCode),
-      ...requestIdLogField(session.socket),
+      ...handlerLogContext(session.roomCode, session.socket),
       source_url: parsed.leetcodeUrl,
     },
     "Problem import started",
@@ -337,8 +341,7 @@ async function handleProblemImport(session: ProblemSession, data: unknown): Prom
     session.logger.info(
       {
         event: "problem_import_completed",
-        ...roomCodeLogFields(session.roomCode),
-        ...requestIdLogField(session.socket),
+        ...handlerLogContext(session.roomCode, session.socket),
         problem_id: importedProblem.id,
         source_url: importedProblem.sourceUrl,
         duration_ms: Date.now() - importStart,
@@ -352,8 +355,7 @@ async function handleProblemImport(session: ProblemSession, data: unknown): Prom
       {
         event: "problem_import_failed",
         err,
-        ...roomCodeLogFields(session.roomCode),
-        ...requestIdLogField(session.socket),
+        ...handlerLogContext(session.roomCode, session.socket),
         ...dependencyErrorLogFields(err),
       },
       "Failed to import problem",
