@@ -1,6 +1,10 @@
 import type { BoilerplateTemplate } from "@codeshare/shared";
 import { pool } from "../pool.js";
-import { type BoilerplateRow, toBoilerplate } from "../types.js";
+import { type BoilerplateRow, getFirstOrNull, toBoilerplate } from "../types.js";
+
+function toCount(value: number | string | undefined): number {
+  return Number(value ?? 0);
+}
 
 export const boilerplateRepository = {
   async findByProblemAndLanguage(
@@ -12,7 +16,7 @@ export const boilerplateRepository = {
        WHERE problem_id = $1 AND language = $2`,
       [problemId, language],
     );
-    return rows[0] ? toBoilerplate(rows[0]) : null;
+    return getFirstOrNull(rows, toBoilerplate);
   },
 
   async create(data: {
@@ -29,5 +33,41 @@ export const boilerplateRepository = {
       [data.problemId, data.language, data.template, data.methodName, data.parameterNames],
     );
     return toBoilerplate(rows[0]);
+  },
+
+  async countLeadingFutureAnnotationsImports(language: string): Promise<number> {
+    const { rows } = await pool.query<{ count: number | string }>(
+      `SELECT COUNT(*)::int AS count
+       FROM boilerplate_templates
+       WHERE language = $1
+         AND template LIKE 'from __future__ import annotations%'`,
+      [language],
+    );
+    return toCount(rows[0]?.count);
+  },
+
+  async cleanLeadingFutureAnnotationsImports(
+    language: string,
+  ): Promise<{ cleanedBoilerplateCount: number }> {
+    const { rows } = await pool.query<{ cleaned_boilerplate_count: number | string }>(
+      `WITH updated AS (
+         UPDATE boilerplate_templates
+         SET template = regexp_replace(
+           template,
+           '^from __future__ import annotations(?:\\r?\\n){1,2}',
+           ''
+         )
+         WHERE language = $1
+           AND template LIKE 'from __future__ import annotations%'
+         RETURNING id
+       )
+       SELECT COUNT(*)::int AS cleaned_boilerplate_count
+       FROM updated`,
+      [language],
+    );
+
+    return {
+      cleanedBoilerplateCount: toCount(rows[0]?.cleaned_boilerplate_count),
+    };
   },
 };

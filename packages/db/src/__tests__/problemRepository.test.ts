@@ -153,4 +153,50 @@ describe("problemRepository", () => {
       "problem-1",
     ]);
   });
+
+  it("summarizeE2eImportedProblems reports only matching imported test rows", async () => {
+    mockQuery.mockResolvedValue({
+      rows: [
+        {
+          total_matching_problems: 4,
+          active_matching_problems: 3,
+          matching_test_cases: 6,
+          matching_boilerplates: 3,
+          matching_hints: 0,
+        },
+      ],
+    });
+
+    const result = await problemRepository.summarizeE2eImportedProblems();
+
+    expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining("title LIKE 'Imported %'"), [
+      ["Imported", "E2E Imported"],
+    ]);
+    expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining("category = ANY($1::text[])"), [
+      ["Imported", "E2E Imported"],
+    ]);
+    expect(result).toEqual({
+      totalMatchingProblems: 4,
+      activeMatchingProblems: 3,
+      matchingTestCases: 6,
+      matchingBoilerplates: 3,
+      matchingHints: 0,
+    });
+  });
+
+  it("softDeleteE2eImportedProblems only updates active matching rows", async () => {
+    mockQuery.mockResolvedValue({
+      rows: [{ soft_deleted_problem_count: 5 }],
+    });
+
+    const result = await problemRepository.softDeleteE2eImportedProblems();
+
+    expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining("UPDATE problems"), [
+      ["Imported", "E2E Imported"],
+    ]);
+    expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining("deleted_at IS NULL"), [
+      ["Imported", "E2E Imported"],
+    ]);
+    expect(result).toEqual({ softDeletedProblemCount: 5 });
+  });
 });

@@ -95,3 +95,24 @@ export function toHint(row: HintRow): Hint {
     orderIndex: row.order_index,
   };
 }
+
+// --- Helper Functions ---
+
+/**
+ * Returns the first row mapped to the application type, or null if no rows.
+ *
+ * This helper centralizes the common pattern of:
+ * 1. Checking if rows array is empty
+ * 2. Mapping the first row to application type
+ * 3. Returning null if no rows
+ *
+ * @param rows - Array of database rows
+ * @param mapper - Function to map row to application type
+ * @returns Mapped first row or null
+ */
+export function getFirstOrNull<TRow, TModel>(
+  rows: TRow[],
+  mapper: (row: TRow) => TModel,
+): TModel | null {
+  return rows[0] ? mapper(rows[0]) : null;
+}

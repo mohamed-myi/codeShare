@@ -18,7 +18,9 @@
     "lint": "biome check src/",
     "migrate": "tsx src/migrations/migrate.ts",
     "seed": "tsx src/seeds/seed.ts",
-    "soft-delete": "tsx src/scripts/softDeleteProblem.ts"
+    "soft-delete": "tsx src/scripts/softDeleteProblem.ts",
+    "clean-e2e-imports": "tsx src/scripts/cleanE2eImports.ts",
+    "clean-python-future-imports": "tsx src/scripts/cleanPythonFutureImports.ts"
   },
   "dependencies": {
     "@codeshare/shared": "workspace:*",

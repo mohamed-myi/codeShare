@@ -1,10 +1,37 @@
 import type { Problem, ProblemListItem } from "@codeshare/shared";
+import { buildNonDeletedWhere, SOFT_DELETE_FILTER } from "../lib/queryHelpers.js";
 import { pool } from "../pool.js";
-import { type ProblemRow, toProblem } from "../types.js";
+import { getFirstOrNull, type ProblemRow, toProblem } from "../types.js";
+
+const E2E_IMPORT_CATEGORIES = ["Imported", "E2E Imported"] as const;
+
+interface E2eImportedProblemSummaryRow {
+  total_matching_problems: number | string;
+  active_matching_problems: number | string;
+  matching_test_cases: number | string;
+  matching_boilerplates: number | string;
+  matching_hints: number | string;
+}
+
+interface E2eImportedProblemDeleteRow {
+  soft_deleted_problem_count: number | string;
+}
+
+export interface E2eImportedProblemSummary {
+  totalMatchingProblems: number;
+  activeMatchingProblems: number;
+  matchingTestCases: number;
+  matchingBoilerplates: number;
+  matchingHints: number;
+}
+
+function toCount(value: number | string | undefined): number {
+  return Number(value ?? 0);
+}
 
 export const problemRepository = {
   async findAll(filters?: { category?: string; difficulty?: string }): Promise<ProblemListItem[]> {
-    const conditions = ["deleted_at IS NULL"];
+    const conditions: string[] = [];
     const params: string[] = [];
 
     if (filters?.category) {
@@ -19,7 +46,7 @@ export const problemRepository = {
     const { rows } = await pool.query<ProblemRow>(
       `SELECT id, slug, title, difficulty, category
        FROM problems
-       WHERE ${conditions.join(" AND ")}
+       WHERE ${buildNonDeletedWhere(conditions)}
        ORDER BY category, title`,
       params,
     );
@@ -35,38 +62,38 @@ export const problemRepository = {
 
   async findById(id: string): Promise<Problem | null> {
     const { rows } = await pool.query<ProblemRow>(
-      "SELECT * FROM problems WHERE id = $1 AND deleted_at IS NULL",
+      `SELECT * FROM problems WHERE id = $1 AND ${SOFT_DELETE_FILTER}`,
       [id],
     );
-    return rows[0] ? toProblem(rows[0]) : null;
+    return getFirstOrNull(rows, toProblem);
   },
 
   async findBySlug(slug: string): Promise<Problem | null> {
     const { rows } = await pool.query<ProblemRow>(
-      "SELECT * FROM problems WHERE slug = $1 AND deleted_at IS NULL",
+      `SELECT * FROM problems WHERE slug = $1 AND ${SOFT_DELETE_FILTER}`,
       [slug],
     );
-    return rows[0] ? toProblem(rows[0]) : null;
+    return getFirstOrNull(rows, toProblem);
   },
 
   async findBySlugIncludingDeleted(slug: string): Promise<Problem | null> {
     const { rows } = await pool.query<ProblemRow>("SELECT * FROM problems WHERE slug = $1", [slug]);
-    return rows[0] ? toProblem(rows[0]) : null;
+    return getFirstOrNull(rows, toProblem);
   },
 
   async findBySourceUrl(url: string): Promise<Problem | null> {
     const { rows } = await pool.query<ProblemRow>(
-      "SELECT * FROM problems WHERE source_url = $1 AND deleted_at IS NULL",
+      `SELECT * FROM problems WHERE source_url = $1 AND ${SOFT_DELETE_FILTER}`,
       [url],
     );
-    return rows[0] ? toProblem(rows[0]) : null;
+    return getFirstOrNull(rows, toProblem);
   },
 
   async findBySourceUrlIncludingDeleted(url: string): Promise<Problem | null> {
     const { rows } = await pool.query<ProblemRow>("SELECT * FROM problems WHERE source_url = $1", [
       url,
     ]);
-    return rows[0] ? toProblem(rows[0]) : null;
+    return getFirstOrNull(rows, toProblem);
   },
 
   async create(data: {
@@ -111,5 +138,74 @@ export const problemRepository = {
 
   async restoreById(id: string): Promise<void> {
     await pool.query("UPDATE problems SET deleted_at = NULL WHERE id = $1", [id]);
+  },
+
+  async summarizeE2eImportedProblems(): Promise<E2eImportedProblemSummary> {
+    const { rows } = await pool.query<E2eImportedProblemSummaryRow>(
+      `WITH matching AS (
+         SELECT id, deleted_at
+         FROM problems
+         WHERE source = 'user_submitted'
+           AND title LIKE 'Imported %'
+           AND source_url LIKE 'https://leetcode.com/problems/%'
+           AND category = ANY($1::text[])
+       )
+       SELECT
+         COUNT(*)::int AS total_matching_problems,
+         COUNT(*) FILTER (WHERE deleted_at IS NULL)::int AS active_matching_problems,
+         (
+           SELECT COUNT(*)::int
+           FROM test_cases
+           WHERE problem_id IN (SELECT id FROM matching)
+         ) AS matching_test_cases,
+         (
+           SELECT COUNT(*)::int
+           FROM boilerplate_templates
+           WHERE problem_id IN (SELECT id FROM matching)
+         ) AS matching_boilerplates,
+         (
+           SELECT COUNT(*)::int
+           FROM hints
+           WHERE problem_id IN (SELECT id FROM matching)
+         ) AS matching_hints
+       FROM matching`,
+      [Array.from(E2E_IMPORT_CATEGORIES)],
+    );
+
+    const row = rows[0];
+    return {
+      totalMatchingProblems: toCount(row?.total_matching_problems),
+      activeMatchingProblems: toCount(row?.active_matching_problems),
+      matchingTestCases: toCount(row?.matching_test_cases),
+      matchingBoilerplates: toCount(row?.matching_boilerplates),
+      matchingHints: toCount(row?.matching_hints),
+    };
+  },
+
+  async softDeleteE2eImportedProblems(): Promise<{ softDeletedProblemCount: number }> {
+    const { rows } = await pool.query<E2eImportedProblemDeleteRow>(
+      `WITH matching AS (
+         SELECT id
+         FROM problems
+         WHERE source = 'user_submitted'
+           AND deleted_at IS NULL
+           AND title LIKE 'Imported %'
+           AND source_url LIKE 'https://leetcode.com/problems/%'
+           AND category = ANY($1::text[])
+       ),
+       updated AS (
+         UPDATE problems
+         SET deleted_at = NOW()
+         WHERE id IN (SELECT id FROM matching)
+         RETURNING id
+       )
+       SELECT COUNT(*)::int AS soft_deleted_problem_count
+       FROM updated`,
+      [Array.from(E2E_IMPORT_CATEGORIES)],
+    );
+
+    return {
+      softDeletedProblemCount: toCount(rows[0]?.soft_deleted_problem_count),
+    };
   },
 };

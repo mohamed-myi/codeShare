@@ -144,6 +144,27 @@ describe("boilerplateRepository", () => {
 
     expect(result).toBeNull();
   });
+
+  it("counts polluted python boilerplates with a leading future import", async () => {
+    mockQuery.mockResolvedValue({ rows: [{ count: "2" }] });
+
+    const result = await boilerplateRepository.countLeadingFutureAnnotationsImports("python");
+
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining("template LIKE 'from __future__ import annotations%'"),
+      ["python"],
+    );
+    expect(result).toBe(2);
+  });
+
+  it("cleans polluted python boilerplates by removing the leading future import", async () => {
+    mockQuery.mockResolvedValue({ rows: [{ cleaned_boilerplate_count: "3" }] });
+
+    const result = await boilerplateRepository.cleanLeadingFutureAnnotationsImports("python");
+
+    expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining("regexp_replace"), ["python"]);
+    expect(result).toEqual({ cleanedBoilerplateCount: 3 });
+  });
 });
 
 describe("hintRepository", () => {
