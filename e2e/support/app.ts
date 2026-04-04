@@ -1,35 +1,59 @@
-import { expect, type APIRequestContext, type Browser, type Page } from "@playwright/test";
+import { type APIRequestContext, type Browser, expect, type Page } from "@playwright/test";
+import { ROOM_CODE } from "../../packages/shared/src/constants.ts";
 
-const ROOM_URL_RE = /\/room\/([a-z2-7]{4}-[a-z2-7]{4})\/session(?:\/solve)?$/;
-const STUB_URL = process.env.E2E_STUB_URL ?? "http://127.0.0.1:4100";
-const SERVER_URL = process.env.E2E_SERVER_URL ?? "http://127.0.0.1:3001";
+const ROOM_URL_RE = new RegExp(
+  `/room/([${ROOM_CODE.ALPHABET}]{${ROOM_CODE.SEGMENT_LENGTH}}-[${ROOM_CODE.ALPHABET}]{${ROOM_CODE.SEGMENT_LENGTH}})/session(?:/solve)?$`,
+);
+export const clientOrigin =
+  process.env.E2E_CLIENT_ORIGIN ?? `http://127.0.0.1:${process.env.E2E_CLIENT_PORT ?? "5173"}`;
+export const stubUrl = process.env.E2E_STUB_URL ?? "http://127.0.0.1:4100";
+export const serverUrl = process.env.E2E_SERVER_URL ?? "http://127.0.0.1:3001";
 
 export type RoomMode = "collaboration" | "interview";
 
+const ROOM_MODE_LABEL: Record<RoomMode, string> = {
+  collaboration: "Collaboration",
+  interview: "Mock Interview",
+};
+
 export async function resetTestState(request: APIRequestContext): Promise<void> {
-  await request.post(`${SERVER_URL}/api/test/reset`);
-  await request.post(`${STUB_URL}/__reset`);
+  await request.post(`${serverUrl}/api/test/reset`);
+  await request.post(`${stubUrl}/__reset`);
 }
 
 export async function setStubScenario(
   request: APIRequestContext,
   scenario: Record<string, unknown>,
 ): Promise<void> {
-  await request.post(`${STUB_URL}/__scenario`, { data: scenario });
+  await request.post(`${stubUrl}/__scenario`, { data: scenario });
 }
 
 export async function getStubJournal(request: APIRequestContext) {
-  const response = await request.get(`${STUB_URL}/__journal`);
+  const response = await request.get(`${stubUrl}/__journal`);
   return response.json();
+}
+
+export async function selectFilterOption(
+  page: Page,
+  label: "Category" | "Difficulty",
+  option: string,
+): Promise<void> {
+  await page.getByLabel(label).click();
+  await page.getByRole("option", { name: option }).click();
 }
 
 export async function createRoom(
   page: Page,
   options: { displayName: string; mode?: RoomMode },
 ): Promise<string> {
+  const mode = options.mode ?? "collaboration";
+
   await page.goto("/");
   await page.getByLabel("Display name").fill(options.displayName);
-  await page.getByLabel("Room mode").selectOption(options.mode ?? "collaboration");
+  if (mode !== "collaboration") {
+    await page.getByLabel("Room mode").click();
+    await page.getByRole("option", { name: ROOM_MODE_LABEL[mode] }).click();
+  }
   await page.getByTestId("create-room-button").click();
   await expect(page).toHaveURL(ROOM_URL_RE);
   return extractRoomCode(page.url());
@@ -52,11 +76,14 @@ export async function openSessionPage(
   },
 ): Promise<Page> {
   const page = await browser.newPage();
-  await page.addInitScript((sessionState) => {
-    for (const [key, value] of Object.entries(sessionState)) {
-      window.sessionStorage.setItem(key, value);
-    }
-  }, options.sessionState ?? { displayName: options.displayName ?? "Guest" });
+  await page.addInitScript(
+    (sessionState) => {
+      for (const [key, value] of Object.entries(sessionState)) {
+        window.sessionStorage.setItem(key, value);
+      }
+    },
+    options.sessionState ?? { displayName: options.displayName ?? "Guest" },
+  );
   await page.goto(`/room/${roomCode}/session`);
   await expect(page).toHaveURL(new RegExp(`/room/${roomCode}/session$`));
   return page;

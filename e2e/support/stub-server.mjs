@@ -1,4 +1,5 @@
 import http from "node:http";
+import { emitLog } from "./log.mjs";
 
 const port = Number(process.env.E2E_STUB_PORT || 4100);
 
@@ -11,11 +12,14 @@ function createDefaultScenario() {
     groq: {
       delayMs: 0,
       mode: "success",
-      chunks: ["Start by grouping equivalent inputs.", " A hash map keyed by a normalized form works well."],
+      chunks: [
+        "Start by grouping equivalent inputs.",
+        " A hash map keyed by a normalized form works well.",
+      ],
     },
     leetcode: {
       difficulty: "Medium",
-      categoryTitle: "Imported",
+      categoryTitle: "E2E Imported",
       titlePrefix: "Imported",
     },
   };
@@ -74,7 +78,10 @@ function toTitleCase(slug) {
 
 function toMethodName(slug) {
   const [first, ...rest] = slug.split("-").filter(Boolean);
-  return [first ?? "solveImported", ...rest.map((part) => part.charAt(0).toUpperCase() + part.slice(1))].join("");
+  return [
+    first ?? "solveImported",
+    ...rest.map((part) => part.charAt(0).toUpperCase() + part.slice(1)),
+  ].join("");
 }
 
 function extractTestCases(sourceCode) {
@@ -99,8 +106,15 @@ function extractIndexedMarker(sourceCode, prefix) {
   return match ? Number(match[1]) : null;
 }
 
-function buildHarnessStdout(results, userStdout = "") {
-  return `===HARNESS_RESULT===\n${JSON.stringify({ results, userStdout })}\n===END_HARNESS_RESULT===\n`;
+function extractHarnessNonce(sourceCode) {
+  const match = sourceCode.match(/===HARNESS_RESULT_([a-f0-9]+)===/i);
+  return match?.[1] ?? null;
+}
+
+function buildHarnessStdout(results, nonce, userStdout = "") {
+  const startTag = nonce ? `===HARNESS_RESULT_${nonce}===` : "===HARNESS_RESULT===";
+  const endTag = nonce ? `===END_HARNESS_RESULT_${nonce}===` : "===END_HARNESS_RESULT===";
+  return `${startTag}\n${JSON.stringify({ results, userStdout })}\n${endTag}\n`;
 }
 
 function buildJudge0Result(sourceCode) {
@@ -195,11 +209,12 @@ function buildJudge0Result(sourceCode) {
   }
 
   const stdoutMessage = extractMarkerArg(sourceCode, "stdout") ?? "";
+  const nonce = extractHarnessNonce(sourceCode);
 
   return {
     statusCode: 200,
     body: {
-      stdout: buildHarnessStdout(results, stdoutMessage),
+      stdout: buildHarnessStdout(results, nonce, stdoutMessage),
       stderr: null,
       status: { id: 3, description: "Accepted" },
       time: "0.01",
@@ -307,6 +322,14 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (body.stream === false) {
+      const content = state.scenario.groq.chunks.join("");
+      sendJson(res, 200, {
+        choices: [{ message: { content } }],
+      });
+      return;
+    }
+
     res.writeHead(200, {
       "content-type": "text/event-stream",
       "cache-control": "no-cache",
@@ -342,5 +365,8 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(port, "127.0.0.1", () => {
-  console.log(`E2E stub server listening on http://127.0.0.1:${port}`);
+  emitLog("info", "e2e_stub_server_ready", {
+    host: "127.0.0.1",
+    port,
+  });
 });

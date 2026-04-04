@@ -1,4 +1,4 @@
-import { expect, test, type Browser } from "@playwright/test";
+import { type Browser, expect, test } from "@playwright/test";
 import {
   buildImportedProblemUrl,
   createRoom,
@@ -97,7 +97,10 @@ test.describe("MVP import flows", () => {
     );
     await createRoom(finalRoom, { displayName: "Global Limit" });
     await goToProblems(finalRoom);
-    await importProblem(finalRoom, buildImportedProblemUrl(uniqueImportSlug("global-cap-overflow")));
+    await importProblem(
+      finalRoom,
+      buildImportedProblemUrl(uniqueImportSlug("global-cap-overflow")),
+    );
     await expect(finalRoom.getByTestId("import-status-message")).toContainText(
       "Daily import limit reached",
     );

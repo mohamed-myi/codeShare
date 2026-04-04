@@ -3,7 +3,6 @@ import {
   captureSessionState,
   createRoom,
   goToProblems,
-  goToSolver,
   joinRoom,
   openSessionPage,
   readEditorCode,
@@ -73,9 +72,7 @@ test.describe("MVP room lifecycle", () => {
     await expect(page.getByTestId("problem-title")).toHaveText("Two Sum");
     await expect(page.getByTestId("waiting-banner")).toBeHidden();
     await expect(page.getByText("Bob")).toBeVisible();
-    await expect
-      .poll(() => readEditorCode(page))
-      .toContain("codeshare-stub:pass-all");
+    await expect.poll(() => readEditorCode(page)).toContain("codeshare-stub:pass-all");
 
     await bob.close();
   });
@@ -105,9 +102,18 @@ test.describe("MVP room lifecycle", () => {
     await expect
       .poll(async () => {
         return (
-          (await aliceRejoin.getByTestId("room-error-banner").isVisible().catch(() => false)) ||
-          (await aliceRejoin.getByTestId("reconnecting-banner").isVisible().catch(() => false)) ||
-          (await aliceRejoin.getByTestId("waiting-banner").isVisible().catch(() => false))
+          (await aliceRejoin
+            .getByTestId("room-error-banner")
+            .isVisible()
+            .catch(() => false)) ||
+          (await aliceRejoin
+            .getByTestId("reconnecting-banner")
+            .isVisible()
+            .catch(() => false)) ||
+          (await aliceRejoin
+            .getByTestId("waiting-banner")
+            .isVisible()
+            .catch(() => false))
         );
       })
       .toBe(true);

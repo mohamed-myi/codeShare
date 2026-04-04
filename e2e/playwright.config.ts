@@ -26,22 +26,28 @@ function loadDotEnv() {
 }
 
 const fileEnv = loadDotEnv();
+const clientPort = process.env.E2E_CLIENT_PORT ?? "5173";
+const serverPort = process.env.E2E_SERVER_PORT ?? "3001";
+const stubPort = process.env.E2E_STUB_PORT ?? "4100";
+const clientUrl = `http://127.0.0.1:${clientPort}`;
+const serverUrl = `http://127.0.0.1:${serverPort}`;
+const stubUrl = `http://127.0.0.1:${stubPort}`;
 const baseEnv = {
   DATABASE_URL:
     process.env.DATABASE_URL ??
     fileEnv.DATABASE_URL ??
     "postgresql://codeshare:codeshare@127.0.0.1:5432/codeshare_dev",
-  JUDGE0_API_URL: "http://127.0.0.1:4100/judge0",
+  JUDGE0_API_URL: `${stubUrl}/judge0`,
   JUDGE0_API_KEY: "e2e-stub",
   JUDGE0_DAILY_LIMIT: "30",
   GROQ_API_KEY: "e2e-stub",
   GROQ_MODEL: "llama-3.3-70b-versatile",
-  GROQ_API_URL: "http://127.0.0.1:4100/openai/v1/chat/completions",
-  LEETCODE_GRAPHQL_URL: "http://127.0.0.1:4100/graphql",
-  PORT: "3001",
+  GROQ_API_URL: `${stubUrl}/openai/v1/chat/completions`,
+  LEETCODE_GRAPHQL_URL: `${stubUrl}/graphql`,
+  PORT: serverPort,
   NODE_ENV: "test",
-  CORS_ORIGIN: "http://127.0.0.1:5173",
-  ALLOWED_ORIGINS: "http://127.0.0.1:5173",
+  CORS_ORIGIN: clientUrl,
+  ALLOWED_ORIGINS: clientUrl,
   LOG_LEVEL: "warn",
   RATE_LIMIT_ROOM_CREATE: "100",
   RATE_LIMIT_WS_CONNECT: "25",
@@ -55,11 +61,13 @@ const baseEnv = {
   MAX_CODE_BYTES: "65536",
   MAX_YJS_MESSAGE_BYTES: "32768",
   MAX_YJS_DOC_BYTES: "65536",
+  JUDGE0_EXEC_PER_HOUR_PER_IP: "500",
   MAX_LLM_CALLS_PER_ROOM: "15",
   MAX_LLM_PROMPT_CHARS: "12000",
   MAX_LLM_HINT_CHARS: "1500",
   ROOM_GRACE_PERIOD_MS: "1500",
   ROOM_HINT_CONSENT_MS: "1500",
+  ROOM_HINT_COOLDOWN_MS: "1000",
   ROOM_MAX_SUBMISSIONS: "3",
   ROOM_MAX_IMPORTS: "3",
   ROOM_MAX_CUSTOM_TEST_CASES: "3",
@@ -82,7 +90,7 @@ export default defineConfig({
   reporter: process.env.CI ? "github" : "list",
   timeout: 60_000,
   use: {
-    baseURL: "http://127.0.0.1:5173",
+    baseURL: clientUrl,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
   },
@@ -96,19 +104,19 @@ export default defineConfig({
     {
       command: "node e2e/support/stub-server.mjs",
       cwd: "..",
-      url: "http://127.0.0.1:4100/health",
+      url: `${stubUrl}/health`,
       reuseExistingServer: false,
       timeout: 30_000,
       env: {
         ...fileEnv,
         ...process.env,
-        E2E_STUB_PORT: "4100",
+        E2E_STUB_PORT: stubPort,
       },
     },
     {
       command: "pnpm --filter @codeshare/server exec tsx src/index.ts",
       cwd: "..",
-      url: "http://127.0.0.1:3001/api/health",
+      url: `${serverUrl}/api/health`,
       reuseExistingServer: false,
       timeout: 120_000,
       env: {
@@ -118,15 +126,17 @@ export default defineConfig({
       },
     },
     {
-      command: "pnpm --filter @codeshare/client exec vite --host 127.0.0.1 --port 5173",
+      command: `pnpm --filter @codeshare/client exec vite --host 127.0.0.1 --port ${clientPort}`,
       cwd: "..",
-      url: "http://127.0.0.1:5173",
+      url: clientUrl,
       reuseExistingServer: false,
       timeout: 120_000,
       env: {
         ...fileEnv,
         ...process.env,
-        VITE_REALTIME_URL: "http://127.0.0.1:3001",
+        VITE_REALTIME_URL: serverUrl,
+        E2E_SERVER_URL: serverUrl,
+        E2E_STUB_URL: stubUrl,
       },
     },
   ],

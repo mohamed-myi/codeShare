@@ -1,19 +1,20 @@
-import { expect, test, type APIRequestContext, type Browser } from "@playwright/test";
-import { io as ioClient, type Socket as ClientSocket } from "socket.io-client";
+import { type APIRequestContext, type Browser, expect, test } from "@playwright/test";
+import { type Socket as ClientSocket, io as ioClient } from "socket.io-client";
 import { SocketEvents } from "../../packages/shared/src/events";
 import {
   buildImportedProblemUrl,
+  clientOrigin,
   createRoom,
   goToProblems,
-  importProblem,
-  resetTestState,
   readEditorCode,
+  resetTestState,
   selectProblem,
+  serverUrl,
   setEditorCode,
   uniqueImportSlug,
 } from "../support/app";
 
-async function openPageForForwardedIp(browser: Browser, ip: string) {
+async function _openPageForForwardedIp(browser: Browser, ip: string) {
   const context = await browser.newContext({
     extraHTTPHeaders: {
       "x-forwarded-for": ip,
@@ -23,10 +24,8 @@ async function openPageForForwardedIp(browser: Browser, ip: string) {
   return { context, page };
 }
 
-const SERVER_URL = process.env.E2E_SERVER_URL ?? "http://127.0.0.1:3001";
-
 async function createRoomViaApi(request: APIRequestContext, displayName: string): Promise<string> {
-  const response = await request.post(`${SERVER_URL}/api/rooms`, {
+  const response = await request.post(`${serverUrl}/api/rooms`, {
     data: {
       mode: "collaboration",
       displayName,
@@ -38,13 +37,13 @@ async function createRoomViaApi(request: APIRequestContext, displayName: string)
 }
 
 async function connectImportClient(roomCode: string, displayName: string): Promise<ClientSocket> {
-  const socket = ioClient(SERVER_URL, {
+  const socket = ioClient(serverUrl, {
     path: "/ws/socket",
     transports: ["websocket"],
     autoConnect: true,
     query: { roomCode },
     extraHeaders: {
-      origin: "http://127.0.0.1:5173",
+      origin: clientOrigin,
       "x-forwarded-for": "203.0.113.8",
     },
   });
@@ -73,9 +72,14 @@ async function connectImportClient(roomCode: string, displayName: string): Promi
   return socket;
 }
 
-async function waitForImportStatus(socket: ClientSocket): Promise<{ status: string; message?: string }> {
+async function waitForImportStatus(
+  socket: ClientSocket,
+): Promise<{ status: string; message?: string }> {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error("Timed out waiting for import status.")), 10_000);
+    const timer = setTimeout(
+      () => reject(new Error("Timed out waiting for import status.")),
+      10_000,
+    );
     const handleStatus = (payload: { status: string; message?: string }) => {
       if (payload.status === "scraping") {
         return;
@@ -174,7 +178,9 @@ test.describe("MVP rate and cap gates", () => {
 
         for (let importIndex = 0; importIndex < 2; importIndex += 1) {
           client.emit(SocketEvents.PROBLEM_IMPORT, {
-            leetcodeUrl: buildImportedProblemUrl(uniqueImportSlug(`ip-limit-${roomIndex}-${importIndex}`)),
+            leetcodeUrl: buildImportedProblemUrl(
+              uniqueImportSlug(`ip-limit-${roomIndex}-${importIndex}`),
+            ),
           });
           await expect(waitForImportStatus(client)).resolves.toMatchObject({ status: "saved" });
         }

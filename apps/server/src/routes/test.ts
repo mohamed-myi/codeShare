@@ -1,3 +1,4 @@
+import { problemRepository } from "@codeshare/db";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { globalCounters } from "../lib/rateLimitCounters.js";
 import { roomManager } from "../models/RoomManager.js";
@@ -20,10 +21,12 @@ export async function testRoutes(app: FastifyInstance): Promise<void> {
     roomManager.resetRooms();
     globalCounters.reset();
     resetSocketIORateLimits();
+    const e2eImportCleanup = await problemRepository.softDeleteE2eImportedProblems();
 
     return {
       ok: true,
       roomCount: roomManager.getRoomCount(),
+      e2eImportCleanup,
     };
   });
 

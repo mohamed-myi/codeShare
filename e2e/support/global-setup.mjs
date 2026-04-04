@@ -1,8 +1,9 @@
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { emitLog } from "./log.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const cwd = path.resolve(__dirname, "../..");
@@ -71,6 +72,10 @@ function runWithRetry(command, args, attempts = 10, delayMs = 2_000) {
       Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, delayMs);
     }
   }
+}
+
+function cleanE2eImports() {
+  run("pnpm", ["--filter", "@codeshare/db", "clean-e2e-imports"]);
 }
 
 function resolvePgBinary(binaryName) {
@@ -158,16 +163,7 @@ function startLocalPostgres({ host, port, username, database }) {
   rmSync(clusterDir, { force: true, recursive: true });
   mkdirSync(socketDir, { recursive: true });
   run(initdb, ["-D", clusterDir, "-U", username, "-A", "trust", "--encoding=UTF8"]);
-  run(pgCtl, [
-    "-D",
-    clusterDir,
-    "-l",
-    logPath,
-    "-w",
-    "start",
-    "-o",
-    `-p ${port} -k ${socketDir}`,
-  ]);
+  run(pgCtl, ["-D", clusterDir, "-l", logPath, "-w", "start", "-o", `-p ${port} -k ${socketDir}`]);
 
   writeFileSync(
     pgStatePath,
@@ -187,18 +183,24 @@ export default async function globalSetup() {
   try {
     run("docker", ["compose", "up", "-d"]);
   } catch (error) {
-    console.warn("Skipping docker compose up:", error instanceof Error ? error.message : error);
+    emitLog("warn", "e2e_docker_compose_up_skipped", {
+      error_message: error instanceof Error ? error.message : String(error),
+    });
   }
 
   if (!canConnectToDatabase(connection)) {
-    console.warn(
-      `Database ${connection.host}:${connection.port} is unavailable; starting a local temporary Postgres cluster`,
-    );
+    emitLog("warn", "e2e_database_unavailable", {
+      host: connection.host,
+      port: connection.port,
+      database: connection.database,
+      action: "start_temporary_postgres_cluster",
+    });
     startLocalPostgres(connection);
   }
 
   run("pnpm", ["--filter", "@codeshare/shared", "build"]);
   run("pnpm", ["--filter", "@codeshare/db", "build"]);
   runWithRetry("pnpm", ["db:migrate"]);
+  cleanE2eImports();
   run("pnpm", ["db:seed"]);
 }

@@ -38,7 +38,10 @@ test.describe("MVP interview mode flows", () => {
     await candidate.close();
   });
 
-  test("reveals curated solutions from the interviewer to both users", async ({ browser, page }) => {
+  test("reveals curated solutions from the interviewer to both users", async ({
+    browser,
+    page,
+  }) => {
     const roomCode = await createRoom(page, {
       displayName: "Interviewer",
       mode: "interview",

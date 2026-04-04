@@ -6,7 +6,9 @@ import {
   joinRoom,
   readEditorCode,
   resetTestState,
+  selectFilterOption,
   selectProblem,
+  stubUrl,
 } from "../support/app";
 
 test.describe("MVP problem flows", () => {
@@ -19,8 +21,8 @@ test.describe("MVP problem flows", () => {
     await goToProblems(page);
 
     await page.getByLabel("Search problems").fill("Two Sum");
-    await page.getByLabel("Category").selectOption("Arrays & Hashing");
-    await page.getByLabel("Difficulty").selectOption("easy");
+    await selectFilterOption(page, "Category", "Arrays & Hashing");
+    await selectFilterOption(page, "Difficulty", "Easy");
 
     await selectProblem(page, "two-sum");
     await expect(page.getByTestId("problem-title")).toHaveText("Two Sum");
@@ -65,12 +67,15 @@ test.describe("MVP problem flows", () => {
     await expect(page.getByText("Custom 1")).toHaveCount(0);
   });
 
-  test("disables problem switching while an execution is in progress", async ({ page, request }) => {
+  test("disables problem switching while an execution is in progress", async ({
+    page,
+    request,
+  }) => {
     await createRoom(page, { displayName: "Alice" });
     await goToProblems(page);
     await selectProblem(page, "two-sum");
     await expect.poll(() => readEditorCode(page)).toContain("def twoSum");
-    await request.post("http://127.0.0.1:4100/__scenario", {
+    await request.post(`${stubUrl}/__scenario`, {
       data: { judge0: { delayMs: 1_000 } },
     });
     await page.evaluate(() => {
