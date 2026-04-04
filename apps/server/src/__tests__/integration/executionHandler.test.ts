@@ -532,6 +532,33 @@ describe("Execution handler", () => {
       expect(errPayload.message).toContain("SyntaxError");
     });
 
+    it("accepted response with a harness compilation marker -> compilation_error", async () => {
+      const { server, room } = await setup();
+      room.problemId = VALID_UUID;
+
+      mockSubmit.mockImplementation((harnessSource: string) => {
+        const nonce = extractNonceFromHarness(harnessSource);
+        return Promise.resolve({
+          stdout: `===HARNESS_COMPILATION_ERROR_${nonce}===\n{"error":"SyntaxError: future feature annotations is not defined"}\n===END_HARNESS_COMPILATION_ERROR_${nonce}===\n`,
+          stderr: null,
+          status: { id: 3, description: "Accepted" },
+          time: "0.01",
+          memory: 9000,
+        });
+      });
+
+      const alice = connectClient(server.port, room.roomCode);
+      await waitForEvent(alice, "connect");
+      await joinUser(alice, "Alice");
+
+      const error = waitForEvent<ExecutionError>(alice, SocketEvents.EXECUTION_ERROR);
+      alice.emit(SocketEvents.CODE_RUN);
+      const errPayload = await error;
+
+      expect(errPayload.errorType).toBe(ExecutionErrorType.COMPILATION_ERROR);
+      expect(errPayload.message).toContain("SyntaxError");
+    });
+
     it("Judge0 TLE (status.id === 5) -> timeout", async () => {
       const { server, room } = await setup();
       room.problemId = VALID_UUID;
@@ -575,6 +602,33 @@ describe("Execution handler", () => {
       const errPayload = await error;
       expect(errPayload.errorType).toBe("runtime_error");
       expect(errPayload.message).toContain("ZeroDivisionError");
+    });
+
+    it("accepted response with a harness runtime marker -> runtime_error", async () => {
+      const { server, room } = await setup();
+      room.problemId = VALID_UUID;
+
+      mockSubmit.mockImplementation((harnessSource: string) => {
+        const nonce = extractNonceFromHarness(harnessSource);
+        return Promise.resolve({
+          stdout: `===HARNESS_RUNTIME_ERROR_${nonce}===\n{"error":"ModuleNotFoundError: No module named 'sortedcontainers'"}\n===END_HARNESS_RUNTIME_ERROR_${nonce}===\n`,
+          stderr: null,
+          status: { id: 3, description: "Accepted" },
+          time: "0.01",
+          memory: 9000,
+        });
+      });
+
+      const alice = connectClient(server.port, room.roomCode);
+      await waitForEvent(alice, "connect");
+      await joinUser(alice, "Alice");
+
+      const error = waitForEvent<ExecutionError>(alice, SocketEvents.EXECUTION_ERROR);
+      alice.emit(SocketEvents.CODE_RUN);
+      const errPayload = await error;
+
+      expect(errPayload.errorType).toBe(ExecutionErrorType.RUNTIME_ERROR);
+      expect(errPayload.message).toContain("ModuleNotFoundError");
     });
 
     it("harness parse failure (no markers) -> parse_error", async () => {

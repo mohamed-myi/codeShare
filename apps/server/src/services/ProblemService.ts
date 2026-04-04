@@ -1,5 +1,6 @@
 import { boilerplateRepository, problemRepository, testCaseRepository } from "@codeshare/db";
 import type { ProblemDetail, ProblemListItem } from "@codeshare/shared";
+import { stripPythonFutureAnnotationsImport } from "../lib/pythonBoilerplate.js";
 
 export const problemService = {
   async list(filters?: { category?: string; difficulty?: string }): Promise<ProblemListItem[]> {
@@ -13,6 +14,15 @@ export const problemService = {
     const visibleTestCases = await testCaseRepository.findVisible(id);
     const boilerplate = await boilerplateRepository.findByProblemAndLanguage(id, "python");
 
-    return { ...problem, visibleTestCases, boilerplate };
+    return {
+      ...problem,
+      visibleTestCases,
+      boilerplate: boilerplate
+        ? {
+            ...boilerplate,
+            template: stripPythonFutureAnnotationsImport(boilerplate.template),
+          }
+        : boilerplate,
+    };
   },
 };

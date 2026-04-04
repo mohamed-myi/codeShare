@@ -1,16 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const {
-  mockFindAll,
-  mockFindById,
-  mockFindVisible,
-  mockFindByProblemAndLanguage,
-} = vi.hoisted(() => ({
-  mockFindAll: vi.fn(),
-  mockFindById: vi.fn(),
-  mockFindVisible: vi.fn(),
-  mockFindByProblemAndLanguage: vi.fn(),
-}));
+const { mockFindAll, mockFindById, mockFindVisible, mockFindByProblemAndLanguage } = vi.hoisted(
+  () => ({
+    mockFindAll: vi.fn(),
+    mockFindById: vi.fn(),
+    mockFindVisible: vi.fn(),
+    mockFindByProblemAndLanguage: vi.fn(),
+  }),
+);
 
 vi.mock("@codeshare/db", () => ({
   problemRepository: {
@@ -136,5 +133,40 @@ describe("problemService", () => {
         parameterNames: ["nums", "target"],
       },
     });
+  });
+
+  it("strips legacy leading future annotation imports before returning problem detail", async () => {
+    mockFindById.mockResolvedValue({
+      id: "problem-1",
+      slug: "two-sum",
+      title: "Two Sum",
+      difficulty: "easy",
+      category: "Arrays",
+      description: "Given an array...",
+      constraints: ["1 <= n <= 10"],
+      solution: null,
+      timeLimitMs: 5000,
+      source: "curated",
+      sourceUrl: "https://leetcode.com/problems/two-sum/",
+      deletedAt: null,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    });
+    mockFindVisible.mockResolvedValue([]);
+    mockFindByProblemAndLanguage.mockResolvedValue({
+      id: "bp-1",
+      problemId: "problem-1",
+      language: "python",
+      template:
+        "from __future__ import annotations\n\nclass Solution:\n    def twoSum(self, nums: List[int], target: int) -> List[int]:\n        pass",
+      methodName: "twoSum",
+      parameterNames: ["nums", "target"],
+    });
+
+    const result = await problemService.getById("problem-1");
+
+    expect(result?.boilerplate?.template).toBe(
+      "class Solution:\n    def twoSum(self, nums: List[int], target: int) -> List[int]:\n        pass",
+    );
   });
 });

@@ -80,12 +80,68 @@ describe("buildHarness", () => {
     expect(harness).toContain('"expectedOutput"');
   });
 
+  it("prepends postponed annotation evaluation before user code", () => {
+    const harness = executionService.buildHarness(
+      "class Solution:\n    def solve(self, nums: List[int]) -> int:\n        return len(nums)",
+      [makeTestCase({ nums: [1, 2] }, 2)],
+      "solve",
+      "nonce123",
+    );
+
+    expect(harness).toContain("__future__.annotations.compiler_flag");
+    expect(harness).toContain("def solve(self, nums: List[int]) -> int:");
+  });
+
+  it("preserves user imports inside the compiled source module", () => {
+    const harness = executionService.buildHarness(
+      "from __future__ import annotations\nimport heapq\n\nclass Solution:\n    def solve(self, nums: List[int]) -> int:\n        return len(nums)",
+      [makeTestCase({ nums: [1, 2] }, 2)],
+      "solve",
+      "nonce123",
+    );
+
+    expect(harness).toContain('_user_code = "from __future__ import annotations\\nimport heapq');
+    expect(harness).toContain("_compiled_user_code = compile(");
+    expect(harness).toContain('"script.py"');
+    expect(harness).toContain("flags=__future__.annotations.compiler_flag");
+  });
+
   it("embeds the provided nonce in both start and end markers", () => {
     const testCases = [makeTestCase({ n: 1 }, 1)];
     const nonce = "deadbeef01234567";
     const harness = executionService.buildHarness("pass", testCases, "solve", nonce);
     expect(harness).toContain(`===HARNESS_RESULT_${nonce}===`);
     expect(harness).toContain(`===END_HARNESS_RESULT_${nonce}===`);
+  });
+});
+
+describe("parseHarnessModuleError", () => {
+  const nonce = "abc123";
+
+  it("parses compilation markers emitted by the wrapper", () => {
+    const stdout = [
+      `===HARNESS_COMPILATION_ERROR_${nonce}===`,
+      JSON.stringify({ error: "SyntaxError: invalid syntax" }),
+      `===END_HARNESS_COMPILATION_ERROR_${nonce}===`,
+    ].join("\n");
+
+    expect(executionService.parseHarnessModuleError(stdout, nonce)).toEqual({
+      error: "SyntaxError: invalid syntax",
+      errorType: "compilation_error",
+    });
+  });
+
+  it("parses runtime markers emitted during module initialization", () => {
+    const stdout = [
+      `===HARNESS_RUNTIME_ERROR_${nonce}===`,
+      JSON.stringify({ error: "ModuleNotFoundError: No module named 'sortedcontainers'" }),
+      `===END_HARNESS_RUNTIME_ERROR_${nonce}===`,
+    ].join("\n");
+
+    expect(executionService.parseHarnessModuleError(stdout, nonce)).toEqual({
+      error: "ModuleNotFoundError: No module named 'sortedcontainers'",
+      errorType: "runtime_error",
+    });
   });
 });
 

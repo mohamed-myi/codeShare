@@ -4,9 +4,12 @@ import type { Logger } from "pino";
 import type { Server, Socket } from "socket.io";
 import type * as Y from "yjs";
 import { dependencyErrorLogFields } from "../lib/dependencyError.js";
+import { emitExecutionError } from "../lib/errorEmitter.js";
+import { handlerLogContext } from "../lib/handlerContext.js";
 import type { IpRateLimiter } from "../lib/ipRateLimiter.js";
-import { requestIdLogField, roomCodeLogFields } from "../lib/logger.js";
+import { getClientIp } from "../lib/ipUtils.js";
 import { globalCounters } from "../lib/rateLimitCounters.js";
+import { createHandlerSession } from "../lib/sessionFactory.js";
 import type { Room } from "../models/Room.js";
 import { executionService } from "../services/ExecutionService.js";
 
@@ -90,40 +93,14 @@ function createExecutionSession(
   deps: ExecutionHandlerDeps,
   executionType: ExecutionType,
 ): ExecutionSession | null {
-  const roomCode = socket.data.roomCode as string;
-  const room = deps.roomLookup.getRoom(roomCode);
-
-  if (!room || !room.problemId) {
-    return null;
-  }
-
-  return { io, socket, logger, deps, room, roomCode, executionType };
-}
-
-function getClientIp(socket: Socket): string {
-  return (socket.data.clientIp as string | undefined) ?? "unknown";
-}
-
-function emitSocketExecutionError(
-  session: ExecutionSession,
-  errorType: ExecutionErrorType,
-  message: string,
-): void {
-  session.socket.emit(SocketEvents.EXECUTION_ERROR, {
-    errorType,
-    message,
-  });
-}
-
-function emitRoomExecutionError(
-  session: ExecutionSession,
-  errorType: ExecutionErrorType,
-  message: string,
-): void {
-  session.io.to(session.roomCode).emit(SocketEvents.EXECUTION_ERROR, {
-    errorType,
-    message,
-  });
+  return createHandlerSession(
+    socket,
+    io,
+    logger,
+    deps.roomLookup,
+    () => ({ io, socket, logger, deps, executionType }),
+    (room) => room.problemId !== null,
+  );
 }
 
 function checkIpExecutionLimit(session: ExecutionSession): boolean {
@@ -144,17 +121,17 @@ function checkIpExecutionLimit(session: ExecutionSession): boolean {
 
   session.logger.warn({
     event: "execution_rejected",
-    ...roomCodeLogFields(session.roomCode),
-    ...requestIdLogField(session.socket),
+    ...handlerLogContext(session.roomCode, session.socket),
     execution_type: session.executionType,
     client_ip: clientIp,
     retry_after_seconds: ipCheck.retryAfterSeconds,
     reason: "ip_limit_reached",
   });
-  emitSocketExecutionError(
-    session,
+  emitExecutionError(
+    { io: session.io, socket: session.socket, roomCode: session.roomCode },
     ExecutionErrorType.IP_LIMIT,
     `Too many executions. Try again in ${ipCheck.retryAfterSeconds}s.`,
+    "socket",
   );
   return false;
 }
@@ -167,15 +144,15 @@ function checkRoomExecutionLimit(session: ExecutionSession): boolean {
 
   session.logger.info({
     event: "execution_rejected",
-    ...roomCodeLogFields(session.roomCode),
-    ...requestIdLogField(session.socket),
+    ...handlerLogContext(session.roomCode, session.socket),
     execution_type: session.executionType,
     reason: canExec.reason ?? "execution_not_allowed",
   });
-  emitSocketExecutionError(
-    session,
+  emitExecutionError(
+    { io: session.io, socket: session.socket, roomCode: session.roomCode },
     ExecutionErrorType.ROOM_LIMIT,
     canExec.reason ?? "Execution not allowed.",
+    "socket",
   );
   return false;
 }
@@ -192,17 +169,17 @@ function validateCodeSize(session: ExecutionSession, code: string): boolean {
 
   session.logger.warn({
     event: "execution_rejected",
-    ...roomCodeLogFields(session.roomCode),
-    ...requestIdLogField(session.socket),
+    ...handlerLogContext(session.roomCode, session.socket),
     execution_type: session.executionType,
     code_size_bytes: codeSizeBytes,
     max_code_bytes: session.deps.maxCodeBytes,
     reason: "code_too_large",
   });
-  emitRoomExecutionError(
-    session,
+  emitExecutionError(
+    { io: session.io, socket: session.socket, roomCode: session.roomCode },
     ExecutionErrorType.API_ERROR,
     `Code size limit exceeded (${session.deps.maxCodeBytes} bytes).`,
+    "room",
   );
   return false;
 }
@@ -243,15 +220,15 @@ async function loadExecutionResources(
   if (!boilerplate || !problem) {
     session.logger.error({
       event: "execution_configuration_missing",
-      ...roomCodeLogFields(session.roomCode),
-      ...requestIdLogField(session.socket),
+      ...handlerLogContext(session.roomCode, session.socket),
       execution_type: session.executionType,
       problem_id: session.room.problemId,
     });
-    emitRoomExecutionError(
-      session,
+    emitExecutionError(
+      { io: session.io, socket: session.socket, roomCode: session.roomCode },
       ExecutionErrorType.API_ERROR,
       "Problem configuration not found.",
+      "room",
     );
     return null;
   }
@@ -266,16 +243,16 @@ function reserveSubmission(session: ExecutionSession): boolean {
 
   session.logger.warn({
     event: "execution_rejected",
-    ...roomCodeLogFields(session.roomCode),
-    ...requestIdLogField(session.socket),
+    ...handlerLogContext(session.roomCode, session.socket),
     execution_type: session.executionType,
     daily_limit: session.deps.dailyLimit,
     reason: "global_limit_reached",
   });
-  emitRoomExecutionError(
-    session,
+  emitExecutionError(
+    { io: session.io, socket: session.socket, roomCode: session.roomCode },
     ExecutionErrorType.GLOBAL_LIMIT,
     "Daily execution limit reached. Please try again tomorrow.",
+    "room",
   );
   return false;
 }
@@ -284,24 +261,31 @@ function emitJudge0StatusError(session: ExecutionSession, response: Judge0Respon
   const statusId = response.status.id;
 
   if (statusId === 6) {
-    emitRoomExecutionError(
-      session,
+    emitExecutionError(
+      { io: session.io, socket: session.socket, roomCode: session.roomCode },
       ExecutionErrorType.COMPILATION_ERROR,
       sanitizeStderr(response.stderr),
+      "room",
     );
     return true;
   }
 
   if (statusId === 5) {
-    emitRoomExecutionError(session, ExecutionErrorType.TIMEOUT, "Time limit exceeded.");
+    emitExecutionError(
+      { io: session.io, socket: session.socket, roomCode: session.roomCode },
+      ExecutionErrorType.TIMEOUT,
+      "Time limit exceeded.",
+      "room",
+    );
     return true;
   }
 
   if (statusId >= 7) {
-    emitRoomExecutionError(
-      session,
+    emitExecutionError(
+      { io: session.io, socket: session.socket, roomCode: session.roomCode },
       ExecutionErrorType.RUNTIME_ERROR,
       sanitizeStderr(response.stderr),
+      "room",
     );
     return true;
   }
@@ -334,22 +318,36 @@ function handleAcceptedExecutionResult(
   testCases: TestCase[],
   nonce: string,
 ): void {
-  const parsed = executionService.parseResult(response.stdout ?? "", nonce);
+  const stdout = response.stdout ?? "";
+  const harnessModuleError = executionService.parseHarnessModuleError(stdout, nonce);
+  if (harnessModuleError) {
+    emitExecutionError(
+      { io: session.io, socket: session.socket, roomCode: session.roomCode },
+      harnessModuleError.errorType,
+      sanitizeStderr(harnessModuleError.error),
+      "room",
+    );
+    return;
+  }
+
+  const parsed = executionService.parseResult(stdout, nonce);
   if (!parsed) {
-    emitRoomExecutionError(
-      session,
+    emitExecutionError(
+      { io: session.io, socket: session.socket, roomCode: session.roomCode },
       ExecutionErrorType.PARSE_ERROR,
       "Could not parse execution results.",
+      "room",
     );
     return;
   }
 
   const validated = harnessResultSchema.safeParse(parsed);
   if (!validated.success) {
-    emitRoomExecutionError(
-      session,
+    emitExecutionError(
+      { io: session.io, socket: session.socket, roomCode: session.roomCode },
       ExecutionErrorType.PARSE_ERROR,
       "Execution results failed validation.",
+      "room",
     );
     return;
   }
@@ -375,8 +373,7 @@ async function submitExecution(
   session.logger.info(
     {
       event: "execution_dependency_completed",
-      ...roomCodeLogFields(session.roomCode),
-      ...requestIdLogField(session.socket),
+      ...handlerLogContext(session.roomCode, session.socket),
       execution_type: session.executionType,
       dependency: "judge0",
       duration_ms: durationMs,
@@ -425,8 +422,7 @@ async function handleExecution(session: ExecutionSession): Promise<void> {
       {
         event: "execution_failed",
         err,
-        ...roomCodeLogFields(session.roomCode),
-        ...requestIdLogField(session.socket),
+        ...handlerLogContext(session.roomCode, session.socket),
         execution_type: session.executionType,
         execution_error_type: errorType,
         ...dependencyErrorLogFields(err),
@@ -434,10 +430,11 @@ async function handleExecution(session: ExecutionSession): Promise<void> {
       "Execution failed",
     );
 
-    emitRoomExecutionError(
-      session,
+    emitExecutionError(
+      { io: session.io, socket: session.socket, roomCode: session.roomCode },
       errorType,
       err instanceof Error ? err.message : "Execution failed.",
+      "room",
     );
   } finally {
     session.room.executionInProgress = false;
