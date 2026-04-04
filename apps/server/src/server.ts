@@ -100,6 +100,7 @@ export function setupUpgradeRouting(
     llmCallsPerHourPerIp: config.LLM_CALLS_PER_HOUR_PER_IP,
     llmDailyLimit: config.LLM_DAILY_LIMIT,
     hintConsentMs: config.ROOM_HINT_CONSENT_MS,
+    hintCooldownMs: config.ROOM_HINT_COOLDOWN_MS,
     importsDailyLimit: config.IMPORTS_DAILY_LIMIT,
     importProblem: (url) => scraperService.importFromUrl(url),
     generateTestCases: testCaseGenerator

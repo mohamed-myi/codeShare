@@ -16,7 +16,10 @@ test.describe("MVP hint flows", () => {
     await resetTestState(request);
     await setStubScenario(request, {
       groq: {
-        chunks: ["Consider how to normalize equivalent inputs.", " Then group by that representation."],
+        chunks: [
+          "Consider how to normalize equivalent inputs.",
+          " Then group by that representation.",
+        ],
       },
     });
   });
@@ -61,9 +64,9 @@ test.describe("MVP hint flows", () => {
   });
 
   test("allows denying or timing out a hint request", async ({ browser, page }) => {
-    const roomCode = await createRoom(page, { displayName: "Alice" });
+    const deniedRoomCode = await createRoom(page, { displayName: "Alice" });
     const bob = await browser.newPage();
-    await joinRoom(bob, roomCode, "Bob");
+    await joinRoom(bob, deniedRoomCode, "Bob");
 
     await goToProblems(page);
     await importProblem(page, buildImportedProblemUrl(uniqueImportSlug("hint-deny")));
@@ -73,10 +76,22 @@ test.describe("MVP hint flows", () => {
     await page.getByRole("button", { name: /request hint/i }).click();
     await bob.getByTestId("deny-hint-button").click();
     await expect(page.getByText(/denied|approval/i)).toBeVisible();
-
-    await page.getByRole("button", { name: /request hint/i }).click();
-    await page.waitForTimeout(1_700);
-    await expect(page.getByText(/denied|approval/i)).toBeVisible();
     await bob.close();
+
+    const timeoutPage = await browser.newPage();
+    const timedOutRoomCode = await createRoom(timeoutPage, { displayName: "Carol" });
+    const dan = await browser.newPage();
+    await joinRoom(dan, timedOutRoomCode, "Dan");
+
+    await goToProblems(timeoutPage);
+    await importProblem(timeoutPage, buildImportedProblemUrl(uniqueImportSlug("hint-timeout")));
+    await goToSolver(timeoutPage);
+    await goToSolver(dan);
+
+    await timeoutPage.getByRole("button", { name: /request hint/i }).click();
+    await timeoutPage.waitForTimeout(1_700);
+    await expect(timeoutPage.getByText(/denied|approval/i)).toBeVisible();
+    await dan.close();
+    await timeoutPage.close();
   });
 });

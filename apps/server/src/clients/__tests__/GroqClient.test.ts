@@ -22,7 +22,6 @@ function createSseBody(frames: string[]): ReadableStream<Uint8Array> {
 }
 
 describe("GroqClient.complete", () => {
-
   it("returns content from non-streaming response", async () => {
     vi.stubGlobal(
       "fetch",

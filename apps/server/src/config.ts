@@ -52,6 +52,7 @@ const envSchema = z.object({
   MAX_ACTIVE_ROOMS: z.coerce.number().int().positive().default(500),
   ROOM_GRACE_PERIOD_MS: z.coerce.number().int().positive().default(TIMEOUTS.GRACE_PERIOD_MS),
   ROOM_HINT_CONSENT_MS: z.coerce.number().int().positive().default(TIMEOUTS.HINT_CONSENT_MS),
+  ROOM_HINT_COOLDOWN_MS: z.coerce.number().int().positive().default(5_000),
   ROOM_MAX_SUBMISSIONS: z.coerce.number().int().positive().default(ROOM_LIMITS.MAX_SUBMISSIONS),
   ROOM_MAX_IMPORTS: z.coerce.number().int().positive().default(ROOM_LIMITS.MAX_IMPORTS),
   ROOM_MAX_CUSTOM_TEST_CASES: z.coerce

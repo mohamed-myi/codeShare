@@ -35,6 +35,7 @@ function setEnv(overrides: Record<string, string | undefined> = {}) {
     MAX_LLM_HINT_CHARS: "1500",
     ROOM_GRACE_PERIOD_MS: "300000",
     ROOM_HINT_CONSENT_MS: "30000",
+    ROOM_HINT_COOLDOWN_MS: "5000",
     ROOM_MAX_SUBMISSIONS: "20",
     ROOM_MAX_IMPORTS: "3",
     ROOM_MAX_CUSTOM_TEST_CASES: "10",
@@ -78,6 +79,7 @@ describe("loadConfig", () => {
     expect(config.ENABLE_IMPORTED_PROBLEM_HINTS).toBe(false);
     expect(config.ROOM_GRACE_PERIOD_MS).toBe(300_000);
     expect(config.ROOM_HINT_CONSENT_MS).toBe(30_000);
+    expect(config.ROOM_HINT_COOLDOWN_MS).toBe(5_000);
     expect(config.ROOM_MAX_SUBMISSIONS).toBe(20);
     expect(config.ROOM_MAX_IMPORTS).toBe(3);
     expect(config.ROOM_MAX_CUSTOM_TEST_CASES).toBe(10);
@@ -140,6 +142,7 @@ describe("loadConfig", () => {
       LEETCODE_GRAPHQL_URL: "http://127.0.0.1:4100/graphql",
       ROOM_GRACE_PERIOD_MS: "1500",
       ROOM_HINT_CONSENT_MS: "2000",
+      ROOM_HINT_COOLDOWN_MS: "1200",
       ROOM_MAX_SUBMISSIONS: "4",
       ROOM_MAX_IMPORTS: "2",
       ROOM_MAX_CUSTOM_TEST_CASES: "3",
@@ -160,6 +163,7 @@ describe("loadConfig", () => {
     expect(config.LEETCODE_GRAPHQL_URL).toBe("http://127.0.0.1:4100/graphql");
     expect(config.ROOM_GRACE_PERIOD_MS).toBe(1_500);
     expect(config.ROOM_HINT_CONSENT_MS).toBe(2_000);
+    expect(config.ROOM_HINT_COOLDOWN_MS).toBe(1_200);
     expect(config.ROOM_MAX_SUBMISSIONS).toBe(4);
     expect(config.ROOM_MAX_IMPORTS).toBe(2);
     expect(config.ROOM_MAX_CUSTOM_TEST_CASES).toBe(3);

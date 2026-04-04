@@ -415,6 +415,35 @@ describe("Hint handler - single user LLM streaming fallback", () => {
     expect(chunks.map((c) => c.text).join("")).toBe("Hello world");
   });
 
+  it("delivers a validated LLM hint for imported problems in solo rooms", async () => {
+    const mockGroqClient = {
+      streamCompletion: vi.fn().mockReturnValue(mockStream(["Normalize the input first."])),
+    };
+    const { room, client } = await setup({
+      groqClient: mockGroqClient,
+      enableLLMHintFallback: true,
+      enableImportedProblemHints: true,
+    });
+    room.problemId = VALID_UUID;
+    room.hintsUsed = 0;
+    room.hintLimit = 2;
+
+    mockFindHintsByProblemId.mockResolvedValue([]);
+    mockFindProblemById.mockResolvedValue({
+      ...mockProblem,
+      source: "user_submitted",
+      sourceUrl: "https://leetcode.com/problems/two-sum/",
+    });
+
+    const doneP = waitForEvent<HintDonePayload>(client, SocketEvents.HINT_DONE);
+    client.emit(SocketEvents.HINT_REQUEST);
+    const payload = await doneP;
+
+    expect(payload.fullHint).toBe("Normalize the input first.");
+    expect(room.hintsUsed).toBe(1);
+    expect(room.hintStreaming).toBe(false);
+  });
+
   it("emits HINT_ERROR when LLM streaming fails", async () => {
     async function* failingStream(): AsyncGenerator<string> {
       yield ""; // biome requires yield in generators
@@ -469,6 +498,38 @@ describe("Hint handler - single user LLM streaming fallback", () => {
     expect(payload.message).toBe("Generated hint was blocked by the output policy.");
     expect(room.hintsUsed).toBe(0);
     expect(room.hintStreaming).toBe(false);
+  });
+
+  it("logs a structured failure reason when output policy blocks a hint", async () => {
+    async function* failingStream(): AsyncGenerator<string> {
+      yield "";
+      throw new Error("Generated solution included code");
+    }
+    const mockGroqClient = {
+      streamCompletion: vi.fn().mockReturnValue(failingStream()),
+    };
+    const { room, client } = await setup({
+      groqClient: mockGroqClient,
+      enableLLMHintFallback: true,
+    });
+    room.problemId = VALID_UUID;
+    room.hintsUsed = 0;
+    room.hintLimit = 2;
+
+    mockFindHintsByProblemId.mockResolvedValue([]);
+    mockFindProblemById.mockResolvedValue(mockProblem);
+
+    const errorP = waitForEvent<{ message: string }>(client, SocketEvents.HINT_ERROR);
+    client.emit(SocketEvents.HINT_REQUEST);
+    await errorP;
+
+    await new Promise((resolve) => logger.flush(resolve));
+    const hintFailure = parseLogEntries(logChunks).find(
+      (entry) => entry.event === "hint_stream_failed",
+    );
+
+    expect(hintFailure).toBeDefined();
+    expect(hintFailure?.failure_reason).toBe("output_policy");
   });
 
   it("logs Groq dependency metadata when hint streaming fails", async () => {

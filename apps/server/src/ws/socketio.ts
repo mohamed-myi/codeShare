@@ -66,6 +66,7 @@ export interface SocketIODeps {
   llmCallsPerHourPerIp?: number;
   llmDailyLimit?: number;
   hintConsentMs?: number;
+  hintCooldownMs?: number;
   importsDailyLimit?: number;
   importProblem?: (url: string) => Promise<{ id: string; sourceUrl: string | null }>;
   generateTestCases?: (ctx: GenerationContext) => Promise<void>;
@@ -237,6 +238,7 @@ function registerSocketHandlers(
     maxLLMHintChars: deps?.maxLLMHintChars ?? 1_500,
     maxLLMCallsPerRoom: deps?.maxLLMCallsPerRoom ?? 15,
     hintConsentMs: deps?.hintConsentMs,
+    hintCooldownMs: deps?.hintCooldownMs,
     ipRateLimiter: config.ipRateLimiter,
     llmCallsPerHourPerIp: deps?.llmCallsPerHourPerIp,
     llmDailyLimit: deps?.llmDailyLimit,

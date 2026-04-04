@@ -4,9 +4,12 @@ import type { Logger } from "pino";
 import type { Server, Socket } from "socket.io";
 import type * as Y from "yjs";
 import { dependencyErrorLogFields } from "../lib/dependencyError.js";
+import { emitMessageEvent } from "../lib/errorEmitter.js";
+import { handlerLogContext } from "../lib/handlerContext.js";
 import type { IpRateLimiter } from "../lib/ipRateLimiter.js";
-import { requestIdLogField, roomCodeLogFields } from "../lib/logger.js";
+import { getClientIp } from "../lib/ipUtils.js";
 import { globalCounters } from "../lib/rateLimitCounters.js";
+import { createHandlerSession } from "../lib/sessionFactory.js";
 import type { Room } from "../models/Room.js";
 import { hintService } from "../services/HintService.js";
 
@@ -92,14 +95,11 @@ function emitHintLog(
 function rejectHintRequest(session: HintSession, rejection: HintRejection): void {
   emitHintLog(session.logger, rejection.level, {
     event: "hint_request_rejected",
-    ...roomCodeLogFields(session.roomCode),
-    ...requestIdLogField(session.socket),
+    ...handlerLogContext(session.roomCode, session.socket),
     ...rejection.extra,
     reason: rejection.reason,
   });
-  session.socket.emit(SocketEvents.HINT_ERROR, {
-    message: rejection.message,
-  });
+  emitMessageEvent({ socket: session.socket }, SocketEvents.HINT_ERROR, rejection.message);
 }
 
 function clearPendingHintRequest(session: HintSession): string | null {
@@ -123,14 +123,12 @@ function createSession(
   logger: Logger,
   deps: HintHandlerDeps,
 ): HintSession | null {
-  const roomCode = socket.data.roomCode as string;
-  const room = deps.roomLookup.getRoom(roomCode);
-
-  if (!room) {
-    return null;
-  }
-
-  return { io, socket, logger, deps, room, roomCode };
+  return createHandlerSession(socket, io, logger, deps.roomLookup, () => ({
+    io,
+    socket,
+    logger,
+    deps,
+  }));
 }
 
 function getHintRequestRejection(
@@ -204,8 +202,7 @@ function sendPendingHintRequest(session: HintSession): void {
   };
   session.logger.info({
     event: "hint_request_pending",
-    ...roomCodeLogFields(session.roomCode),
-    ...requestIdLogField(session.socket),
+    ...handlerLogContext(session.roomCode, session.socket),
     requested_by: requester.id,
   });
   session.io.to(session.roomCode).emit(SocketEvents.ROOM_SYNC, session.room.toSyncPayload());
@@ -242,8 +239,7 @@ function startConsentTimer(session: HintSession): void {
 
     session.logger.info({
       event: "hint_request_denied",
-      ...roomCodeLogFields(session.roomCode),
-      ...requestIdLogField(session.socket),
+      ...handlerLogContext(session.roomCode, session.socket),
       requested_by: requester.id,
       reason: "consent_timeout",
     });
@@ -263,8 +259,7 @@ function handleHintDeny(session: HintSession, reason: "peer_denied" | "consent_t
 
   session.logger.info({
     event: "hint_request_denied",
-    ...roomCodeLogFields(session.roomCode),
-    ...requestIdLogField(session.socket),
+    ...handlerLogContext(session.roomCode, session.socket),
     requested_by: requester.id,
     reason,
   });
@@ -275,8 +270,7 @@ function emitHintDelivered(session: HintSession, fullHint: string, source: "stor
   const hintsRemaining = session.room.hintLimit - session.room.hintsUsed;
   session.logger.info({
     event: "hint_delivered",
-    ...roomCodeLogFields(session.roomCode),
-    ...requestIdLogField(session.socket),
+    ...handlerLogContext(session.roomCode, session.socket),
     source,
     hints_remaining: hintsRemaining,
   });
@@ -292,13 +286,26 @@ function deliverStoredHint(session: HintSession, hint: Hint): void {
   emitHintDelivered(session, hint.hintText, "stored");
 }
 
-function getClientIp(socket: Socket): string {
-  return (socket.data.clientIp as string | undefined) ?? "unknown";
-}
-
 function rejectLLMHintRequest(session: HintSession, rejection: HintRejection): null {
   rejectHintRequest(session, rejection);
   return null;
+}
+
+function classifyHintStreamFailure(streamErr: unknown): {
+  reason: "output_policy" | "generation_failed";
+  clientMessage: string;
+} {
+  if (streamErr instanceof Error && /empty|code|solution/i.test(streamErr.message)) {
+    return {
+      reason: "output_policy",
+      clientMessage: "Generated hint was blocked by the output policy.",
+    };
+  }
+
+  return {
+    reason: "generation_failed",
+    clientMessage: "Failed to generate hint. Please try again.",
+  };
 }
 
 async function prepareLLMHintRequest(session: HintSession): Promise<PreparedLLMHintRequest | null> {
@@ -416,8 +423,7 @@ async function streamLLMHint(session: HintSession, request: PreparedLLMHintReque
     session.logger.info(
       {
         event: "hint_stream_completed",
-        ...roomCodeLogFields(session.roomCode),
-        ...requestIdLogField(session.socket),
+        ...handlerLogContext(session.roomCode, session.socket),
         dependency: "groq",
         duration_ms: durationMs,
       },
@@ -432,24 +438,20 @@ async function streamLLMHint(session: HintSession, request: PreparedLLMHintReque
     emitHintDelivered(session, fullHint, "llm");
   } catch (streamErr) {
     const durationMs = Date.now() - groqStart;
+    const failure = classifyHintStreamFailure(streamErr);
     session.logger.error(
       {
         event: "hint_stream_failed",
         err: streamErr,
-        ...roomCodeLogFields(session.roomCode),
-        ...requestIdLogField(session.socket),
+        ...handlerLogContext(session.roomCode, session.socket),
         dependency: "groq",
         duration_ms: durationMs,
+        failure_reason: failure.reason,
         ...dependencyErrorLogFields(streamErr),
       },
       "LLM hint streaming failed",
     );
-    session.socket.emit(SocketEvents.HINT_ERROR, {
-      message:
-        streamErr instanceof Error && /empty|code|solution/i.test(streamErr.message)
-          ? "Generated hint was blocked by the output policy."
-          : "Failed to generate hint. Please try again.",
-    });
+    emitMessageEvent({ socket: session.socket }, SocketEvents.HINT_ERROR, failure.clientMessage);
   } finally {
     session.room.hintStreaming = false;
   }
@@ -477,15 +479,16 @@ async function deliverHint(session: HintSession): Promise<void> {
       {
         event: "hint_delivery_failed",
         err,
-        ...roomCodeLogFields(session.roomCode),
-        ...requestIdLogField(session.socket),
+        ...handlerLogContext(session.roomCode, session.socket),
         ...dependencyErrorLogFields(err),
       },
       "Failed to deliver hint",
     );
-    session.socket.emit(SocketEvents.HINT_ERROR, {
-      message: "Failed to retrieve hint. Please try again.",
-    });
+    emitMessageEvent(
+      { socket: session.socket },
+      SocketEvents.HINT_ERROR,
+      "Failed to retrieve hint. Please try again.",
+    );
   }
 }
 
@@ -513,8 +516,7 @@ async function handleHintApprove(session: HintSession): Promise<void> {
   clearPendingHintRequest(session);
   session.logger.info({
     event: "hint_request_approved",
-    ...roomCodeLogFields(session.roomCode),
-    ...requestIdLogField(session.socket),
+    ...handlerLogContext(session.roomCode, session.socket),
   });
   await deliverHint(session);
 }
