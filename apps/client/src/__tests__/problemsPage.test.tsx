@@ -1,5 +1,6 @@
-import type { PendingHintRequest, ProblemListItem } from "@codeshare/shared";
+import { type PendingHintRequest, type ProblemListItem, SocketEvents } from "@codeshare/shared";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockNavigate = vi.hoisted(() => vi.fn());
@@ -70,8 +71,11 @@ import { ProblemsPage } from "../pages/ProblemsPage.tsx";
 
 describe("ProblemsPage", () => {
   beforeEach(() => {
+    mockProblems.problems = [];
     mockRoomState.state.importStatus = null;
+    mockRoomState.state.currentUserId = null;
     mockRoomState.dispatch.mockClear();
+    mockSocket.emit.mockClear();
     mockNavigate.mockClear();
   });
 
@@ -91,5 +95,60 @@ describe("ProblemsPage", () => {
 
     expect(mockNavigate).not.toHaveBeenCalled();
     expect(screen.queryByTestId("import-dialog")).toBeNull();
+  });
+
+  it("keeps problem selection disabled until the local user has joined the room", async () => {
+    const user = userEvent.setup();
+    mockProblems.problems = [
+      {
+        id: "problem-1",
+        slug: "climbing-stairs",
+        title: "Climbing Stairs",
+        difficulty: "easy",
+        category: "1-D Dynamic Programming",
+      },
+    ];
+
+    render(<ProblemsPage />);
+
+    const option = screen.getByTestId("problem-option-climbing-stairs");
+    expect(option).toBeDisabled();
+    expect(screen.getByTestId("joining-room-message")).toBeInTheDocument();
+
+    await user.click(option);
+
+    expect(mockSocket.emit).not.toHaveBeenCalled();
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it("selects a problem after the local user has joined the room", async () => {
+    const user = userEvent.setup();
+    mockRoomState.state.currentUserId = "user-1";
+    mockRoomState.state.users = [
+      {
+        id: "user-1",
+        displayName: "Solo Dev",
+        role: "peer",
+        connected: true,
+      },
+    ];
+    mockProblems.problems = [
+      {
+        id: "problem-1",
+        slug: "climbing-stairs",
+        title: "Climbing Stairs",
+        difficulty: "easy",
+        category: "1-D Dynamic Programming",
+      },
+    ];
+
+    render(<ProblemsPage />);
+
+    await user.click(screen.getByTestId("problem-option-climbing-stairs"));
+
+    expect(mockSocket.emit).toHaveBeenCalledWith(SocketEvents.PROBLEM_SELECT, {
+      problemId: "problem-1",
+    });
+    expect(mockNavigate).toHaveBeenCalledWith("/room/abc-xyz/session/solve");
   });
 });

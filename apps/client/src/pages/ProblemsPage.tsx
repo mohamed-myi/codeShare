@@ -1,4 +1,4 @@
-import type { Difficulty, ProblemListItem } from "@codeshare/shared";
+import type { ProblemListItem } from "@codeshare/shared";
 import { SocketEvents } from "@codeshare/shared";
 import { Download } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -9,12 +9,7 @@ import { Select } from "../components/Select.tsx";
 import { useProblems } from "../hooks/useProblems.ts";
 import { useRoom } from "../hooks/useRoom.ts";
 import { useSocket } from "../hooks/useSocket.ts";
-
-const DIFFICULTY_COLORS: Record<Difficulty, string> = {
-  easy: "text-[var(--color-difficulty-easy)]",
-  medium: "text-[var(--color-difficulty-medium)]",
-  hard: "text-[var(--color-difficulty-hard)]",
-};
+import { DIFFICULTY_COLORS } from "../lib/difficultyStyles.ts";
 
 const DEBOUNCE_MS = 300;
 
@@ -36,8 +31,11 @@ export function ProblemsPage() {
 
   const currentUser = state.users.find((u) => u.id === state.currentUserId);
   const isCandidate = currentUser?.role === "candidate";
+  const hasJoinedRoom = Boolean(state.currentUserId);
+  const isJoiningRoom = connected && !hasJoinedRoom;
   const importDisabled = state.executionInProgress || state.isHintStreaming;
   const canImport = state.mode === "collaboration" || currentUser?.role === "interviewer";
+  const selectionDisabled = !socket || state.executionInProgress || !connected || !hasJoinedRoom;
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -71,7 +69,7 @@ export function ProblemsPage() {
   }
 
   function handleSelect(problem: ProblemListItem): void {
-    if (!socket || state.executionInProgress || !connected) return;
+    if (selectionDisabled) return;
     if (isCandidate && state.mode === "interview") return;
     if (problem.id === state.problemId) {
       navigate(`/room/${roomCode}/session/solve`);
@@ -88,10 +86,10 @@ export function ProblemsPage() {
 
   const handleImportProblem = useCallback(
     (leetcodeUrl: string) => {
-      if (importDisabled) return;
+      if (importDisabled || !hasJoinedRoom) return;
       socket?.emit(SocketEvents.PROBLEM_IMPORT, { leetcodeUrl });
     },
-    [importDisabled, socket],
+    [hasJoinedRoom, importDisabled, socket],
   );
 
   if (loading) {
@@ -121,6 +119,15 @@ export function ProblemsPage() {
         <p className="mt-5 text-sm text-[var(--color-text-tertiary)]">
           {filtered.length} {filtered.length === 1 ? "problem" : "problems"} available
         </p>
+        {isJoiningRoom && (
+          <p
+            className="mt-2 text-xs text-[var(--color-text-tertiary)]"
+            data-testid="joining-room-message"
+            role="status"
+          >
+            Joining room...
+          </p>
+        )}
       </div>
 
       <div
@@ -165,7 +172,7 @@ export function ProblemsPage() {
             type="button"
             onClick={() => setShowImportDialog(true)}
             data-testid="open-import-dialog"
-            disabled={importDisabled || !connected}
+            disabled={importDisabled || !connected || !hasJoinedRoom}
             className="ui-ghost-button justify-self-start text-sm md:col-auto md:justify-self-end"
           >
             <Download size={14} />
@@ -189,11 +196,7 @@ export function ProblemsPage() {
                 key={problem.id}
                 onClick={() => handleSelect(problem)}
                 data-testid={`problem-option-${problem.slug}`}
-                disabled={
-                  state.executionInProgress ||
-                  !connected ||
-                  (isCandidate && state.mode === "interview")
-                }
+                disabled={selectionDisabled || (isCandidate && state.mode === "interview")}
                 style={{ ["--stagger-delay" as string]: `${Math.min(i * 50, 400)}ms` }}
                 className={`fade-up-in grid w-full grid-cols-[44px_minmax(0,1fr)_120px] items-center gap-6 px-6 py-7 text-left transition-all duration-[140ms] ease-in-out hover:bg-white/[0.02] disabled:opacity-40 md:px-12 ${
                   problem.id === state.problemId ? "text-[var(--color-text-primary)]" : ""
@@ -228,7 +231,7 @@ export function ProblemsPage() {
         onCancel={() => setPendingSelection(null)}
         onConfirm={() => {
           if (!pendingSelection) return;
-          if (state.executionInProgress || !connected) {
+          if (selectionDisabled) {
             setPendingSelection(null);
             return;
           }
