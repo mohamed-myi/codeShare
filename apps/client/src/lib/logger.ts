@@ -16,13 +16,14 @@ export interface BrowserLogTransport {
 }
 
 interface BrowserLoggerOptions {
+  getRoute?: () => string;
   environment?: string;
   route?: string;
   transport?: BrowserLogTransport;
   consoleApi?: BrowserConsole;
 }
 
-interface BrowserLogInput {
+export interface BrowserLogInput {
   event: string;
   roomCode?: string;
   socketId?: string;
@@ -40,6 +41,7 @@ const DEFAULT_CONSOLE: BrowserConsole = {
 export function createBrowserLogger(options: BrowserLoggerOptions = {}) {
   const environment = options.environment ?? import.meta.env.MODE ?? "development";
   const consoleApi = options.consoleApi ?? DEFAULT_CONSOLE;
+  const resolveRoute = () => options.getRoute?.() ?? options.route;
 
   async function write(level: "info" | "warn" | "error", input: BrowserLogInput): Promise<void> {
     const payload = clientLogPayloadSchema.parse({
@@ -50,7 +52,7 @@ export function createBrowserLogger(options: BrowserLoggerOptions = {}) {
       room_code: input.roomCode,
       socket_id: input.socketId,
       request_id: input.requestId,
-      route: options.route,
+      route: resolveRoute(),
       error_type: input.error?.name,
       error_message: input.error?.message,
       context: input.context,
@@ -70,7 +72,7 @@ export function createBrowserLogger(options: BrowserLoggerOptions = {}) {
         event: CLIENT_LOG_EVENTS.CLIENT_LOG_INGEST_FAILED,
         service: LOG_SERVICES.CLIENT,
         timestamp: new Date().toISOString(),
-        route: options.route,
+        route: resolveRoute(),
         error_type: error instanceof Error ? error.name : "UnknownError",
         error_message: error instanceof Error ? error.message : "Client log ingest failed",
         context: {
@@ -107,9 +109,10 @@ export function createDevLogTransport(): BrowserLogTransport {
   };
 }
 
-export function getBrowserLogger(route = window.location.pathname) {
+export function getBrowserLogger(route?: string) {
   return createBrowserLogger({
     environment: import.meta.env.MODE,
+    getRoute: route ? undefined : () => window.location.pathname,
     route,
     transport: import.meta.env.DEV ? createDevLogTransport() : undefined,
   });

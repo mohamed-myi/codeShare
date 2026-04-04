@@ -1,4 +1,8 @@
+import { CLIENT_LOG_EVENTS } from "@codeshare/shared";
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { getBrowserLogger } from "../lib/logger.ts";
+
+const logger = getBrowserLogger();
 
 interface RoomErrorBoundaryProps {
   children: ReactNode;
@@ -18,7 +22,14 @@ export class RoomErrorBoundary extends Component<RoomErrorBoundaryProps, RoomErr
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    console.error("Room view failed to render", error, errorInfo);
+    void logger.error({
+      event: CLIENT_LOG_EVENTS.CLIENT_RENDER_FAILED,
+      error,
+      context: {
+        boundary: "room",
+        component_stack: errorInfo.componentStack,
+      },
+    });
   }
 
   render() {

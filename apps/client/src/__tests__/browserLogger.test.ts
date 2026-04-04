@@ -65,4 +65,69 @@ describe("createBrowserLogger", () => {
 
     expect(consoleApi.error).toHaveBeenCalledTimes(2);
   });
+
+  it("resolves the route at write time when getRoute is provided", async () => {
+    const consoleApi = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    };
+    let route = "/room/abc-xyz/session/problems";
+    const logger = createBrowserLogger({
+      environment: "development",
+      getRoute: () => route,
+      transport: { send: vi.fn().mockResolvedValue(undefined) },
+      consoleApi,
+    });
+
+    await logger.info({
+      event: "client_socket_connected",
+      roomCode: "abc-xyz",
+    });
+
+    route = "/room/abc-xyz/session/solve";
+
+    await logger.warn({
+      event: "client_yjs_disconnected",
+      roomCode: "abc-xyz",
+    });
+
+    expect(consoleApi.info).toHaveBeenCalledWith(
+      expect.objectContaining({ route: "/room/abc-xyz/session/problems" }),
+    );
+    expect(consoleApi.warn).toHaveBeenCalledWith(
+      expect.objectContaining({ route: "/room/abc-xyz/session/solve" }),
+    );
+  });
+
+  it("uses the current route for ingest-failure fallback logs", async () => {
+    const consoleApi = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    };
+    let route = "/room/abc-xyz/session/problems";
+    const logger = createBrowserLogger({
+      environment: "development",
+      getRoute: () => route,
+      transport: {
+        send: vi.fn().mockRejectedValue(new Error("write failed")),
+      },
+      consoleApi,
+    });
+
+    route = "/room/abc-xyz/session/solve";
+
+    await logger.error({
+      event: "client_socket_connect_failed",
+      error: new Error("Origin not allowed"),
+    });
+
+    expect(consoleApi.error).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        event: "client_log_ingest_failed",
+        route: "/room/abc-xyz/session/solve",
+      }),
+    );
+  });
 });

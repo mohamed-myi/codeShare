@@ -4,8 +4,18 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { SocketProvider, useSocketContext } from "../providers/SocketProvider.tsx";
 
 const mockIo = vi.fn();
+const mockBrowserLogger = vi.hoisted(() => ({
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+}));
+const mockGetBrowserLogger = vi.hoisted(() => vi.fn(() => mockBrowserLogger));
 vi.mock("socket.io-client", () => ({
   io: (...args: unknown[]) => mockIo(...args),
+}));
+
+vi.mock("../lib/logger.ts", () => ({
+  getBrowserLogger: (...args: unknown[]) => mockGetBrowserLogger(...args),
 }));
 
 vi.mock("../lib/realtimeUrl.ts", () => ({
@@ -40,6 +50,11 @@ function createMockSocket() {
 
 afterEach(() => {
   mockIo.mockReset();
+  mockGetBrowserLogger.mockReset();
+  mockGetBrowserLogger.mockImplementation(() => mockBrowserLogger);
+  mockBrowserLogger.info.mockReset();
+  mockBrowserLogger.warn.mockReset();
+  mockBrowserLogger.error.mockReset();
 });
 
 describe("SocketProvider", () => {
@@ -68,6 +83,7 @@ describe("SocketProvider", () => {
         query: { roomCode: "abc-xyz" },
       }),
     );
+    expect(mockGetBrowserLogger).toHaveBeenCalledWith();
   });
 
   it("does not create socket when roomCode is undefined", () => {

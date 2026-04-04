@@ -1,4 +1,8 @@
+import { CLIENT_LOG_EVENTS } from "@codeshare/shared";
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { getBrowserLogger } from "../lib/logger.ts";
+
+const logger = getBrowserLogger();
 
 interface PanelErrorBoundaryProps {
   name: string;
@@ -20,7 +24,15 @@ export class PanelErrorBoundary extends Component<
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    console.error(`Panel "${this.props.name}" failed to render`, error, errorInfo);
+    void logger.error({
+      event: CLIENT_LOG_EVENTS.CLIENT_RENDER_FAILED,
+      error,
+      context: {
+        boundary: "panel",
+        panel_name: this.props.name,
+        component_stack: errorInfo.componentStack,
+      },
+    });
   }
 
   handleRetry = () => {

@@ -1,6 +1,8 @@
+import { CLIENT_LOG_EVENTS } from "@codeshare/shared";
 import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { io, type Socket } from "socket.io-client";
+import { getBrowserLogger } from "../lib/logger.ts";
 import { getRealtimeHttpBase } from "../lib/realtimeUrl.ts";
 
 interface SocketContextValue {
@@ -29,6 +31,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     if (!roomCode) return;
 
     const normalizedRoomCode = roomCode.toLowerCase();
+    const logger = getBrowserLogger();
     const s = io(getRealtimeHttpBase(), {
       path: "/ws/socket",
       autoConnect: true,
@@ -37,16 +40,33 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     });
     setSocket(s);
 
+    let lastSocketId: string | undefined;
     const handleConnect = () => {
+      lastSocketId = s.id;
       setConnected(true);
       setConnectionError(null);
+      void logger.info({
+        event: CLIENT_LOG_EVENTS.CLIENT_SOCKET_CONNECTED,
+        roomCode: normalizedRoomCode,
+        socketId: s.id,
+      });
     };
     const handleDisconnect = () => {
       setConnected(false);
+      void logger.warn({
+        event: CLIENT_LOG_EVENTS.CLIENT_SOCKET_DISCONNECTED,
+        roomCode: normalizedRoomCode,
+        socketId: lastSocketId,
+      });
     };
     const handleConnectError = (error: Error) => {
       setConnected(false);
       setConnectionError(error.message);
+      void logger.error({
+        event: CLIENT_LOG_EVENTS.CLIENT_SOCKET_CONNECT_FAILED,
+        roomCode: normalizedRoomCode,
+        error,
+      });
     };
 
     s.on("connect", handleConnect);

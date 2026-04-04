@@ -51,9 +51,16 @@ const mockBrowserLogger = vi.hoisted(() => ({
   warn: vi.fn(),
   error: vi.fn(),
 }));
+const mockGetBrowserLogger = vi.hoisted(() => vi.fn(() => mockBrowserLogger));
+
+const mockJoinAckDelayMs = vi.hoisted(() => ({ value: 0 }));
 
 vi.mock("../lib/logger.ts", () => ({
-  getBrowserLogger: () => mockBrowserLogger,
+  getBrowserLogger: (...args: unknown[]) => mockGetBrowserLogger(...args),
+}));
+
+vi.mock("../lib/testControls.ts", () => ({
+  getJoinAckDelayMs: () => mockJoinAckDelayMs.value,
 }));
 
 import { useRoom } from "../hooks/useRoom.ts";
@@ -75,8 +82,12 @@ function renderWithRoomProvider(ui: React.ReactNode) {
 }
 
 afterEach(() => {
+  vi.useRealTimers();
   sessionStorage.clear();
   mockSocket.reset();
+  mockJoinAckDelayMs.value = 0;
+  mockGetBrowserLogger.mockReset();
+  mockGetBrowserLogger.mockImplementation(() => mockBrowserLogger);
   mockBrowserLogger.info.mockReset();
   mockBrowserLogger.warn.mockReset();
   mockBrowserLogger.error.mockReset();
@@ -95,6 +106,7 @@ describe("useRoom", () => {
       displayName: "Alice",
       reconnectToken: "token-123",
     });
+    expect(mockGetBrowserLogger).toHaveBeenCalledWith();
   });
 
   it("emits user:join only once when multiple consumers mount under StrictMode", () => {
@@ -175,6 +187,38 @@ describe("useRoom", () => {
     expect(sessionStorage.getItem("yjsToken")).toBe("yjs-token-1");
     expect(screen.getByTestId("current-user-id").textContent).toBe("user-1");
     expect(screen.getByTestId("user-count").textContent).toBe("1");
+  });
+
+  it("delays applying the local user:joined payload when join ack delay is configured", () => {
+    vi.useFakeTimers();
+    mockJoinAckDelayMs.value = 1_000;
+
+    renderWithRoomProvider(<TestHarness />);
+
+    act(() => {
+      mockSocket.trigger(SocketEvents.USER_JOINED, {
+        userId: "user-1",
+        displayName: "Alice",
+        role: "peer",
+        mode: "collaboration",
+        reconnectToken: "fresh-token",
+        yjsToken: "yjs-token-1",
+      });
+    });
+
+    expect(sessionStorage.getItem("reconnectToken")).toBe("fresh-token");
+    expect(sessionStorage.getItem("yjsToken")).toBe("yjs-token-1");
+    expect(screen.getByTestId("current-user-id").textContent).toBe("");
+    expect(screen.getByTestId("user-count").textContent).toBe("0");
+
+    act(() => {
+      vi.advanceTimersByTime(1_000);
+    });
+
+    expect(screen.getByTestId("current-user-id").textContent).toBe("user-1");
+    expect(screen.getByTestId("user-count").textContent).toBe("1");
+
+    vi.useRealTimers();
   });
 
   it("does not overwrite the local reconnect token when another user joins", () => {

@@ -32,7 +32,8 @@ export type RoomAction =
   | { type: "TESTCASE_ADDED"; payload: { testCase: CustomTestCase } }
   | { type: "TESTCASE_ERROR"; payload: { message: string } }
   | { type: "SOLUTION_REVEALED"; payload: { solution: string } }
-  | { type: "EVENT_REJECTED"; payload: { event: string; reason: string } };
+  | { type: "EVENT_REJECTED"; payload: { event: string; reason: string } }
+  | { type: "YJS_TOKEN_ROTATED" };
 
 export interface ClientRoomState extends RoomState {
   currentUserId: string | null;
@@ -207,6 +208,11 @@ export function roomReducer(state: ClientRoomState, action: RoomAction): ClientR
 
     case "EVENT_REJECTED":
       return { ...state, lastError: action.payload.reason };
+
+    // Forces a re-render so YjsProvider picks up the rotated yjsToken from sessionStorage.
+    // Returning a new object reference (even with identical data) triggers React's state update.
+    case "YJS_TOKEN_ROTATED":
+      return { ...state };
 
     default:
       return state;

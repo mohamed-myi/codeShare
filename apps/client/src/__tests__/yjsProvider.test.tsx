@@ -9,22 +9,44 @@ const mockBrowserLogger = vi.hoisted(() => ({
   error: vi.fn(),
 }));
 
+const mockGetBrowserLogger = vi.hoisted(() => vi.fn((_route?: string) => mockBrowserLogger));
 const mockUseRoom = vi.hoisted(() => vi.fn());
-const providerInstances = vi.hoisted(() => [] as Array<Record<string, unknown>>);
+
+interface MockProvider {
+  url: string;
+  roomCode: string;
+  doc: unknown;
+  options: { params: { token: string } };
+  destroy: ReturnType<typeof vi.fn>;
+  on: (event: string, handler: (payload?: unknown) => void) => void;
+  off: (event: string, handler: (payload?: unknown) => void) => void;
+  emit: (event: string, payload?: unknown) => void;
+}
+
+const providerInstances = vi.hoisted(() => [] as MockProvider[]);
 const MockWebsocketProvider = vi.hoisted(
   () =>
     class {
       static OPEN = 1;
-      readonly destroy = vi.fn();
-      private readonly listeners = new Map<string, Array<(payload?: unknown) => void>>();
+      destroy = vi.fn();
+      private listeners = new Map<string, Array<(payload?: unknown) => void>>();
+
+      url: string;
+      roomCode: string;
+      doc: unknown;
+      options: { params: { token: string } };
 
       constructor(
-        readonly url: string,
-        readonly roomCode: string,
-        readonly doc: unknown,
-        readonly options: { params: { token: string } },
+        url: string,
+        roomCode: string,
+        doc: unknown,
+        options: { params: { token: string } },
       ) {
-        providerInstances.push(this as unknown as Record<string, unknown>);
+        this.url = url;
+        this.roomCode = roomCode;
+        this.doc = doc;
+        this.options = options;
+        providerInstances.push(this as unknown as MockProvider);
       }
 
       on(event: string, handler: (payload?: unknown) => void) {
@@ -50,7 +72,7 @@ const MockWebsocketProvider = vi.hoisted(
 );
 
 vi.mock("../lib/logger.ts", () => ({
-  getBrowserLogger: () => mockBrowserLogger,
+  getBrowserLogger: (route?: string) => mockGetBrowserLogger(route),
 }));
 
 vi.mock("../hooks/useRoom.ts", () => ({
@@ -80,6 +102,8 @@ function renderWithRoute(children: ReactNode) {
 describe("YjsProvider", () => {
   afterEach(() => {
     sessionStorage.clear();
+    mockGetBrowserLogger.mockReset();
+    mockGetBrowserLogger.mockImplementation(() => mockBrowserLogger);
     mockUseRoom.mockReset();
     mockBrowserLogger.info.mockReset();
     mockBrowserLogger.warn.mockReset();
@@ -93,6 +117,7 @@ describe("YjsProvider", () => {
     renderWithRoute(<YjsProvider>child</YjsProvider>);
 
     expect(providerInstances).toHaveLength(0);
+    expect(mockGetBrowserLogger).toHaveBeenCalledWith(undefined);
     expect(mockBrowserLogger.warn).toHaveBeenCalledWith(
       expect.objectContaining({
         event: "client_yjs_token_missing",
@@ -140,5 +165,29 @@ describe("YjsProvider", () => {
         }),
       );
     });
+  });
+
+  it("does not recreate the provider when rerendered with a fresh logger instance", () => {
+    sessionStorage.setItem("yjsToken", "yjs-token-1");
+    mockUseRoom.mockReturnValue({ state: { currentUserId: "user-1" } });
+    mockGetBrowserLogger.mockImplementation(() => ({
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    }));
+
+    const { rerender } = renderWithRoute(<YjsProvider>child</YjsProvider>);
+
+    expect(providerInstances).toHaveLength(1);
+
+    rerender(
+      <MemoryRouter initialEntries={["/room/abc-xyz/session"]}>
+        <Routes>
+          <Route path="/room/:roomCode/session" element={<YjsProvider>child</YjsProvider>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(providerInstances).toHaveLength(1);
   });
 });
