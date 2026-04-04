@@ -4,6 +4,7 @@
     "includes": [
       "apps/*/src/**",
       "packages/*/src/**",
+      "load-tests/src/**",
       "e2e/**",
       "!**/node_modules",
       "!**/dist",

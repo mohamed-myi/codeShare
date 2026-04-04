@@ -21,7 +21,9 @@
     "verify": "pnpm lint && pnpm typecheck && pnpm test",
     "dev:fresh": "bash scripts/setup.sh --start-dev",
     "load-test": "pnpm --filter codeshare-load-tests lt",
-    "load-test:all": "pnpm --filter codeshare-load-tests lt"
+    "load-test:all": "pnpm --filter codeshare-load-tests lt",
+    "load-test:auto": "pnpm --filter codeshare-load-tests lt:auto",
+    "load-test:smoke": "pnpm --filter codeshare-load-tests lt --auto-start --skip-db-setup --scenarios LT-2,LT-3"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.1",
