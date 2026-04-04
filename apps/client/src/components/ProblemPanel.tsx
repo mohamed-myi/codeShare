@@ -1,5 +1,6 @@
 import type { Problem } from "@codeshare/shared";
 import type { ReactNode } from "react";
+import { DIFFICULTY_COLORS } from "../lib/difficultyStyles.ts";
 import { ProblemHintStatus, type ProblemHintStatusProps } from "./ProblemHintStatus.tsx";
 
 interface ProblemPanelProps {
@@ -7,12 +8,6 @@ interface ProblemPanelProps {
   emptyMessage?: string;
   hint?: ProblemHintStatusProps;
 }
-
-const DIFFICULTY_STYLES: Record<string, string> = {
-  easy: "text-[var(--color-difficulty-easy)]",
-  medium: "text-[var(--color-difficulty-medium)]",
-  hard: "text-[var(--color-difficulty-hard)]",
-};
 
 export function ProblemPanel({
   problem,
@@ -37,7 +32,7 @@ export function ProblemPanel({
           >
             {problem.title}
           </h2>
-          <span className={`text-sm capitalize ${DIFFICULTY_STYLES[problem.difficulty]}`}>
+          <span className={`text-sm capitalize ${DIFFICULTY_COLORS[problem.difficulty]}`}>
             {problem.difficulty}
           </span>
         </div>

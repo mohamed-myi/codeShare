@@ -91,7 +91,9 @@ vi.mock("react-resizable-panels", () => ({
     <div data-testid={`panel-${props.id ?? "unknown"}`}>{children}</div>
   ),
   Group: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  Separator: () => <div data-testid="resize-handle" />,
+  Separator: ({ id, ...props }: { id?: string; [key: string]: unknown }) => (
+    <div data-testid={id ?? "resize-handle"} id={id} {...props} />
+  ),
 }));
 
 import { SolverPage } from "../pages/SolverPage.tsx";
@@ -137,6 +139,19 @@ describe("SolverPage", () => {
     expect(screen.getByTestId("panel-problem")).toBeDefined();
     expect(screen.getByTestId("panel-editor")).toBeDefined();
     expect(screen.getByTestId("panel-results")).toBeDefined();
+  });
+
+  it("renders solver resize handles with stable ids and classes", () => {
+    render(<SolverPage />);
+
+    expect(screen.getByTestId("solver-main-separator")).toHaveAttribute(
+      "class",
+      expect.stringContaining("solver-resize-handle"),
+    );
+    expect(screen.getByTestId("solver-results-separator")).toHaveAttribute(
+      "class",
+      expect.stringContaining("solver-resize-handle"),
+    );
   });
 
   it("renders Run and Submit buttons", () => {

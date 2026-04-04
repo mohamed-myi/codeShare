@@ -165,7 +165,7 @@ export function SolverPage() {
           </PanelErrorBoundary>
         </Panel>
 
-        <Separator />
+        <Separator id="solver-main-separator" className="solver-resize-handle" />
 
         <Panel id="right-col" defaultSize={60} minSize={30}>
           <Group orientation="vertical" id="right-column">
@@ -196,7 +196,7 @@ export function SolverPage() {
               </div>
             </Panel>
 
-            <Separator />
+            <Separator id="solver-results-separator" className="solver-resize-handle" />
 
             <Panel
               id="results"

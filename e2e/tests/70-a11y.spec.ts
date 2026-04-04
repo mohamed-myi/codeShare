@@ -12,6 +12,10 @@ import {
   uniqueImportSlug,
 } from "../support/app";
 
+async function waitForAnimations(page: Page) {
+  await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)));
+}
+
 function scanPage(page: Page) {
   return new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
 }
@@ -27,6 +31,7 @@ test.describe("MVP accessibility smoke", () => {
   }) => {
     await page.goto("/");
     await page.getByTestId("home-page").waitFor();
+    await waitForAnimations(page);
     expect((await scanPage(page)).violations).toEqual([]);
 
     const roomCode = await createRoom(page, { displayName: "Alice" });
@@ -34,13 +39,16 @@ test.describe("MVP accessibility smoke", () => {
     const joinPage = await joinCtx.newPage();
     await joinPage.goto(`/room/${roomCode}`);
     await joinPage.getByTestId("join-room-button").waitFor();
+    await waitForAnimations(joinPage);
     expect((await scanPage(joinPage)).violations).toEqual([]);
 
     await goToProblems(page);
     await selectProblem(page, "two-sum");
+    await waitForAnimations(page);
     expect((await scanPage(page)).violations).toEqual([]);
 
     await page.getByTestId("solver-import-button").click();
+    await waitForAnimations(page);
     expect((await scanPage(page)).violations).toEqual([]);
 
     await joinCtx.close();
@@ -59,6 +67,7 @@ test.describe("MVP accessibility smoke", () => {
     await page.getByTestId("request-hint-button").click();
 
     await bob.getByTestId("hint-consent-card").waitFor();
+    await waitForAnimations(bob);
     expect((await scanPage(bob)).violations).toEqual([]);
     await bobCtx.close();
   });

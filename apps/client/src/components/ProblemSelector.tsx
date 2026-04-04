@@ -1,8 +1,9 @@
-import type { Difficulty, ProblemListItem } from "@codeshare/shared";
+import type { ProblemListItem } from "@codeshare/shared";
 import { SocketEvents } from "@codeshare/shared";
 import { useState } from "react";
 import { useProblems } from "../hooks/useProblems.ts";
 import { useSocket } from "../hooks/useSocket.ts";
+import { DIFFICULTY_COLORS } from "../lib/difficultyStyles.ts";
 import { ConfirmDialog } from "./ConfirmDialog.tsx";
 import { Select } from "./Select.tsx";
 
@@ -11,12 +12,6 @@ interface ProblemSelectorProps {
   executionInProgress: boolean;
   disabled?: boolean;
 }
-
-const DIFFICULTY_COLORS: Record<Difficulty, string> = {
-  easy: "text-[var(--color-success-text)]",
-  medium: "text-[var(--color-warning-text)]",
-  hard: "text-[var(--color-error-text)]",
-};
 
 export function ProblemSelector({
   currentProblemId,
