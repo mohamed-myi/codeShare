@@ -1,9 +1,9 @@
-import type { RunConfig, Scenario, ScenarioResult, Assertion } from "../types.js";
+import { assertBelow } from "../lib/assertions.js";
 import { hrtimeMs } from "../lib/clock.js";
 import { PercentileTracker } from "../lib/metrics.js";
-import { assertBelow } from "../lib/assertions.js";
 import { spawnServerProcesses } from "../lib/server-manager.js";
 import { NFR } from "../nfr-thresholds.js";
+import type { Assertion, RunConfig, Scenario, ScenarioResult } from "../types.js";
 
 const MAX_ATTEMPTS = 100;
 

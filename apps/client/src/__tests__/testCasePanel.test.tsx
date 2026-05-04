@@ -72,6 +72,28 @@ describe("TestCasePanel - custom test cases", () => {
     expect(screen.getByText("Custom Test Cases")).toBeDefined();
   });
 
+  it("renders duplicate custom test case inputs without duplicate key warnings", () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const duplicateCustomCases: CustomTestCase[] = [
+      { input: { nums: [1, 2], target: 3 }, expectedOutput: [0, 1] },
+      { input: { nums: [1, 2], target: 3 }, expectedOutput: [0, 1] },
+    ];
+
+    try {
+      render(<TestCasePanel testCases={[]} customTestCases={duplicateCustomCases} />);
+
+      expect(screen.getByText("Custom 1")).toBeDefined();
+      expect(screen.getByText("Custom 2")).toBeDefined();
+      expect(
+        consoleError.mock.calls.some((args) =>
+          args.some((arg) => String(arg).includes("Encountered two children with the same key")),
+        ),
+      ).toBe(false);
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
   it("add form visible when parameterNames non-empty and canAddMore: true", () => {
     render(
       <TestCasePanel

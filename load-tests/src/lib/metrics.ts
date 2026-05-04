@@ -1,8 +1,12 @@
+import { getLoadTestLogger } from "./logger.js";
+
 interface MemorySample {
   heapUsedMB: number;
   rssMB: number;
   timestamp: number;
 }
+
+const logger = getLoadTestLogger();
 
 export class PercentileTracker {
   private samples: number[] = [];
@@ -49,8 +53,21 @@ export class MemoryRecorder {
   }
 
   async sample(): Promise<void> {
-    const res = await fetch(`${this.serverUrl}/api/health?metrics=memory`);
+    let res: Response;
+    try {
+      res = await fetch(`${this.serverUrl}/api/health?metrics=memory`);
+    } catch (error) {
+      logger.error("load_test_memory_sample_failed", {
+        server_url: this.serverUrl,
+        error_message: error instanceof Error ? error.message : "Memory sample failed.",
+      });
+      throw error;
+    }
     if (!res.ok) {
+      logger.error("load_test_memory_sample_failed", {
+        server_url: this.serverUrl,
+        status_code: res.status,
+      });
       throw new Error(`Health endpoint returned ${res.status}`);
     }
     const data = (await res.json()) as { heapUsedMB: number; rssMB: number };

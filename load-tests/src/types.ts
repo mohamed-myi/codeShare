@@ -26,5 +26,6 @@ export interface ScenarioResult {
 export interface Scenario {
   id: string;
   name: string;
+  requiresProblemData?: boolean;
   run(config: RunConfig): Promise<ScenarioResult>;
 }

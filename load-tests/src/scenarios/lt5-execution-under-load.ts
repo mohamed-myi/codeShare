@@ -1,30 +1,23 @@
-import type { RunConfig, Scenario, ScenarioResult, Assertion } from "../types.js";
+import { SocketEvents } from "@codeshare/shared";
+import { assertBelow, assertEqual, assertNoFailures } from "../lib/assertions.js";
 import { hrtimeMs } from "../lib/clock.js";
-import { assertBelow, assertNoFailures, assertEqual } from "../lib/assertions.js";
-import { waitForEvent } from "../lib/socket-client.js";
+import { fetchFirstProblemId } from "../lib/problem-catalog.js";
 import {
   createLoadRoom,
-  joinLoadRoom,
   disconnectParticipant,
-  selectProblem,
+  joinLoadRoom,
   type RoomParticipant,
+  selectProblem,
 } from "../lib/room-lifecycle.js";
-import { SocketEvents } from "@codeshare/shared";
+import { waitForEvent } from "../lib/socket-client.js";
 import { NFR } from "../nfr-thresholds.js";
+import type { Assertion, RunConfig, Scenario, ScenarioResult } from "../types.js";
 
 const ROOM_COUNT = 5;
 
 interface RoomPair {
   userA: RoomParticipant;
   userB: RoomParticipant;
-}
-
-async function fetchFirstProblemId(serverUrl: string): Promise<string> {
-  const res = await fetch(`${serverUrl}/api/problems`);
-  if (!res.ok) throw new Error(`Failed to fetch problems: ${res.status}`);
-  const body = (await res.json()) as { problems: { id: string }[] };
-  if (body.problems.length === 0) throw new Error("No problems found in database");
-  return body.problems[0].id;
 }
 
 async function setupRoom(serverUrl: string, problemId: string): Promise<RoomPair> {
@@ -59,6 +52,7 @@ async function resetStub(stubUrl: string): Promise<void> {
 const scenario: Scenario = {
   id: "LT-5",
   name: "Execution Under Load",
+  requiresProblemData: true,
 
   async run(config: RunConfig): Promise<ScenarioResult> {
     const start = hrtimeMs();
@@ -90,8 +84,16 @@ const scenario: Scenario = {
       const executionPromises = rooms.map((room) => {
         const aStarted = waitForEvent(room.userA.socket, SocketEvents.EXECUTION_STARTED, 15_000);
         const bStarted = waitForEvent(room.userB.socket, SocketEvents.EXECUTION_STARTED, 15_000);
-        const aResult = waitForEvent(room.userA.socket, SocketEvents.EXECUTION_RESULT, resultTimeoutMs);
-        const bResult = waitForEvent(room.userB.socket, SocketEvents.EXECUTION_RESULT, resultTimeoutMs);
+        const aResult = waitForEvent(
+          room.userA.socket,
+          SocketEvents.EXECUTION_RESULT,
+          resultTimeoutMs,
+        );
+        const bResult = waitForEvent(
+          room.userB.socket,
+          SocketEvents.EXECUTION_RESULT,
+          resultTimeoutMs,
+        );
         return { aStarted, bStarted, aResult, bResult };
       });
 
@@ -108,15 +110,9 @@ const scenario: Scenario = {
 
       const outcomeResults = await Promise.allSettled(
         executionPromises.map(async (promises, idx) => {
-          await Promise.all([
-            promises.aStarted,
-            promises.bStarted,
-          ]);
+          await Promise.all([promises.aStarted, promises.bStarted]);
 
-          const [aResult, bResult] = await Promise.all([
-            promises.aResult,
-            promises.bResult,
-          ]);
+          const [aResult, bResult] = await Promise.all([promises.aResult, promises.bResult]);
 
           roomsCompleted++;
 
@@ -125,20 +121,14 @@ const scenario: Scenario = {
           broadcastDeltas.push(delta);
 
           // Track e2e latency from emit to result receipt
-          const maxResultLatency = Math.max(aResult.latencyMs, bResult.latencyMs);
-          const e2e = hrtimeMs() - emitTimestamps[idx] - maxResultLatency + maxResultLatency;
-          // Simpler: time from emit to when the later result arrived
           e2eLatencies.push(hrtimeMs() - emitTimestamps[idx]);
         }),
       );
 
       const failures = outcomeResults.filter((r) => r.status === "rejected").length;
-      const maxBroadcastDelta = broadcastDeltas.length > 0
-        ? Math.max(...broadcastDeltas)
-        : Infinity;
-      const maxE2eLatency = e2eLatencies.length > 0
-        ? Math.max(...e2eLatencies)
-        : Infinity;
+      const maxBroadcastDelta =
+        broadcastDeltas.length > 0 ? Math.max(...broadcastDeltas) : Infinity;
+      const maxE2eLatency = e2eLatencies.length > 0 ? Math.max(...e2eLatencies) : Infinity;
 
       const durationMs = hrtimeMs() - start;
 

@@ -17,6 +17,8 @@ export function TestCasePanel({
   onAddTestCase,
   canAddMore = false,
 }: TestCasePanelProps) {
+  const keyedCustomTestCases = buildKeyedCustomTestCases(customTestCases);
+
   if (testCases.length === 0 && customTestCases.length === 0 && parameterNames.length === 0) {
     return (
       <div className="flex h-full items-center justify-center p-4">
@@ -67,11 +69,8 @@ export function TestCasePanel({
             Custom Test Cases
           </h3>
           <div className="space-y-4">
-            {customTestCases.map((ct, i) => (
-              <div
-                key={JSON.stringify(ct.input)}
-                className="border-l border-[var(--color-border-subtle)] pl-4 text-xs"
-              >
+            {keyedCustomTestCases.map(({ testCase: ct, key }, i) => (
+              <div key={key} className="border-l border-[var(--color-border-subtle)] pl-4 text-xs">
                 <div className="mb-2 text-[var(--color-text-secondary)]">Custom {i + 1}</div>
                 <div className="space-y-1">
                   {Object.entries(ct.input).map(([key, value]) => (
@@ -222,4 +221,22 @@ function buildInitialValues(parameterNames: string[]): Record<string, string> {
   }
   initial.__expected = "";
   return initial;
+}
+
+function buildKeyedCustomTestCases(testCases: CustomTestCase[]) {
+  const seen = new Map<string, number>();
+
+  return testCases.map((testCase) => {
+    const baseKey = JSON.stringify({
+      input: testCase.input,
+      expectedOutput: testCase.expectedOutput,
+    });
+    const count = seen.get(baseKey) ?? 0;
+    seen.set(baseKey, count + 1);
+
+    return {
+      key: count === 0 ? baseKey : `${baseKey}#${count + 1}`,
+      testCase,
+    };
+  });
 }

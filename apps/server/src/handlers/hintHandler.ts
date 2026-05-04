@@ -565,7 +565,7 @@ export function registerHintHandler(
 
   socket.on(SocketEvents.HINT_DENY, () => {
     const session = createSession(io, socket, logger, deps);
-    if (!session || !session.room.pendingHintRequest) {
+    if (!session?.room.pendingHintRequest) {
       return;
     }
 

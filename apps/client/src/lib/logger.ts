@@ -67,6 +67,10 @@ export function createBrowserLogger(options: BrowserLoggerOptions = {}) {
     try {
       await options.transport.send(payload);
     } catch (error) {
+      if (isIgnorableTransportFailure(error)) {
+        return;
+      }
+
       const fallback = clientLogPayloadSchema.parse({
         level: "error",
         event: CLIENT_LOG_EVENTS.CLIENT_LOG_INGEST_FAILED,
@@ -88,6 +92,14 @@ export function createBrowserLogger(options: BrowserLoggerOptions = {}) {
     warn: (input: BrowserLogInput) => write("warn", input),
     error: (input: BrowserLogInput) => write("error", input),
   };
+}
+
+function isIgnorableTransportFailure(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  return error.name === "TypeError" && /failed to fetch|load failed/i.test(error.message);
 }
 
 export function createDevLogTransport(): BrowserLogTransport {

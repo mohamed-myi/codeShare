@@ -66,6 +66,31 @@ describe("createBrowserLogger", () => {
     expect(consoleApi.error).toHaveBeenCalledTimes(2);
   });
 
+  it("does not emit ingest-failure fallback logs for transient fetch failures", async () => {
+    const consoleApi = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    };
+    const transport = {
+      send: vi.fn().mockRejectedValue(new TypeError("Failed to fetch")),
+    };
+    const logger = createBrowserLogger({
+      environment: "development",
+      route: "/room/abc-xyz/session",
+      transport,
+      consoleApi,
+    });
+
+    await logger.warn({
+      event: "client_yjs_disconnected",
+      roomCode: "abc-xyz",
+    });
+
+    expect(consoleApi.warn).toHaveBeenCalledOnce();
+    expect(consoleApi.error).not.toHaveBeenCalled();
+  });
+
   it("resolves the route at write time when getRoute is provided", async () => {
     const consoleApi = {
       info: vi.fn(),

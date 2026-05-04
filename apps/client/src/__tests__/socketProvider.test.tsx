@@ -15,7 +15,7 @@ vi.mock("socket.io-client", () => ({
 }));
 
 vi.mock("../lib/logger.ts", () => ({
-  getBrowserLogger: (...args: unknown[]) => mockGetBrowserLogger(...args),
+  getBrowserLogger: () => mockGetBrowserLogger(),
 }));
 
 vi.mock("../lib/realtimeUrl.ts", () => ({

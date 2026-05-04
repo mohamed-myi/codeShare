@@ -1,14 +1,14 @@
-import type { RunConfig, Scenario, ScenarioResult, Assertion } from "../types.js";
+import { assertBelow, assertEqual, assertNoFailures } from "../lib/assertions.js";
 import { hrtimeMs } from "../lib/clock.js";
 import { PercentileTracker } from "../lib/metrics.js";
-import { assertBelow, assertNoFailures, assertEqual } from "../lib/assertions.js";
 import {
   createLoadRoom,
-  joinLoadRoom,
   disconnectParticipant,
+  joinLoadRoom,
   type RoomParticipant,
 } from "../lib/room-lifecycle.js";
 import { NFR } from "../nfr-thresholds.js";
+import type { Assertion, RunConfig, Scenario, ScenarioResult } from "../types.js";
 
 const ROOM_COUNT = 5;
 const DISCONNECT_WAIT_MS = 3_000;
@@ -54,7 +54,13 @@ const scenario: Scenario = {
       }
 
       assertions.push(
-        assertEqual("lt9-rooms-created", "NFR-5.2", "All rooms created and joined", rooms.length, ROOM_COUNT),
+        assertEqual(
+          "lt9-rooms-created",
+          "NFR-5.2",
+          "All rooms created and joined",
+          rooms.length,
+          ROOM_COUNT,
+        ),
       );
 
       // Phase 2: Disconnect one user per room simultaneously
@@ -77,12 +83,9 @@ const scenario: Scenario = {
       const reconnectResults = await Promise.allSettled(
         tokensToReconnect.map(async ({ roomCode, reconnectToken, originalUserId }) => {
           const reqStart = hrtimeMs();
-          const participant = await joinLoadRoom(
-            config.serverUrl,
-            roomCode,
-            "LT9-A-Reconnected",
-            { reconnectToken },
-          );
+          const participant = await joinLoadRoom(config.serverUrl, roomCode, "LT9-A-Reconnected", {
+            reconnectToken,
+          });
           const latency = hrtimeMs() - reqStart;
           reconnectTracker.record(latency);
           allParticipants.push(participant);

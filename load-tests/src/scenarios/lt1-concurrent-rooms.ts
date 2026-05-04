@@ -1,14 +1,14 @@
-import type { RunConfig, Scenario, ScenarioResult, Assertion } from "../types.js";
+import { assertBelow, assertEqual, assertNoFailures } from "../lib/assertions.js";
 import { hrtimeMs } from "../lib/clock.js";
-import { PercentileTracker, MemoryRecorder } from "../lib/metrics.js";
-import { assertBelow, assertNoFailures, assertEqual } from "../lib/assertions.js";
-import { NFR } from "../nfr-thresholds.js";
+import { MemoryRecorder, PercentileTracker } from "../lib/metrics.js";
 import {
   createLoadRoom,
-  joinLoadRoom,
   disconnectParticipant,
+  joinLoadRoom,
   type RoomParticipant,
 } from "../lib/room-lifecycle.js";
+import { NFR } from "../nfr-thresholds.js";
+import type { Assertion, RunConfig, Scenario, ScenarioResult } from "../types.js";
 
 const ROOM_COUNT = 20;
 const USERS_PER_ROOM = 2;
@@ -44,7 +44,13 @@ const scenario: Scenario = {
 
       const roomCreationFailures = ROOM_COUNT - validRoomCodes.length;
       assertions.push(
-        assertNoFailures("lt1-room-creation", "NFR-2.1", "All rooms created", roomCreationFailures, ROOM_COUNT),
+        assertNoFailures(
+          "lt1-room-creation",
+          "NFR-2.1",
+          "All rooms created",
+          roomCreationFailures,
+          ROOM_COUNT,
+        ),
       );
 
       // Join 2 users per room with Yjs clients
@@ -67,10 +73,22 @@ const scenario: Scenario = {
       const expectedClients = validRoomCodes.length * USERS_PER_ROOM;
       const joinFailures = expectedClients - participants.length;
       assertions.push(
-        assertEqual("lt1-clients-connected", "NFR-2.1", "All clients connected", participants.length, expectedClients),
+        assertEqual(
+          "lt1-clients-connected",
+          "NFR-2.1",
+          "All clients connected",
+          participants.length,
+          expectedClients,
+        ),
       );
       assertions.push(
-        assertNoFailures("lt1-join-failures", "NFR-2.1", "All joins succeeded", joinFailures, expectedClients),
+        assertNoFailures(
+          "lt1-join-failures",
+          "NFR-2.1",
+          "All joins succeeded",
+          joinFailures,
+          expectedClients,
+        ),
       );
 
       // Register remote update observers on every Yjs client

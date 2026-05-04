@@ -1,10 +1,10 @@
-import type { RunConfig, Scenario, ScenarioResult, Assertion } from "../types.js";
+import { assertBelow, assertNoFailures } from "../lib/assertions.js";
 import { hrtimeMs } from "../lib/clock.js";
 import { PercentileTracker } from "../lib/metrics.js";
-import { assertBelow, assertNoFailures } from "../lib/assertions.js";
 import { createLoadRoom } from "../lib/room-lifecycle.js";
 import { createLoadSocket, disconnectSocket, type TimedSocket } from "../lib/socket-client.js";
 import { NFR } from "../nfr-thresholds.js";
+import type { Assertion, RunConfig, Scenario, ScenarioResult } from "../types.js";
 
 const ROOM_COUNT = 10;
 const CONNECTIONS_PER_ROOM = 2;
@@ -74,11 +74,23 @@ const scenario: Scenario = {
       );
 
       assertions.push(
-        assertBelow("lt2-p50", "NFR-1.3", "Connect latency p50", latencyTracker.p50(), connectThreshold),
+        assertBelow(
+          "lt2-p50",
+          "NFR-1.3",
+          "Connect latency p50",
+          latencyTracker.p50(),
+          connectThreshold,
+        ),
       );
 
       assertions.push(
-        assertBelow("lt2-p95", "NFR-1.3", "Connect latency p95", latencyTracker.p95(), connectThreshold),
+        assertBelow(
+          "lt2-p95",
+          "NFR-1.3",
+          "Connect latency p95",
+          latencyTracker.p95(),
+          connectThreshold,
+        ),
       );
     } finally {
       for (const ts of sockets) {

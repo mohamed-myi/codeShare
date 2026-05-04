@@ -1,14 +1,15 @@
-import type { RunConfig, Scenario, ScenarioResult, Assertion } from "../types.js";
+import { assertBelow, assertEqual } from "../lib/assertions.js";
 import { hrtimeMs } from "../lib/clock.js";
 import { PercentileTracker } from "../lib/metrics.js";
-import { assertBelow, assertEqual } from "../lib/assertions.js";
 import {
   createLoadRoom,
-  joinLoadRoom,
   disconnectParticipant,
+  joinLoadRoom,
   type RoomParticipant,
 } from "../lib/room-lifecycle.js";
+import type { LoadYjsClient } from "../lib/yjs-client.js";
 import { NFR } from "../nfr-thresholds.js";
+import type { Assertion, RunConfig, Scenario, ScenarioResult } from "../types.js";
 
 const ROOM_COUNT = 5;
 const TYPING_DURATION_MS = 20_000;
@@ -18,8 +19,8 @@ const BULK_SYNC_TIMEOUT_MS = 5_000;
 const BULK_POLL_INTERVAL_MS = 50;
 
 interface RoomPair {
-  userA: RoomParticipant;
-  userB: RoomParticipant;
+  userA: RoomParticipant & { yjsClient: LoadYjsClient };
+  userB: RoomParticipant & { yjsClient: LoadYjsClient };
 }
 
 function generateBulkText(size: number): string {
@@ -65,10 +66,10 @@ const scenario: Scenario = {
 
       // Register remote update callbacks on both sides for latency tracking
       for (const room of rooms) {
-        room.userB.yjsClient!.onRemoteUpdate((latencyMs) => {
+        room.userB.yjsClient.onRemoteUpdate((latencyMs) => {
           charSyncTracker.record(latencyMs);
         });
-        room.userA.yjsClient!.onRemoteUpdate((latencyMs) => {
+        room.userA.yjsClient.onRemoteUpdate((latencyMs) => {
           charSyncTracker.record(latencyMs);
         });
       }
@@ -81,13 +82,13 @@ const scenario: Scenario = {
         for (let i = 0; i < rooms.length; i++) {
           const room = rooms[i];
           const counters = charCounters[i];
-          const docLen = room.userA.yjsClient!.getText().length;
+          const docLen = room.userA.yjsClient.getText().length;
 
-          room.userA.yjsClient!.insertChar(docLen, "a");
+          room.userA.yjsClient.insertChar(docLen, "a");
           counters.a++;
 
-          const docLenB = room.userB.yjsClient!.getText().length;
-          room.userB.yjsClient!.insertChar(docLenB, "b");
+          const docLenB = room.userB.yjsClient.getText().length;
+          room.userB.yjsClient.insertChar(docLenB, "b");
           counters.b++;
         }
 
@@ -99,8 +100,8 @@ const scenario: Scenario = {
 
       // Verify documents converged after typing phase
       for (const room of rooms) {
-        const textA = room.userA.yjsClient!.getText();
-        const textB = room.userB.yjsClient!.getText();
+        const textA = room.userA.yjsClient.getText();
+        const textB = room.userB.yjsClient.getText();
         if (textA !== textB) divergenceCount++;
       }
 
@@ -108,18 +109,18 @@ const scenario: Scenario = {
       const bulkText = generateBulkText(BULK_TEXT_SIZE);
       const bulkSyncTimes: number[] = [];
 
-      const bulkResults = await Promise.allSettled(
+      await Promise.allSettled(
         rooms.map(async (room) => {
           const bulkStart = hrtimeMs();
-          const existingLen = room.userA.yjsClient!.getText().length;
-          room.userA.yjsClient!.insertText(existingLen, bulkText);
+          const existingLen = room.userA.yjsClient.getText().length;
+          room.userA.yjsClient.insertText(existingLen, bulkText);
 
-          const expectedText = room.userA.yjsClient!.getText();
+          const expectedText = room.userA.yjsClient.getText();
 
           // Poll user B until doc matches
           const deadline = hrtimeMs() + BULK_SYNC_TIMEOUT_MS;
           while (hrtimeMs() < deadline) {
-            const bText = room.userB.yjsClient!.getText();
+            const bText = room.userB.yjsClient.getText();
             if (bText === expectedText) {
               bulkSyncTimes.push(hrtimeMs() - bulkStart);
               return;
@@ -128,7 +129,7 @@ const scenario: Scenario = {
           }
 
           // Check one final time
-          const finalText = room.userB.yjsClient!.getText();
+          const finalText = room.userB.yjsClient.getText();
           if (finalText === expectedText) {
             bulkSyncTimes.push(hrtimeMs() - bulkStart);
           } else {
@@ -138,15 +139,25 @@ const scenario: Scenario = {
         }),
       );
 
-      const maxBulkSync = bulkSyncTimes.length > 0
-        ? Math.max(...bulkSyncTimes)
-        : Infinity;
+      const maxBulkSync = bulkSyncTimes.length > 0 ? Math.max(...bulkSyncTimes) : Infinity;
 
       const durationMs = hrtimeMs() - start;
 
       const assertions: Assertion[] = [
-        assertBelow("lt6-char-p50", "NFR-1.1", "Char sync p50", charSyncTracker.p50(), charP50Threshold),
-        assertBelow("lt6-char-p95", "NFR-1.1", "Char sync p95", charSyncTracker.p95(), charP95Threshold),
+        assertBelow(
+          "lt6-char-p50",
+          "NFR-1.1",
+          "Char sync p50",
+          charSyncTracker.p50(),
+          charP50Threshold,
+        ),
+        assertBelow(
+          "lt6-char-p95",
+          "NFR-1.1",
+          "Char sync p95",
+          charSyncTracker.p95(),
+          charP95Threshold,
+        ),
         assertBelow("lt6-bulk-sync", "NFR-1.1", "Bulk paste sync", maxBulkSync, bulkThreshold),
         assertEqual("lt6-no-divergence", "NFR-1.1", "Zero document divergence", divergenceCount, 0),
       ];

@@ -1,6 +1,6 @@
 import { SocketEvents } from "@codeshare/shared";
 import type { Socket } from "socket.io-client";
-import { createLoadSocket, waitForEvent, type TimedSocket } from "./socket-client.js";
+import { createLoadSocket, type TimedSocket, waitForEvent } from "./socket-client.js";
 import { createLoadYjsClient, type LoadYjsClient } from "./yjs-client.js";
 
 export interface RoomParticipant {
@@ -35,6 +35,18 @@ export async function createLoadRoom(
   return body.roomCode;
 }
 
+export async function joinLoadRoom(
+  serverUrl: string,
+  roomCode: string,
+  displayName: string,
+  opts: JoinOptions & { withYjs: true },
+): Promise<RoomParticipant & { yjsClient: LoadYjsClient }>;
+export async function joinLoadRoom(
+  serverUrl: string,
+  roomCode: string,
+  displayName: string,
+  opts?: JoinOptions,
+): Promise<RoomParticipant>;
 export async function joinLoadRoom(
   serverUrl: string,
   roomCode: string,

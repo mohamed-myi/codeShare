@@ -1,6 +1,7 @@
 import { writeFileSync } from "node:fs";
+import { NFR, type NfrId, SCENARIO_NFR_MAP, UNCOVERED_NFRS } from "../nfr-thresholds.js";
 import type { ScenarioResult } from "../types.js";
-import { NFR, SCENARIO_NFR_MAP, UNCOVERED_NFRS, type NfrId } from "../nfr-thresholds.js";
+import type { LoadTestLogger } from "./logger.js";
 
 interface NfrCoverageEntry {
   nfrId: NfrId;
@@ -61,7 +62,7 @@ function buildNfrCoverage(results: ScenarioResult[]): NfrCoverageEntry[] {
   return [...coverage.values()];
 }
 
-export function printResults(results: ScenarioResult[]): void {
+export function printResults(results: ScenarioResult[], logger?: LoadTestLogger): void {
   console.log("\n=== Load Test Results ===\n");
 
   const rows = results.map((r) => ({
@@ -97,9 +98,10 @@ export function printResults(results: ScenarioResult[]): void {
     Title: entry.title,
     Status: entry.status,
     "Tested By": entry.testedBy.join(", ") || "-",
-    Assertions: entry.assertions.length > 0
-      ? `${entry.assertions.filter((a) => a.passed).length}/${entry.assertions.length}`
-      : "-",
+    Assertions:
+      entry.assertions.length > 0
+        ? `${entry.assertions.filter((a) => a.passed).length}/${entry.assertions.length}`
+        : "-",
   }));
   console.table(nfrRows);
 
@@ -110,9 +112,23 @@ export function printResults(results: ScenarioResult[]): void {
   console.log(
     `NFR Summary: ${nfrPassed} passed, ${nfrFailed} failed, ${nfrSkipped} skipped, ${nfrUncovered} uncovered (integration-tested)\n`,
   );
+
+  logger?.info("load_test_results_reported", {
+    scenario_count: total,
+    passed_count: passed,
+    failed_count: total - passed,
+    nfr_passed_count: nfrPassed,
+    nfr_failed_count: nfrFailed,
+    nfr_skipped_count: nfrSkipped,
+    nfr_uncovered_count: nfrUncovered,
+  });
 }
 
-export function writeJsonReport(results: ScenarioResult[], filePath: string): void {
+export function writeJsonReport(
+  results: ScenarioResult[],
+  filePath: string,
+  logger?: LoadTestLogger,
+): void {
   const nfrCoverage = buildNfrCoverage(results);
 
   const report = {
@@ -129,4 +145,8 @@ export function writeJsonReport(results: ScenarioResult[], filePath: string): vo
   const json = JSON.stringify(report, null, 2);
   writeFileSync(filePath, json, "utf-8");
   console.log(`Report written to ${filePath}`);
+  logger?.info("load_test_report_written", {
+    report_path: filePath,
+    scenario_count: results.length,
+  });
 }

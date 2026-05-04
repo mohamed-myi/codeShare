@@ -43,14 +43,15 @@ async function flushLogs(app: { log: FastifyBaseLogger }): Promise<void> {
 }
 
 async function buildApp(options?: {
-  environment?: "development" | "test";
+  environment?: "development" | "production" | "test";
   logDir?: string;
   logLevel?: string;
   stream?: Writable;
   configOverrides?: Partial<ReturnType<typeof createTestConfig>>;
 }) {
+  const environment = options?.environment ?? "test";
   const logger = createLogger(options?.logLevel ?? "silent", {
-    environment: options?.environment ?? "test",
+    environment,
     stream: options?.stream,
     enablePretty: false,
     enableFileLogging: false,
@@ -60,7 +61,7 @@ async function buildApp(options?: {
     loggerInstance: logger as FastifyBaseLogger,
   });
   const config = createTestConfig({
-    NODE_ENV: options?.environment ?? "test",
+    NODE_ENV: environment,
     LOG_LEVEL: (options?.logLevel ?? "silent") as never,
     ...options?.configOverrides,
   });
@@ -70,8 +71,8 @@ async function buildApp(options?: {
   await app.register(roomRoutes, { prefix: "/api", config });
   await app.register(healthRoutes);
 
-  if (options?.environment === "development") {
-    await app.register(devLogRoutes, { logDir: options.logDir });
+  if (environment !== "production") {
+    await app.register(devLogRoutes, { logDir: options?.logDir });
   }
 
   await app.ready();
@@ -237,5 +238,27 @@ describe("devLogRoutes", () => {
 
     const contents = fs.readFileSync(path.join(serviceDir, files[0]), "utf8");
     expect(contents).toContain('"event":"client_render_failed"');
+  });
+
+  it("accepts client logs in the test environment used by e2e runs", async () => {
+    const logDir = fs.mkdtempSync(path.join(os.tmpdir(), "codeshare-client-logs-"));
+    tempDirs.push(logDir);
+
+    const app = await buildApp({
+      environment: "test",
+      logDir,
+    });
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/dev/logs/client",
+      payload: {
+        level: "warn",
+        event: "client_log_ingest_probe",
+        service: "codeshare-client",
+        message: "e2e logger check",
+      },
+    });
+
+    expect(response.statusCode).toBe(202);
   });
 });

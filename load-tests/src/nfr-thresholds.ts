@@ -58,7 +58,9 @@ export const NFR: Record<NfrId, NfrEntry> = {
   },
   "NFR-3.6": {
     title: "Non-member rejection under load",
-    thresholds: {},
+    thresholds: {
+      nonMemberDropP95Ms: 20,
+    },
   },
   "NFR-4.1": {
     title: "IP-based rate limit enforcement",
@@ -68,7 +70,9 @@ export const NFR: Record<NfrId, NfrEntry> = {
   },
   "NFR-4.2": {
     title: "Per-room limits (exec, imports, test cases)",
-    thresholds: {},
+    thresholds: {
+      roomLimitRejectionP95Ms: 50,
+    },
   },
   "NFR-4.3": {
     title: "Global limits (Judge0/day, imports/day)",
@@ -96,6 +100,9 @@ export const SCENARIO_NFR_MAP: Record<string, NfrId[]> = {
   "LT-7": ["NFR-2.1"],
   "LT-8": ["NFR-4.1"],
   "LT-9": ["NFR-3.3", "NFR-5.2"],
+  "LT-10": ["NFR-3.6"],
+  "LT-11": ["NFR-4.2"],
+  "LT-12": ["NFR-4.3"],
 };
 
-export const UNCOVERED_NFRS: NfrId[] = ["NFR-3.6", "NFR-4.2", "NFR-4.3"];
+export const UNCOVERED_NFRS: NfrId[] = [];

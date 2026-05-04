@@ -14,7 +14,7 @@
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run src",
     "lint": "biome check src/",
     "migrate": "tsx src/migrations/migrate.ts",
     "seed": "tsx src/seeds/seed.ts",
@@ -27,9 +27,9 @@
     "pg": "^8.16.0"
   },
   "devDependencies": {
-    "@types/pg": "^8.11.0",
+    "@types/pg": "^8.20.0",
     "tsx": "^4.19.0",
-    "typescript": "^5.8.2",
-    "vitest": "^3.1.0"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.5"
   }
 }

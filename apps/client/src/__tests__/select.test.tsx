@@ -9,11 +9,13 @@ const OPTIONS: SelectOption[] = [
   { value: "c", label: "Gamma" },
 ];
 
+type OnChange = (value: string) => void;
+
 describe("Select", () => {
-  let onChange: ReturnType<typeof vi.fn>;
+  let onChange: OnChange;
 
   beforeEach(() => {
-    onChange = vi.fn();
+    onChange = vi.fn<OnChange>();
   });
 
   it("renders trigger with placeholder when value is empty", () => {

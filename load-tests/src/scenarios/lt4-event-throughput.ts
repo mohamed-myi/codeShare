@@ -1,17 +1,17 @@
-import type { RunConfig, Scenario, ScenarioResult, Assertion } from "../types.js";
+import { SocketEvents } from "@codeshare/shared";
+import { assertBelow, assertNoFailures } from "../lib/assertions.js";
 import { hrtimeMs } from "../lib/clock.js";
 import { PercentileTracker } from "../lib/metrics.js";
-import { assertBelow, assertNoFailures } from "../lib/assertions.js";
-import { waitForEvent } from "../lib/socket-client.js";
 import {
   createLoadRoom,
-  joinLoadRoom,
   disconnectParticipant,
-  selectProblem,
+  joinLoadRoom,
   type RoomParticipant,
+  selectProblem,
 } from "../lib/room-lifecycle.js";
-import { SocketEvents } from "@codeshare/shared";
+import { waitForEvent } from "../lib/socket-client.js";
 import { NFR } from "../nfr-thresholds.js";
+import type { Assertion, RunConfig, Scenario, ScenarioResult } from "../types.js";
 
 const ROOM_COUNT = 5;
 const EMIT_INTERVAL_MS = 500; // 2 events/sec
@@ -55,6 +55,7 @@ async function setupRoom(serverUrl: string, problemId: string): Promise<RoomPair
 const scenario: Scenario = {
   id: "LT-4",
   name: "Socket.io Event Throughput",
+  requiresProblemData: true,
 
   async run(config: RunConfig): Promise<ScenarioResult> {
     const start = hrtimeMs();

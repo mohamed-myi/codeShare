@@ -4,9 +4,13 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check src/",
+    "test": "vitest run src",
     "lt": "tsx src/runner.ts",
     "lt:quick": "tsx src/runner.ts --scenarios LT-2,LT-3",
-    "lt:soak": "tsx src/runner.ts --scenarios LT-7"
+    "lt:soak": "tsx src/runner.ts --scenarios LT-7",
+    "lt:auto": "tsx src/runner.ts --auto-start"
   },
   "dependencies": {
     "@codeshare/shared": "workspace:*",
@@ -17,9 +21,10 @@
     "ws": "^8.20.0"
   },
   "devDependencies": {
-    "@types/node": "^25.5.0",
+    "@types/node": "^25.6.0",
     "@types/ws": "^8.18.1",
     "tsx": "^4.21.0",
-    "typescript": "^5.8.2"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.5"
   }
 }

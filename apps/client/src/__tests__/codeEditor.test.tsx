@@ -3,9 +3,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 const { mockMonacoBindingDestroy, mockMonacoBinding, mockOnMount } = vi.hoisted(() => {
   const mockMonacoBindingDestroy = vi.fn();
-  const mockMonacoBinding = vi.fn(() => ({
-    destroy: mockMonacoBindingDestroy,
-  }));
+  const mockMonacoBinding = vi.fn(function MockMonacoBinding() {
+    return {
+      destroy: mockMonacoBindingDestroy,
+    };
+  });
   const mockOnMount = vi.fn();
   return { mockMonacoBindingDestroy, mockMonacoBinding, mockOnMount };
 });

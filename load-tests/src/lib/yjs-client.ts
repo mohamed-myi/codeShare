@@ -1,13 +1,14 @@
-import WebSocket from "ws";
-import * as Y from "yjs";
-import * as encoding from "lib0/encoding";
 import * as decoding from "lib0/decoding";
+import * as encoding from "lib0/encoding";
+import WebSocket from "ws";
 import * as syncProtocol from "y-protocols/sync";
+import * as Y from "yjs";
 import { hrtimeMs } from "./clock.js";
+import { getLoadTestLogger } from "./logger.js";
 
 const MESSAGE_SYNC = 0;
-const MESSAGE_AWARENESS = 1;
 const YJS_TEXT_TYPE = "monaco";
+const logger = getLoadTestLogger();
 
 export interface LoadYjsClient {
   doc: Y.Doc;
@@ -20,9 +21,7 @@ export interface LoadYjsClient {
 }
 
 function toWsUrl(serverUrl: string, roomCode: string, yjsToken: string): string {
-  const wsUrl = serverUrl
-    .replace(/^https:\/\//, "wss://")
-    .replace(/^http:\/\//, "ws://");
+  const wsUrl = serverUrl.replace(/^https:\/\//, "wss://").replace(/^http:\/\//, "ws://");
   return `${wsUrl}/ws/yjs/${roomCode}?token=${encodeURIComponent(yjsToken)}`;
 }
 
@@ -62,6 +61,11 @@ export function createLoadYjsClient(
     const connectTimeout = setTimeout(() => {
       ws.close();
       doc.destroy();
+      logger.error("load_test_yjs_connect_failed", {
+        server_url: serverUrl,
+        room_code: roomCode,
+        error_message: "Yjs WebSocket connect timed out after 10s",
+      });
       reject(new Error("Yjs WebSocket connect timed out after 10s"));
     }, 10_000);
 
@@ -73,6 +77,11 @@ export function createLoadYjsClient(
 
     ws.on("error", (err) => {
       clearTimeout(connectTimeout);
+      logger.error("load_test_yjs_connect_failed", {
+        server_url: serverUrl,
+        room_code: roomCode,
+        error_message: String(err),
+      });
       reject(new Error(`Yjs WebSocket error: ${String(err)}`));
     });
 
@@ -89,12 +98,7 @@ export function createLoadYjsClient(
       if (messageType === MESSAGE_SYNC) {
         const encoder = encoding.createEncoder();
         encoding.writeVarUint(encoder, MESSAGE_SYNC);
-        const syncMessageType = syncProtocol.readSyncMessage(
-          decoder,
-          encoder,
-          doc,
-          REMOTE_ORIGIN,
-        );
+        const syncMessageType = syncProtocol.readSyncMessage(decoder, encoder, doc, REMOTE_ORIGIN);
 
         // Send reply if the encoder has content beyond the message type header
         if (encoding.length(encoder) > 1) {

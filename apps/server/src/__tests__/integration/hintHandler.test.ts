@@ -7,7 +7,7 @@ import * as Y from "yjs";
 import type { IpRateLimiter } from "../../lib/ipRateLimiter.js";
 import { createLogger } from "../../lib/logger.js";
 import { roomManager } from "../../models/RoomManager.js";
-import { setupSocketIO } from "../../ws/socketio.js";
+import { type SocketIODeps, setupSocketIO } from "../../ws/socketio.js";
 import { createTestClient, createTestServer, waitForEvent } from "../helpers/socketTestHelper.js";
 
 const mockFindHintsByProblemId = vi.hoisted(() => vi.fn().mockResolvedValue([]));
@@ -346,8 +346,17 @@ describe("Hint handler - single user LLM streaming fallback", () => {
     for (const chunk of chunks) yield chunk;
   }
 
+  type TestGroqClient = NonNullable<SocketIODeps["groqClient"]>;
+  type StreamCompletion = TestGroqClient["streamCompletion"];
+
+  function createMockGroqClient(stream: AsyncGenerator<string>) {
+    return {
+      streamCompletion: vi.fn<StreamCompletion>().mockReturnValue(stream),
+    };
+  }
+
   async function setup(opts?: {
-    groqClient?: { streamCompletion: ReturnType<typeof vi.fn> };
+    groqClient?: TestGroqClient;
     enableLLMHintFallback?: boolean;
     enableImportedProblemHints?: boolean;
     ipRateLimiter?: IpRateLimiter;
@@ -385,9 +394,7 @@ describe("Hint handler - single user LLM streaming fallback", () => {
   }
 
   it("delivers a validated LLM hint when stored hints are exhausted", async () => {
-    const mockGroqClient = {
-      streamCompletion: vi.fn().mockReturnValue(mockStream(["Hello", " world"])),
-    };
+    const mockGroqClient = createMockGroqClient(mockStream(["Hello", " world"]));
     const { room, client } = await setup({
       groqClient: mockGroqClient,
       enableLLMHintFallback: true,
@@ -416,9 +423,7 @@ describe("Hint handler - single user LLM streaming fallback", () => {
   });
 
   it("delivers a validated LLM hint for imported problems in solo rooms", async () => {
-    const mockGroqClient = {
-      streamCompletion: vi.fn().mockReturnValue(mockStream(["Normalize the input first."])),
-    };
+    const mockGroqClient = createMockGroqClient(mockStream(["Normalize the input first."]));
     const { room, client } = await setup({
       groqClient: mockGroqClient,
       enableLLMHintFallback: true,
@@ -449,9 +454,7 @@ describe("Hint handler - single user LLM streaming fallback", () => {
       yield ""; // biome requires yield in generators
       throw new Error("Groq API error: 500");
     }
-    const mockGroqClient = {
-      streamCompletion: vi.fn().mockReturnValue(failingStream()),
-    };
+    const mockGroqClient = createMockGroqClient(failingStream());
     const { room, client } = await setup({
       groqClient: mockGroqClient,
       enableLLMHintFallback: true,
@@ -477,9 +480,7 @@ describe("Hint handler - single user LLM streaming fallback", () => {
       yield "";
       throw new Error("Generated solution included code");
     }
-    const mockGroqClient = {
-      streamCompletion: vi.fn().mockReturnValue(failingStream()),
-    };
+    const mockGroqClient = createMockGroqClient(failingStream());
     const { room, client } = await setup({
       groqClient: mockGroqClient,
       enableLLMHintFallback: true,
@@ -505,9 +506,7 @@ describe("Hint handler - single user LLM streaming fallback", () => {
       yield "";
       throw new Error("Generated solution included code");
     }
-    const mockGroqClient = {
-      streamCompletion: vi.fn().mockReturnValue(failingStream()),
-    };
+    const mockGroqClient = createMockGroqClient(failingStream());
     const { room, client } = await setup({
       groqClient: mockGroqClient,
       enableLLMHintFallback: true,
@@ -543,9 +542,7 @@ describe("Hint handler - single user LLM streaming fallback", () => {
         isTimeout: false,
       });
     }
-    const mockGroqClient = {
-      streamCompletion: vi.fn().mockReturnValue(failingStream()),
-    };
+    const mockGroqClient = createMockGroqClient(failingStream());
     const { room, client } = await setup({
       groqClient: mockGroqClient,
       enableLLMHintFallback: true,
@@ -595,9 +592,7 @@ describe("Hint handler - single user LLM streaming fallback", () => {
   });
 
   it("rejects fallback when the problem lookup returns null", async () => {
-    const mockGroqClient = {
-      streamCompletion: vi.fn().mockReturnValue(mockStream(["Hello"])),
-    };
+    const mockGroqClient = createMockGroqClient(mockStream(["Hello"]));
     const { room, client } = await setup({
       groqClient: mockGroqClient,
       enableLLMHintFallback: true,
@@ -634,9 +629,7 @@ describe("Hint handler - single user LLM streaming fallback", () => {
   });
 
   it("rejects fallback when the global LLM daily limit is reached", async () => {
-    const mockGroqClient = {
-      streamCompletion: vi.fn().mockReturnValue(mockStream(["Hello"])),
-    };
+    const mockGroqClient = createMockGroqClient(mockStream(["Hello"]));
     const { room, client } = await setup({
       groqClient: mockGroqClient,
       enableLLMHintFallback: true,
@@ -666,9 +659,7 @@ describe("Hint handler - single user LLM streaming fallback", () => {
         return { allowed: true, retryAfterSeconds: 0 };
       }),
     } as unknown as IpRateLimiter;
-    const mockGroqClient = {
-      streamCompletion: vi.fn().mockReturnValue(mockStream(["Hello"])),
-    };
+    const mockGroqClient = createMockGroqClient(mockStream(["Hello"]));
     const { room, client } = await setup({
       groqClient: mockGroqClient,
       enableLLMHintFallback: true,
@@ -689,9 +680,7 @@ describe("Hint handler - single user LLM streaming fallback", () => {
   });
 
   it("rejects LLM hint when per-room LLM call limit is reached", async () => {
-    const mockGroqClient = {
-      streamCompletion: vi.fn().mockReturnValue(mockStream(["Hello"])),
-    };
+    const mockGroqClient = createMockGroqClient(mockStream(["Hello"]));
     const { room, client } = await setup({
       groqClient: mockGroqClient,
       enableLLMHintFallback: true,
@@ -714,9 +703,7 @@ describe("Hint handler - single user LLM streaming fallback", () => {
   });
 
   it("increments llmCallsUsed on successful LLM hint delivery", async () => {
-    const mockGroqClient = {
-      streamCompletion: vi.fn().mockReturnValue(mockStream(["Valid hint"])),
-    };
+    const mockGroqClient = createMockGroqClient(mockStream(["Valid hint"]));
     const { room, client } = await setup({
       groqClient: mockGroqClient,
       enableLLMHintFallback: true,
@@ -738,9 +725,7 @@ describe("Hint handler - single user LLM streaming fallback", () => {
 
   it("rejects llm hints for imported problems when imported fallback is disabled", async () => {
     const { room, client } = await setup({
-      groqClient: {
-        streamCompletion: vi.fn().mockReturnValue(mockStream(["Hello"])),
-      },
+      groqClient: createMockGroqClient(mockStream(["Hello"])),
       enableLLMHintFallback: true,
       enableImportedProblemHints: false,
     });

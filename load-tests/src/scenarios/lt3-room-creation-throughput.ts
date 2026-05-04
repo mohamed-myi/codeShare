@@ -1,9 +1,9 @@
-import type { RunConfig, Scenario, ScenarioResult, Assertion } from "../types.js";
+import { assertBelow, assertEqual, assertNoFailures } from "../lib/assertions.js";
 import { hrtimeMs } from "../lib/clock.js";
 import { PercentileTracker } from "../lib/metrics.js";
-import { assertBelow, assertNoFailures, assertEqual } from "../lib/assertions.js";
 import { createLoadSocket, disconnectSocket } from "../lib/socket-client.js";
 import { NFR } from "../nfr-thresholds.js";
+import type { Assertion, RunConfig, Scenario, ScenarioResult } from "../types.js";
 
 const RATE_PER_SECOND = 5;
 const DURATION_SECONDS = 10;
@@ -83,11 +83,23 @@ const scenario: Scenario = {
     const duplicateCount = TOTAL_REQUESTS - totalFailures - roomCodes.size;
 
     assertions.push(
-      assertBelow("lt3-p50", "NFR-1.3", "Response latency p50", latencyTracker.p50(), roomCreateThreshold),
+      assertBelow(
+        "lt3-p50",
+        "NFR-1.3",
+        "Response latency p50",
+        latencyTracker.p50(),
+        roomCreateThreshold,
+      ),
     );
 
     assertions.push(
-      assertBelow("lt3-p95", "NFR-1.3", "Response latency p95", latencyTracker.p95(), roomCreateThreshold),
+      assertBelow(
+        "lt3-p95",
+        "NFR-1.3",
+        "Response latency p95",
+        latencyTracker.p95(),
+        roomCreateThreshold,
+      ),
     );
 
     assertions.push(
@@ -119,7 +131,13 @@ const scenario: Scenario = {
       disconnectSocket(timedSocket);
 
       assertions.push(
-        assertBelow("lt3-e2e-create-join", "NFR-1.3", "Create + join e2e latency", e2eLatency, combinedThreshold),
+        assertBelow(
+          "lt3-e2e-create-join",
+          "NFR-1.3",
+          "Create + join e2e latency",
+          e2eLatency,
+          combinedThreshold,
+        ),
       );
     } else {
       assertions.push({

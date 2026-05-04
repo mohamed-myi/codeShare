@@ -56,7 +56,7 @@ const mockGetBrowserLogger = vi.hoisted(() => vi.fn(() => mockBrowserLogger));
 const mockJoinAckDelayMs = vi.hoisted(() => ({ value: 0 }));
 
 vi.mock("../lib/logger.ts", () => ({
-  getBrowserLogger: (...args: unknown[]) => mockGetBrowserLogger(...args),
+  getBrowserLogger: () => mockGetBrowserLogger(),
 }));
 
 vi.mock("../lib/testControls.ts", () => ({

@@ -1,6 +1,7 @@
-import { spawn, type ChildProcess } from "node:child_process";
+import { type ChildProcess, execFileSync, spawn } from "node:child_process";
 import { resolve } from "node:path";
 import { waitForHealthy } from "./health-client.js";
+import { resolveDatabaseUrl } from "./server-env.js";
 
 interface ServerProcesses {
   server: ChildProcess;
@@ -15,18 +16,19 @@ interface SpawnOptions {
   stubPort?: number;
   rateLimitOverrides?: Record<string, string>;
   exposeGC?: boolean;
+  skipDbSetup?: boolean;
 }
 
-function buildServerEnv(opts: SpawnOptions): Record<string, string> {
+function buildServerEnv(opts: SpawnOptions, repoRoot: string): Record<string, string> {
   const port = String(opts.serverPort ?? 3099);
   const stubPort = String(opts.stubPort ?? 4199);
   const stubUrl = `http://127.0.0.1:${stubPort}`;
 
   const env: Record<string, string> = {
-    ...process.env as Record<string, string>,
+    ...(process.env as Record<string, string>),
     PORT: port,
     NODE_ENV: "test",
-    DATABASE_URL: process.env.DATABASE_URL ?? "postgresql://codeshare:codeshare@localhost:5432/codeshare_dev",
+    DATABASE_URL: resolveDatabaseUrl(repoRoot),
     JUDGE0_API_URL: `${stubUrl}/judge0`,
     JUDGE0_API_KEY: "load-test-stub-key",
     JUDGE0_DAILY_LIMIT: "10000",
@@ -36,6 +38,9 @@ function buildServerEnv(opts: SpawnOptions): Record<string, string> {
     CORS_ORIGIN: "http://localhost:5173",
     ALLOWED_ORIGINS: "http://localhost:5173",
     LOG_LEVEL: "warn",
+    ROOM_GRACE_PERIOD_MS: "5000",
+    ENABLE_PROBLEM_IMPORT: "true",
+    LEETCODE_GRAPHQL_URL: `${stubUrl}/graphql`,
     RATE_LIMIT_ROOM_CREATE: "10000",
     RATE_LIMIT_WS_CONNECT: "10000",
     RATE_LIMIT_JOIN: "10000",
@@ -50,6 +55,46 @@ function buildServerEnv(opts: SpawnOptions): Record<string, string> {
   return env;
 }
 
+function buildProcessEnv(opts: SpawnOptions, repoRoot: string): Record<string, string> {
+  return buildServerEnv(opts, repoRoot);
+}
+
+function ensureDatabase(repoRoot: string, opts: SpawnOptions): void {
+  const env = buildProcessEnv(opts, repoRoot);
+  const commands = [
+    ["pnpm", "--filter", "@codeshare/shared", "build"],
+    ["pnpm", "--filter", "@codeshare/db", "build"],
+    ["pnpm", "db:migrate"],
+    ["pnpm", "--filter", "@codeshare/db", "clean-e2e-imports"],
+    ["pnpm", "db:seed"],
+  ] as const;
+
+  for (const [command, ...args] of commands) {
+    try {
+      execFileSync(command, args, {
+        cwd: repoRoot,
+        env,
+        stdio: "pipe",
+      });
+    } catch (error) {
+      if (!(error instanceof Error)) {
+        throw error;
+      }
+
+      const stdout =
+        "stdout" in error && Buffer.isBuffer(error.stdout) ? error.stdout.toString().trim() : "";
+      const stderr =
+        "stderr" in error && Buffer.isBuffer(error.stderr) ? error.stderr.toString().trim() : "";
+      const output = stderr || stdout;
+      throw new Error(
+        output.length > 0
+          ? `Failed to run '${[command, ...args].join(" ")}': ${output}`
+          : `Failed to run '${[command, ...args].join(" ")}'.`,
+      );
+    }
+  }
+}
+
 export async function spawnServerProcesses(opts: SpawnOptions = {}): Promise<ServerProcesses> {
   const serverPort = opts.serverPort ?? 3099;
   const stubPort = opts.stubPort ?? 4199;
@@ -57,6 +102,10 @@ export async function spawnServerProcesses(opts: SpawnOptions = {}): Promise<Ser
   const stubUrl = `http://127.0.0.1:${stubPort}`;
 
   const repoRoot = resolve(import.meta.dirname, "../../..");
+
+  if (!opts.skipDbSetup) {
+    ensureDatabase(repoRoot, { ...opts, serverPort, stubPort });
+  }
 
   const stubPath = resolve(repoRoot, "e2e/support/stub-server.mjs");
   const stub = spawn("node", [stubPath], {
@@ -68,7 +117,7 @@ export async function spawnServerProcesses(opts: SpawnOptions = {}): Promise<Ser
   await new Promise<void>((res, rej) => {
     const timeout = setTimeout(() => rej(new Error("Stub server start timed out")), 10_000);
     stub.stdout?.on("data", (chunk: Buffer) => {
-      if (chunk.toString().includes("listening")) {
+      if (chunk.toString().includes("e2e_stub_server_ready")) {
         clearTimeout(timeout);
         res();
       }
@@ -79,7 +128,7 @@ export async function spawnServerProcesses(opts: SpawnOptions = {}): Promise<Ser
     });
   });
 
-  const env = buildServerEnv({ ...opts, serverPort, stubPort });
+  const env = buildServerEnv({ ...opts, serverPort, stubPort }, repoRoot);
   const serverEntry = resolve(repoRoot, "apps/server/dist/index.js");
 
   const nodeArgs = opts.exposeGC ? ["--expose-gc", serverEntry] : [serverEntry];

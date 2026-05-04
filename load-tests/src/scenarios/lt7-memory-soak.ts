@@ -1,19 +1,21 @@
-import type { RunConfig, Scenario, ScenarioResult, Assertion } from "../types.js";
-import { hrtimeMs } from "../lib/clock.js";
-import { MemoryRecorder } from "../lib/metrics.js";
 import { assertBelow, assertWithin } from "../lib/assertions.js";
+import { hrtimeMs } from "../lib/clock.js";
+import { fetchHealth, triggerGC } from "../lib/health-client.js";
+import { MemoryRecorder } from "../lib/metrics.js";
 import {
   createLoadRoom,
-  joinLoadRoom,
   disconnectParticipant,
+  joinLoadRoom,
   type RoomParticipant,
 } from "../lib/room-lifecycle.js";
-import { fetchHealth, triggerGC } from "../lib/health-client.js";
 import { NFR } from "../nfr-thresholds.js";
+import type { Assertion, RunConfig, Scenario, ScenarioResult } from "../types.js";
 
 const SOAK_DURATION_S = 300;
 const ROOM_INTERVAL_MS = 1_000;
 const HEAP_SAMPLE_INTERVAL_S = 30;
+const CLEANUP_POLL_INTERVAL_MS = 1_000;
+const CLEANUP_TIMEOUT_MS = 30_000;
 
 const scenario: Scenario = {
   id: "LT-7",
@@ -41,7 +43,11 @@ const scenario: Scenario = {
       while (Date.now() - soakStart < SOAK_DURATION_S * 1_000) {
         // Create a room, join 2 users, then disconnect both
         try {
-          const roomCode = await createLoadRoom(config.serverUrl, "collaboration", `LT7-Host-${iterations}`);
+          const roomCode = await createLoadRoom(
+            config.serverUrl,
+            "collaboration",
+            `LT7-Host-${iterations}`,
+          );
 
           const [p1, p2] = await Promise.all([
             joinLoadRoom(config.serverUrl, roomCode, `LT7-A-${iterations}`),
@@ -65,13 +71,21 @@ const scenario: Scenario = {
         await new Promise((r) => setTimeout(r, ROOM_INTERVAL_MS));
       }
 
-      // Trigger GC and wait for cleanup
-      await triggerGC(config.serverUrl);
-      await new Promise((r) => setTimeout(r, 5_000));
+      const cleanupDeadline = Date.now() + CLEANUP_TIMEOUT_MS;
+      let finalHealth = await fetchHealth(config.serverUrl);
 
-      // Final heap sample
-      await memory.sample();
-      const finalHealth = await fetchHealth(config.serverUrl);
+      while (Date.now() < cleanupDeadline) {
+        await triggerGC(config.serverUrl).catch(() => false);
+        await memory.sample().catch(() => {});
+
+        finalHealth = await fetchHealth(config.serverUrl);
+        if (finalHealth.roomCount < 5) {
+          break;
+        }
+
+        await new Promise((r) => setTimeout(r, CLEANUP_POLL_INTERVAL_MS));
+      }
+
       const finalHeap = finalHealth.heapUsedMB ?? memory.latest();
       const finalRoomCount = finalHealth.roomCount;
 

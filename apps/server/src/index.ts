@@ -39,7 +39,7 @@ await app.register(healthRoutes, {
 });
 await app.register(roomRoutes, { prefix: "/api", config });
 await app.register(problemRoutes, { prefix: "/api" });
-if (config.NODE_ENV === "development") {
+if (config.NODE_ENV !== "production") {
   await app.register(devLogRoutes);
 }
 if (config.NODE_ENV === "test") {

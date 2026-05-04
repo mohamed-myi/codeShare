@@ -1,5 +1,6 @@
 import { io, type Socket } from "socket.io-client";
 import { hrtimeMs } from "./clock.js";
+import { getLoadTestLogger } from "./logger.js";
 
 export interface TimedSocket {
   socket: Socket;
@@ -12,6 +13,7 @@ export interface EventResult<T> {
 }
 
 const CONNECT_TIMEOUT_MS = 10_000;
+const logger = getLoadTestLogger();
 
 export async function createLoadSocket(
   serverUrl: string,
@@ -30,6 +32,11 @@ export async function createLoadSocket(
 
     const timeout = setTimeout(() => {
       socket.disconnect();
+      logger.error("load_test_socket_connect_failed", {
+        server_url: serverUrl,
+        room_code: roomCode,
+        error_message: `Socket connect timed out after ${CONNECT_TIMEOUT_MS}ms`,
+      });
       reject(new Error(`Socket connect timed out after ${CONNECT_TIMEOUT_MS}ms`));
     }, CONNECT_TIMEOUT_MS);
 
@@ -44,6 +51,11 @@ export async function createLoadSocket(
     socket.on("connect_error", (err) => {
       clearTimeout(timeout);
       socket.disconnect();
+      logger.error("load_test_socket_connect_failed", {
+        server_url: serverUrl,
+        room_code: roomCode,
+        error_message: err.message,
+      });
       reject(new Error(`Socket connect failed: ${err.message}`));
     });
   });
@@ -59,6 +71,10 @@ export function waitForEvent<T>(
 
     const timeout = setTimeout(() => {
       socket.off(event, handler);
+      logger.warn("load_test_socket_event_wait_failed", {
+        event_name: event,
+        timeout_ms: timeoutMs,
+      });
       reject(new Error(`Timed out waiting for event "${event}" after ${timeoutMs}ms`));
     }, timeoutMs);
 
