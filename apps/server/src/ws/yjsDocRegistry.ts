@@ -83,6 +83,10 @@ export function findSharedDoc(docName: string): Y.Doc | undefined {
   return docs.get(docName);
 }
 
+export function getSharedDocCount(): number {
+  return docs.size;
+}
+
 export function destroySharedDoc(docName: string): void {
   const doc = docs.get(docName);
   if (!doc) {

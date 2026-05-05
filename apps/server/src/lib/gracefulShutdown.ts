@@ -11,6 +11,8 @@ export interface ShutdownDeps {
   destroyAllDocs: () => void;
   resetRooms: () => void;
   closePool: () => Promise<void>;
+  stopBackgroundTasks?: () => void;
+  closeReliabilityStore?: () => Promise<void>;
   forceTimeoutMs?: number;
 }
 
@@ -44,6 +46,15 @@ export function createGracefulShutdown(deps: ShutdownDeps): GracefulShutdownResu
     if (typeof forceTimer.unref === "function") {
       forceTimer.unref();
     }
+
+    await safeStep(
+      "stopBackgroundTasks",
+      () => {
+        deps.stopBackgroundTasks?.();
+        return Promise.resolve();
+      },
+      Boolean(deps.stopBackgroundTasks),
+    );
 
     await safeStep(
       "httpServer.close",
@@ -81,11 +92,20 @@ export function createGracefulShutdown(deps: ShutdownDeps): GracefulShutdownResu
 
     await safeStep("closePool", () => deps.closePool());
 
+    await safeStep(
+      "closeReliabilityStore",
+      () => deps.closeReliabilityStore?.() ?? Promise.resolve(),
+      Boolean(deps.closeReliabilityStore),
+    );
+
     clearTimeout(forceTimer);
     deps.logger.info({ event: "graceful_shutdown_complete" });
   }
 
-  async function safeStep(name: string, fn: () => Promise<void>): Promise<void> {
+  async function safeStep(name: string, fn: () => Promise<void>, shouldRun = true): Promise<void> {
+    if (!shouldRun) {
+      return;
+    }
     try {
       await fn();
     } catch (error) {

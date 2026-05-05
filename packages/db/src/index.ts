@@ -1,4 +1,5 @@
 export { pool } from "./pool.js";
+export { accessRepository } from "./repositories/accessRepository.js";
 export { boilerplateRepository } from "./repositories/boilerplateRepository.js";
 export { hintRepository } from "./repositories/hintRepository.js";
 export { problemRepository } from "./repositories/problemRepository.js";

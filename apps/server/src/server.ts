@@ -7,8 +7,11 @@ import { createGroqClient } from "./clients/GroqClient.js";
 import { createJudge0Client } from "./clients/Judge0Client.js";
 import type { Config } from "./config.js";
 import type { CircuitState } from "./lib/circuitBreaker.js";
+import type { RateLimitConsumer } from "./lib/ipRateLimiter.js";
 import { roomCodeLogFields } from "./lib/logger.js";
+import type { OperationLimiter } from "./lib/operationLimiter.js";
 import { roomManager } from "./models/RoomManager.js";
+import type { AccessService } from "./services/AccessService.js";
 import { createScraperService } from "./services/ScraperService.js";
 import { createTestCaseGeneratorService } from "./services/TestCaseGeneratorService.js";
 import { setupSocketIO } from "./ws/socketio.js";
@@ -22,6 +25,15 @@ export interface ServerResources {
   groqClient?: { getCircuitState(): CircuitState };
 }
 
+export interface ServerRuntimeDeps {
+  ipRateLimiter?: RateLimitConsumer;
+  operationLimiters?: {
+    judge0?: OperationLimiter;
+    imports?: OperationLimiter;
+    llm?: OperationLimiter;
+  };
+}
+
 /**
  * Sets up the HTTP upgrade routing for dual WebSocket channels.
  * Creates Socket.io + y-websocket servers, attaches to the HTTP server,
@@ -31,6 +43,8 @@ export function setupUpgradeRouting(
   httpServer: http.Server,
   config: Config,
   logger: Logger,
+  accessService?: AccessService,
+  runtimeDeps: ServerRuntimeDeps = {},
 ): ServerResources {
   roomManager.configureDefaults({
     submissionLimit: config.ROOM_MAX_SUBMISSIONS,
@@ -38,6 +52,7 @@ export function setupUpgradeRouting(
     customTestCaseLimit: config.ROOM_MAX_CUSTOM_TEST_CASES,
     gracePeriodMs: config.ROOM_GRACE_PERIOD_MS,
     maxActiveRooms: config.MAX_ACTIVE_ROOMS,
+    idleRoomTtlMs: config.ROOM_IDLE_TTL_MS,
   });
 
   const io = new SocketIOServer({
@@ -54,6 +69,7 @@ export function setupUpgradeRouting(
     allowedOrigins: config.ALLOWED_ORIGINS,
     maxMessageBytes: config.MAX_YJS_MESSAGE_BYTES,
     maxDocBytes: config.MAX_YJS_DOC_BYTES,
+    accessService,
   });
   const judge0Client = createJudge0Client(config);
   const groqClient = config.GROQ_API_KEY ? createGroqClient(config) : undefined;
@@ -87,6 +103,8 @@ export function setupUpgradeRouting(
       joinAttemptsPerHour: config.RATE_LIMIT_JOIN,
       importsPerHour: config.RATE_LIMIT_IMPORT,
     },
+    ipRateLimiter: runtimeDeps.ipRateLimiter,
+    operationLimiters: runtimeDeps.operationLimiters,
     allowedOrigins: config.ALLOWED_ORIGINS,
     trustedProxyIps: config.TRUSTED_PROXY_IPS,
     maxCodeBytes: config.MAX_CODE_BYTES,
@@ -102,9 +120,17 @@ export function setupUpgradeRouting(
     hintConsentMs: config.ROOM_HINT_CONSENT_MS,
     hintCooldownMs: config.ROOM_HINT_COOLDOWN_MS,
     importsDailyLimit: config.IMPORTS_DAILY_LIMIT,
+    accessService,
     importProblem: (url) => scraperService.importFromUrl(url),
     generateTestCases: testCaseGenerator
-      ? (ctx) => testCaseGenerator.generateForProblem(ctx)
+      ? (ctx) => {
+          if (!runtimeDeps.operationLimiters?.llm) {
+            return testCaseGenerator.generateForProblem(ctx);
+          }
+          return runtimeDeps.operationLimiters.llm.run(() =>
+            testCaseGenerator.generateForProblem(ctx),
+          );
+        }
       : undefined,
   });
 

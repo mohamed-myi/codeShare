@@ -35,8 +35,16 @@ const envSchema = z.object({
   RATE_LIMIT_WS_CONNECT: z.coerce.number().int().positive().default(20),
   RATE_LIMIT_JOIN: z.coerce.number().int().positive().default(30),
   RATE_LIMIT_IMPORT: z.coerce.number().int().positive().default(10),
+  RATE_LIMIT_ACCESS_LOGIN: z.coerce.number().int().positive().default(10),
   RATE_LIMIT_ROOM_LOOKUP: z.coerce.number().int().positive().default(60),
+  RELIABILITY_STORE: z.enum(["memory", "redis"]).default("memory"),
+  REDIS_URL: optionalSecretSchema,
+  REDIS_CONNECT_TIMEOUT_MS: z.coerce.number().int().positive().default(1_000),
   TRUSTED_PROXY_IPS: csvStringSchema.default([]),
+  ENABLE_PRIVATE_ACCESS: booleanFromStringSchema.default(false),
+  ACCESS_SESSION_SECRET: optionalSecretSchema,
+  ACCESS_SESSION_TTL_DAYS: z.coerce.number().int().positive().default(30),
+  ACCESS_COOKIE_NAME: z.string().min(1).default("codeshare_access"),
   ENABLE_PROBLEM_IMPORT: booleanFromStringSchema.default(false),
   ENABLE_LLM_HINT_FALLBACK: booleanFromStringSchema.default(false),
   ENABLE_IMPORTED_PROBLEM_HINTS: booleanFromStringSchema.default(false),
@@ -50,6 +58,12 @@ const envSchema = z.object({
   MAX_LLM_PROMPT_CHARS: z.coerce.number().int().positive().default(12_000),
   MAX_LLM_HINT_CHARS: z.coerce.number().int().positive().default(1_500),
   MAX_ACTIVE_ROOMS: z.coerce.number().int().positive().default(500),
+  ROOM_IDLE_TTL_MS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(30 * 60 * 1000),
+  ROOM_SWEEP_INTERVAL_MS: z.coerce.number().int().positive().default(60_000),
   ROOM_GRACE_PERIOD_MS: z.coerce.number().int().positive().default(TIMEOUTS.GRACE_PERIOD_MS),
   ROOM_HINT_CONSENT_MS: z.coerce.number().int().positive().default(TIMEOUTS.HINT_CONSENT_MS),
   ROOM_HINT_COOLDOWN_MS: z.coerce.number().int().positive().default(5_000),
@@ -62,6 +76,12 @@ const envSchema = z.object({
     .default(ROOM_LIMITS.MAX_CUSTOM_TEST_CASES),
   IMPORTS_DAILY_LIMIT: z.coerce.number().int().positive().default(GLOBAL_LIMITS.IMPORTS_DAILY),
   JUDGE0_EXEC_PER_HOUR_PER_IP: z.coerce.number().int().positive().default(30),
+  JUDGE0_MAX_IN_FLIGHT: z.coerce.number().int().positive().default(4),
+  JUDGE0_MAX_QUEUE: z.coerce.number().int().min(0).default(20),
+  IMPORT_MAX_IN_FLIGHT: z.coerce.number().int().positive().default(2),
+  IMPORT_MAX_QUEUE: z.coerce.number().int().min(0).default(10),
+  LLM_MAX_IN_FLIGHT: z.coerce.number().int().positive().default(2),
+  LLM_MAX_QUEUE: z.coerce.number().int().min(0).default(10),
   JUDGE0_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(TIMEOUTS.JUDGE0_REQUEST_MS),
   GROQ_MAX_TOKENS: z.coerce.number().int().positive().default(512),
   GROQ_TEMPERATURE: z.coerce.number().min(0).max(2).default(0.6),
@@ -105,6 +125,28 @@ export function loadConfig(): Config {
       environment: config.NODE_ENV,
       invalid_fields: ["ALLOWED_ORIGINS"],
       reason: "production_origins_empty",
+    });
+    process.exit(1);
+  }
+
+  if (config.ENABLE_PRIVATE_ACCESS && !config.ACCESS_SESSION_SECRET) {
+    writeBootstrapLog({
+      level: "error",
+      event: "bootstrap_configuration_rejected",
+      environment: config.NODE_ENV,
+      invalid_fields: ["ACCESS_SESSION_SECRET"],
+      reason: "private_access_secret_missing",
+    });
+    process.exit(1);
+  }
+
+  if (config.RELIABILITY_STORE === "redis" && !config.REDIS_URL) {
+    writeBootstrapLog({
+      level: "error",
+      event: "bootstrap_configuration_rejected",
+      environment: config.NODE_ENV,
+      invalid_fields: ["REDIS_URL"],
+      reason: "redis_url_missing",
     });
     process.exit(1);
   }

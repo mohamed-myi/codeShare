@@ -19,8 +19,8 @@ export async function testRoutes(app: FastifyInstance): Promise<void> {
 
   app.post("/api/test/reset", async () => {
     roomManager.resetRooms();
-    globalCounters.reset();
-    resetSocketIORateLimits();
+    await globalCounters.reset();
+    await resetSocketIORateLimits();
     const e2eImportCleanup = await problemRepository.softDeleteE2eImportedProblems();
 
     return {

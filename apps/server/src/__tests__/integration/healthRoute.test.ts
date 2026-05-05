@@ -1,7 +1,7 @@
 import type { HealthResponse } from "@codeshare/shared";
 import type { FastifyInstance } from "fastify";
 import Fastify from "fastify";
-import { afterAll, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { type HealthRouteDeps, healthRoutes } from "../../routes/health.js";
 
 function buildApp(deps: HealthRouteDeps): FastifyInstance {
@@ -20,6 +20,11 @@ vi.mock("@codeshare/db", () => ({
 
 describe("GET /api/health (extended)", () => {
   let app: FastifyInstance;
+
+  beforeEach(() => {
+    mockPool.query.mockReset();
+    mockPool.query.mockResolvedValue({ rows: [{ "?column?": 1 }] });
+  });
 
   afterAll(async () => {
     if (app) await app.close();
@@ -121,5 +126,73 @@ describe("GET /api/health (extended)", () => {
     expect(body.heapUsedMB).toBeTypeOf("number");
     expect(body.heapTotalMB).toBeTypeOf("number");
     expect(body.rssMB).toBeTypeOf("number");
+  });
+
+  it("exposes live status without dependency checks", async () => {
+    mockPool.query.mockRejectedValueOnce(new Error("db down"));
+    app = buildApp({
+      isShuttingDown: () => false,
+    });
+
+    const res = await app.inject({ method: "GET", url: "/api/live" });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual({ status: "alive" });
+    expect(mockPool.query).not.toHaveBeenCalled();
+  });
+
+  it("returns ready when critical dependencies are available", async () => {
+    mockPool.query.mockResolvedValueOnce({});
+    app = buildApp({
+      getJudge0State: () => "closed",
+      getReliabilityStoreHealth: async () => ({ available: true, kind: "redis" }),
+      isShuttingDown: () => false,
+    });
+
+    const res = await app.inject({ method: "GET", url: "/api/ready" });
+    const body = res.json<HealthResponse>();
+
+    expect(res.statusCode).toBe(200);
+    expect(body.status).toBe("ok");
+    expect(body.reliabilityStore).toEqual({ available: true, kind: "redis" });
+  });
+
+  it("returns 503 ready when shutting down", async () => {
+    mockPool.query.mockResolvedValueOnce({});
+    app = buildApp({
+      getJudge0State: () => "closed",
+      isShuttingDown: () => true,
+    });
+
+    const res = await app.inject({ method: "GET", url: "/api/ready" });
+    const body = res.json<HealthResponse>();
+
+    expect(res.statusCode).toBe(503);
+    expect(body.status).toBe("degraded");
+    expect(body.shuttingDown).toBe(true);
+  });
+
+  it("returns 503 ready when Redis-backed reliability is unavailable", async () => {
+    mockPool.query.mockResolvedValueOnce({});
+    app = buildApp({
+      getJudge0State: () => "closed",
+      getReliabilityStoreHealth: async () => ({
+        available: false,
+        kind: "redis",
+        error: "connection refused",
+      }),
+      isShuttingDown: () => false,
+    });
+
+    const res = await app.inject({ method: "GET", url: "/api/ready" });
+    const body = res.json<HealthResponse>();
+
+    expect(res.statusCode).toBe(503);
+    expect(body.status).toBe("degraded");
+    expect(body.reliabilityStore).toEqual({
+      available: false,
+      kind: "redis",
+      error: "connection refused",
+    });
   });
 });

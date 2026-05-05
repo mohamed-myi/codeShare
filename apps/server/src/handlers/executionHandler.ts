@@ -6,8 +6,9 @@ import type * as Y from "yjs";
 import { dependencyErrorLogFields } from "../lib/dependencyError.js";
 import { emitExecutionError } from "../lib/errorEmitter.js";
 import { handlerLogContext } from "../lib/handlerContext.js";
-import type { IpRateLimiter } from "../lib/ipRateLimiter.js";
+import type { RateLimitConsumer } from "../lib/ipRateLimiter.js";
 import { getClientIp } from "../lib/ipUtils.js";
+import { isOperationLimitExceededError, type OperationLimiter } from "../lib/operationLimiter.js";
 import { globalCounters } from "../lib/rateLimitCounters.js";
 import { createHandlerSession } from "../lib/sessionFactory.js";
 import type { Room } from "../models/Room.js";
@@ -64,7 +65,8 @@ export interface ExecutionHandlerDeps {
   judge0Client: { submit(source: string, timeLimitMs: number): Promise<Judge0Response> };
   dailyLimit: number;
   maxCodeBytes: number;
-  ipRateLimiter?: IpRateLimiter;
+  ipRateLimiter?: RateLimitConsumer;
+  operationLimiter?: OperationLimiter;
   judge0ExecPerHour?: number;
   findVisible: (problemId: string) => Promise<TestCase[]>;
   findByProblemId: (problemId: string) => Promise<TestCase[]>;
@@ -103,13 +105,13 @@ function createExecutionSession(
   );
 }
 
-function checkIpExecutionLimit(session: ExecutionSession): boolean {
+async function checkIpExecutionLimit(session: ExecutionSession): Promise<boolean> {
   if (!session.deps.ipRateLimiter) {
     return true;
   }
 
   const clientIp = getClientIp(session.socket);
-  const ipCheck = session.deps.ipRateLimiter.consume(
+  const ipCheck = await session.deps.ipRateLimiter.consume(
     "judge0-exec",
     clientIp,
     session.deps.judge0ExecPerHour ?? 30,
@@ -236,8 +238,8 @@ async function loadExecutionResources(
   return { code, testCases, boilerplate, problem };
 }
 
-function reserveSubmission(session: ExecutionSession): boolean {
-  if (globalCounters.reserveSubmission(session.deps.dailyLimit)) {
+async function reserveSubmission(session: ExecutionSession): Promise<boolean> {
+  if (await globalCounters.reserveSubmission(session.deps.dailyLimit)) {
     return true;
   }
 
@@ -390,7 +392,7 @@ async function submitExecution(
 }
 
 async function handleExecution(session: ExecutionSession): Promise<void> {
-  if (!checkIpExecutionLimit(session) || !checkRoomExecutionLimit(session)) {
+  if (!(await checkIpExecutionLimit(session)) || !checkRoomExecutionLimit(session)) {
     return;
   }
 
@@ -406,13 +408,32 @@ async function handleExecution(session: ExecutionSession): Promise<void> {
       return;
     }
 
-    if (!reserveSubmission(session)) {
+    await runJudge0Operation(session, async () => {
+      if (!(await reserveSubmission(session))) {
+        return;
+      }
+      submissionReserved = true;
+      await submitExecution(session, resources);
+    });
+  } catch (err) {
+    if (isOperationLimitExceededError(err)) {
+      session.logger.warn({
+        event: "execution_rejected",
+        ...handlerLogContext(session.roomCode, session.socket),
+        execution_type: session.executionType,
+        operation: err.operation,
+        retry_after_seconds: err.retryAfterSeconds,
+        reason: "server_capacity_reached",
+      });
+      emitExecutionError(
+        { io: session.io, socket: session.socket, roomCode: session.roomCode },
+        ExecutionErrorType.API_ERROR,
+        `Execution service is busy. Try again in ${err.retryAfterSeconds}s.`,
+        "room",
+      );
       return;
     }
-    submissionReserved = true;
 
-    await submitExecution(session, resources);
-  } catch (err) {
     const errorType =
       err instanceof DOMException && err.name === "AbortError"
         ? ExecutionErrorType.API_TIMEOUT
@@ -443,6 +464,17 @@ async function handleExecution(session: ExecutionSession): Promise<void> {
     }
     session.room.lastActivityAt = new Date();
   }
+}
+
+async function runJudge0Operation(
+  session: ExecutionSession,
+  operation: () => Promise<void>,
+): Promise<void> {
+  if (!session.deps.operationLimiter) {
+    await operation();
+    return;
+  }
+  await session.deps.operationLimiter.run(operation);
 }
 
 export function registerExecutionHandler(

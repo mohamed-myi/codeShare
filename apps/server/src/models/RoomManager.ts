@@ -4,6 +4,7 @@ import { Room, type RoomOptions } from "./Room.js";
 
 export interface RoomManagerConfig {
   maxActiveRooms?: number;
+  idleRoomTtlMs?: number;
 }
 
 class RoomManagerSingleton {
@@ -11,6 +12,7 @@ class RoomManagerSingleton {
   private destroyListeners = new Set<(roomCode: string) => void>();
   private roomDefaults: RoomOptions = {};
   private maxActiveRooms = 500;
+  private idleRoomTtlMs = 30 * 60 * 1000;
 
   createRoom(mode: RoomMode): Room {
     if (this.rooms.size >= this.maxActiveRooms) {
@@ -28,10 +30,15 @@ class RoomManagerSingleton {
     if (defaults.maxActiveRooms !== undefined) {
       this.maxActiveRooms = defaults.maxActiveRooms;
     }
+    if (defaults.idleRoomTtlMs !== undefined) {
+      this.idleRoomTtlMs = defaults.idleRoomTtlMs;
+    }
   }
 
   resetDefaults(): void {
     this.roomDefaults = {};
+    this.maxActiveRooms = 500;
+    this.idleRoomTtlMs = 30 * 60 * 1000;
   }
 
   getRoom(roomCode: string): Room | undefined {
@@ -55,6 +62,29 @@ class RoomManagerSingleton {
 
   getRoomCount(): number {
     return this.rooms.size;
+  }
+
+  getCapacitySnapshot(): { activeRooms: number; maxActiveRooms: number; roomCapacityUsed: number } {
+    return {
+      activeRooms: this.rooms.size,
+      maxActiveRooms: this.maxActiveRooms,
+      roomCapacityUsed: this.maxActiveRooms === 0 ? 1 : this.rooms.size / this.maxActiveRooms,
+    };
+  }
+
+  destroyIdleRooms(idleRoomTtlMs = this.idleRoomTtlMs, now = Date.now()): number {
+    let destroyed = 0;
+    for (const [roomCode, room] of this.rooms) {
+      if (room.connectedUserCount() > 0) {
+        continue;
+      }
+      if (now - room.lastActivityAt.getTime() < idleRoomTtlMs) {
+        continue;
+      }
+      this.destroyRoom(roomCode);
+      destroyed += 1;
+    }
+    return destroyed;
   }
 
   resetRooms(): void {

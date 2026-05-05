@@ -21,7 +21,7 @@ vi.mock("../../ws/socketio.js", () => ({
 describe("POST /api/test/reset", () => {
   afterEach(async () => {
     roomManager.resetRooms();
-    globalCounters.reset();
+    await globalCounters.reset();
     mockProblemRepository.softDeleteE2eImportedProblems.mockReset();
     mockResetSocketIORateLimits.mockReset();
   });
@@ -32,7 +32,7 @@ describe("POST /api/test/reset", () => {
     });
 
     const room = roomManager.createRoom("collaboration");
-    globalCounters.recordImport();
+    await globalCounters.recordImport();
 
     const app = Fastify();
     await app.register(testRoutes);
@@ -46,7 +46,7 @@ describe("POST /api/test/reset", () => {
     expect(mockProblemRepository.softDeleteE2eImportedProblems).toHaveBeenCalledTimes(1);
     expect(mockResetSocketIORateLimits).toHaveBeenCalledTimes(1);
     expect(roomManager.getRoom(room.roomCode)).toBeUndefined();
-    expect(globalCounters.canImport(1)).toBe(true);
+    await expect(globalCounters.canImport(1)).resolves.toBe(true);
     expect(response.json()).toEqual({
       ok: true,
       roomCount: 0,

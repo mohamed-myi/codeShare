@@ -1,73 +1,71 @@
-/**
- * In-memory global rate limit counters.
- * Reset on server restart (accepted for MVP).
- */
+import {
+  type DailyQuotaResource,
+  MemoryReliabilityStore,
+  type ReliabilityStore,
+} from "./reliabilityStore.js";
+
 class GlobalCounters {
-  private judge0Today = 0;
-  private importsToday = 0;
-  private llmCallsToday = 0;
-  private dayStart = this.todayStart();
+  private store: ReliabilityStore = new MemoryReliabilityStore();
 
-  private todayStart(): number {
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
-    return now.getTime();
+  configure(store: ReliabilityStore): void {
+    this.store = store;
   }
 
-  private rolloverIfNeeded(): void {
-    const today = this.todayStart();
-    if (today > this.dayStart) {
-      this.judge0Today = 0;
-      this.importsToday = 0;
-      this.llmCallsToday = 0;
-      this.dayStart = today;
-    }
+  getStore(): ReliabilityStore {
+    return this.store;
   }
 
-  canSubmit(dailyLimit: number): boolean {
-    this.rolloverIfNeeded();
-    return this.judge0Today < dailyLimit;
+  async canSubmit(dailyLimit: number): Promise<boolean> {
+    return this.hasQuota("judge0", dailyLimit);
   }
 
-  reserveSubmission(dailyLimit: number): boolean {
-    this.rolloverIfNeeded();
-    if (this.judge0Today >= dailyLimit) {
-      return false;
-    }
-    this.judge0Today++;
-    return true;
+  async reserveSubmission(dailyLimit: number): Promise<boolean> {
+    return this.reserve("judge0", dailyLimit);
   }
 
-  recordSubmission(): void {
-    this.rolloverIfNeeded();
-    this.judge0Today++;
+  async recordSubmission(): Promise<void> {
+    await this.reserve("judge0", Number.MAX_SAFE_INTEGER);
   }
 
-  canImport(dailyLimit: number): boolean {
-    this.rolloverIfNeeded();
-    return this.importsToday < dailyLimit;
+  async canImport(dailyLimit: number): Promise<boolean> {
+    return this.hasQuota("imports", dailyLimit);
   }
 
-  recordImport(): void {
-    this.rolloverIfNeeded();
-    this.importsToday++;
+  async reserveImport(dailyLimit: number): Promise<boolean> {
+    return this.reserve("imports", dailyLimit);
   }
 
-  canCallLLM(dailyLimit: number): boolean {
-    this.rolloverIfNeeded();
-    return this.llmCallsToday < dailyLimit;
+  async recordImport(): Promise<void> {
+    await this.reserve("imports", Number.MAX_SAFE_INTEGER);
   }
 
-  recordLLMCall(): void {
-    this.rolloverIfNeeded();
-    this.llmCallsToday++;
+  async canCallLLM(dailyLimit: number): Promise<boolean> {
+    return this.hasQuota("llm", dailyLimit);
   }
 
-  reset(): void {
-    this.judge0Today = 0;
-    this.importsToday = 0;
-    this.llmCallsToday = 0;
-    this.dayStart = this.todayStart();
+  async reserveLLMCall(dailyLimit: number): Promise<boolean> {
+    return this.reserve("llm", dailyLimit);
+  }
+
+  async recordLLMCall(): Promise<void> {
+    await this.reserve("llm", Number.MAX_SAFE_INTEGER);
+  }
+
+  async reset(): Promise<void> {
+    await this.store.clear();
+  }
+
+  private async hasQuota(resource: DailyQuotaResource, dailyLimit: number): Promise<boolean> {
+    const snapshot = await this.store.getUsageSnapshot();
+    return snapshot[resource] < dailyLimit;
+  }
+
+  private async reserve(resource: DailyQuotaResource, dailyLimit: number): Promise<boolean> {
+    const reservation = await this.store.reserveDailyQuota({
+      resource,
+      limit: dailyLimit,
+    });
+    return reservation.allowed;
   }
 }
 

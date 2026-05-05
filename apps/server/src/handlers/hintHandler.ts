@@ -6,8 +6,9 @@ import type * as Y from "yjs";
 import { dependencyErrorLogFields } from "../lib/dependencyError.js";
 import { emitMessageEvent } from "../lib/errorEmitter.js";
 import { handlerLogContext } from "../lib/handlerContext.js";
-import type { IpRateLimiter } from "../lib/ipRateLimiter.js";
+import type { RateLimitConsumer } from "../lib/ipRateLimiter.js";
 import { getClientIp } from "../lib/ipUtils.js";
+import { isOperationLimitExceededError, type OperationLimiter } from "../lib/operationLimiter.js";
 import { globalCounters } from "../lib/rateLimitCounters.js";
 import { createHandlerSession } from "../lib/sessionFactory.js";
 import type { Room } from "../models/Room.js";
@@ -55,7 +56,8 @@ export interface HintHandlerDeps {
   maxLLMCallsPerRoom: number;
   hintConsentMs?: number;
   hintCooldownMs?: number;
-  ipRateLimiter?: IpRateLimiter;
+  ipRateLimiter?: RateLimitConsumer;
+  llmLimiter?: OperationLimiter;
   llmCallsPerHourPerIp?: number;
   llmDailyLimit?: number;
   findStoredHint: (problemId: string, hintsUsed: number) => Promise<Hint | null>;
@@ -327,20 +329,9 @@ async function prepareLLMHintRequest(session: HintSession): Promise<PreparedLLMH
     });
   }
 
-  if (!globalCounters.canCallLLM(session.deps.llmDailyLimit ?? 500)) {
-    return rejectLLMHintRequest(session, {
-      reason: "daily_llm_limit_reached",
-      message: "Daily AI hint limit reached. Please try again tomorrow.",
-      extra: {
-        daily_limit: session.deps.llmDailyLimit ?? 500,
-      },
-      level: "warn",
-    });
-  }
-
   if (session.deps.ipRateLimiter) {
     const clientIp = getClientIp(session.socket);
-    const ipCheck = session.deps.ipRateLimiter.consume(
+    const ipCheck = await session.deps.ipRateLimiter.consume(
       "llm-hint",
       clientIp,
       session.deps.llmCallsPerHourPerIp ?? 20,
@@ -357,6 +348,17 @@ async function prepareLLMHintRequest(session: HintSession): Promise<PreparedLLMH
         level: "warn",
       });
     }
+  }
+
+  if (!(await globalCounters.canCallLLM(session.deps.llmDailyLimit ?? 500))) {
+    return rejectLLMHintRequest(session, {
+      reason: "daily_llm_limit_reached",
+      message: "Daily AI hint limit reached. Please try again tomorrow.",
+      extra: {
+        daily_limit: session.deps.llmDailyLimit ?? 500,
+      },
+      level: "warn",
+    });
   }
 
   if (!session.deps.groqClient) {
@@ -404,6 +406,22 @@ async function prepareLLMHintRequest(session: HintSession): Promise<PreparedLLMH
   };
 }
 
+async function reserveLLMQuota(session: HintSession): Promise<boolean> {
+  if (await globalCounters.reserveLLMCall(session.deps.llmDailyLimit ?? 500)) {
+    return true;
+  }
+
+  rejectLLMHintRequest(session, {
+    reason: "daily_llm_limit_reached",
+    message: "Daily AI hint limit reached. Please try again tomorrow.",
+    extra: {
+      daily_limit: session.deps.llmDailyLimit ?? 500,
+    },
+    level: "warn",
+  });
+  return false;
+}
+
 async function streamLLMHint(session: HintSession, request: PreparedLLMHintRequest): Promise<void> {
   session.room.hintStreaming = true;
   let generatedHint = "";
@@ -433,7 +451,6 @@ async function streamLLMHint(session: HintSession, request: PreparedLLMHintReque
     const fullHint = hintService.sanitizeLLMHint(generatedHint, session.deps.maxLLMHintChars);
     session.room.hintsUsed += 1;
     session.room.llmCallsUsed += 1;
-    globalCounters.recordLLMCall();
     session.room.hintHistory.push(fullHint);
     emitHintDelivered(session, fullHint, "llm");
   } catch (streamErr) {
@@ -473,8 +490,29 @@ async function deliverHint(session: HintSession): Promise<void> {
       return;
     }
 
-    await streamLLMHint(session, llmRequest);
+    await runLLMHintOperation(session, async () => {
+      if (!(await reserveLLMQuota(session))) {
+        return;
+      }
+      await streamLLMHint(session, llmRequest);
+    });
   } catch (err) {
+    if (isOperationLimitExceededError(err)) {
+      session.logger.warn({
+        event: "hint_request_rejected",
+        ...handlerLogContext(session.roomCode, session.socket),
+        operation: err.operation,
+        retry_after_seconds: err.retryAfterSeconds,
+        reason: "server_capacity_reached",
+      });
+      emitMessageEvent(
+        { socket: session.socket },
+        SocketEvents.HINT_ERROR,
+        `AI hint service is busy. Try again in ${err.retryAfterSeconds}s.`,
+      );
+      return;
+    }
+
     session.logger.error(
       {
         event: "hint_delivery_failed",
@@ -490,6 +528,17 @@ async function deliverHint(session: HintSession): Promise<void> {
       "Failed to retrieve hint. Please try again.",
     );
   }
+}
+
+async function runLLMHintOperation(
+  session: HintSession,
+  operation: () => Promise<void>,
+): Promise<void> {
+  if (!session.deps.llmLimiter) {
+    await operation();
+    return;
+  }
+  await session.deps.llmLimiter.run(operation);
 }
 
 async function handleHintRequest(session: HintSession, hintCooldownMs: number): Promise<void> {

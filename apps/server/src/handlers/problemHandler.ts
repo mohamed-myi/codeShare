@@ -11,8 +11,9 @@ import type * as Y from "yjs";
 import { dependencyErrorLogFields } from "../lib/dependencyError.js";
 import { emitMessageEvent } from "../lib/errorEmitter.js";
 import { handlerLogContext } from "../lib/handlerContext.js";
-import type { IpRateLimiter } from "../lib/ipRateLimiter.js";
+import type { RateLimitConsumer } from "../lib/ipRateLimiter.js";
 import { getClientIp } from "../lib/ipUtils.js";
+import { isOperationLimitExceededError, type OperationLimiter } from "../lib/operationLimiter.js";
 import { globalCounters } from "../lib/rateLimitCounters.js";
 import { createHandlerSession } from "../lib/sessionFactory.js";
 import { validatePayloadOrReject } from "../lib/validation.js";
@@ -26,12 +27,13 @@ interface RoomLookup {
 }
 
 interface ProblemHandlerDeps {
-  ipRateLimiter: IpRateLimiter;
+  ipRateLimiter: RateLimitConsumer;
   importsPerHour: number;
   enableProblemImport: boolean;
   importsDailyLimit: number;
   importProblem?: (url: string) => Promise<{ id: string; sourceUrl: string | null }>;
   generateTestCases?: (ctx: GenerationContext) => Promise<void>;
+  importLimiter?: OperationLimiter;
 }
 
 interface ProblemSession {
@@ -179,10 +181,10 @@ async function handleProblemSelect(session: ProblemSession, data: unknown): Prom
   }
 }
 
-function validateProblemImport(
+async function validateProblemImport(
   session: ProblemSession,
   data: unknown,
-): { leetcodeUrl: string } | null {
+): Promise<{ leetcodeUrl: string } | null> {
   if (!session.deps.enableProblemImport) {
     logProblemImportRejection(session, {
       reason: "feature_disabled",
@@ -216,7 +218,7 @@ function validateProblemImport(
   }
 
   const clientIp = getClientIp(session.socket);
-  const importCheck = session.deps.ipRateLimiter.consume(
+  const importCheck = await session.deps.ipRateLimiter.consume(
     "problem-import",
     clientIp,
     session.deps.importsPerHour,
@@ -256,7 +258,7 @@ function validateProblemImport(
     return null;
   }
 
-  if (!globalCounters.canImport(session.deps.importsDailyLimit)) {
+  if (!(await globalCounters.canImport(session.deps.importsDailyLimit))) {
     logProblemImportRejection(session, {
       reason: "daily_import_limit_reached",
       message: "Daily import limit reached. Please try again tomorrow.",
@@ -273,6 +275,26 @@ function validateProblemImport(
   }
 
   return parsed;
+}
+
+async function reserveImportQuota(session: ProblemSession): Promise<boolean> {
+  if (await globalCounters.reserveImport(session.deps.importsDailyLimit)) {
+    return true;
+  }
+
+  logProblemImportRejection(session, {
+    reason: "daily_import_limit_reached",
+    message: "Daily import limit reached. Please try again tomorrow.",
+    extra: {
+      daily_limit: session.deps.importsDailyLimit,
+    },
+    level: "warn",
+  });
+  emitImportStatusToSender(session.socket, {
+    status: "failed",
+    message: "Daily import limit reached. Please try again tomorrow.",
+  });
+  return false;
 }
 
 function startBackgroundTestCaseGeneration(session: ProblemSession, detail: ProblemDetail): void {
@@ -306,7 +328,7 @@ function startBackgroundTestCaseGeneration(session: ProblemSession, detail: Prob
 }
 
 async function handleProblemImport(session: ProblemSession, data: unknown): Promise<void> {
-  const parsed = validateProblemImport(session, data);
+  const parsed = await validateProblemImport(session, data);
   if (!parsed) {
     return;
   }
@@ -324,9 +346,18 @@ async function handleProblemImport(session: ProblemSession, data: unknown): Prom
   );
 
   try {
-    const importedProblem = await (session.deps.importProblem
-      ? session.deps.importProblem(parsed.leetcodeUrl)
-      : scraperService.importFromUrl(parsed.leetcodeUrl));
+    const importedProblem = await runImportOperation(session, async () => {
+      if (!(await reserveImportQuota(session))) {
+        return null;
+      }
+      return session.deps.importProblem
+        ? session.deps.importProblem(parsed.leetcodeUrl)
+        : scraperService.importFromUrl(parsed.leetcodeUrl);
+    });
+    if (!importedProblem) {
+      return;
+    }
+
     const detail = await problemService.getById(importedProblem.id);
 
     if (!detail) {
@@ -335,7 +366,6 @@ async function handleProblemImport(session: ProblemSession, data: unknown): Prom
 
     loadProblemIntoRoom(session, detail);
     session.room.importsUsed += 1;
-    globalCounters.recordImport();
     emitImportStatusToRoom(session, { status: "saved" });
 
     session.logger.info(
@@ -351,6 +381,25 @@ async function handleProblemImport(session: ProblemSession, data: unknown): Prom
 
     startBackgroundTestCaseGeneration(session, detail);
   } catch (err) {
+    if (isOperationLimitExceededError(err)) {
+      logProblemImportRejection(session, {
+        reason: "server_capacity_reached",
+        message: `Import service is busy. Try again in ${err.retryAfterSeconds}s.`,
+        retryAfterSeconds: err.retryAfterSeconds,
+        extra: {
+          operation: err.operation,
+          retry_after_seconds: err.retryAfterSeconds,
+        },
+        level: "warn",
+      });
+      emitImportStatusToSender(session.socket, {
+        status: "failed",
+        message: `Import service is busy. Try again in ${err.retryAfterSeconds}s.`,
+        retryAfterSeconds: err.retryAfterSeconds,
+      });
+      return;
+    }
+
     session.logger.error(
       {
         event: "problem_import_failed",
@@ -365,6 +414,16 @@ async function handleProblemImport(session: ProblemSession, data: unknown): Prom
       message: err instanceof Error ? err.message : "Failed to import problem.",
     });
   }
+}
+
+async function runImportOperation<T>(
+  session: ProblemSession,
+  operation: () => Promise<T>,
+): Promise<T> {
+  if (!session.deps.importLimiter) {
+    return operation();
+  }
+  return session.deps.importLimiter.run(operation);
 }
 
 export function registerProblemHandler(

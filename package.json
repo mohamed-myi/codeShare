@@ -13,6 +13,7 @@
     "e2e:live": "PLAYWRIGHT_LIVE=1 playwright test --config e2e/playwright.config.ts --grep @live",
     "db:migrate": "bash scripts/run-with-env.sh pnpm --filter @codeshare/db migrate",
     "db:seed": "bash scripts/run-with-env.sh pnpm --filter @codeshare/db seed",
+    "invite": "bash scripts/run-with-env.sh pnpm --filter @codeshare/server invite --",
     "db:up": "docker compose up -d --wait",
     "db:down": "docker compose down",
     "db:reset": "pnpm db:down && docker compose up -d --wait && pnpm db:migrate && pnpm db:seed",

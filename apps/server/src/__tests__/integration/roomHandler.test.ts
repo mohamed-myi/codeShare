@@ -392,11 +392,12 @@ describe("Room handler", () => {
       const alice2 = connectClient(server.port, room.roomCode);
       await waitForEvent(alice2, "connect");
 
+      const rejoinPromise = waitForEvent<UserJoinedPayload>(alice2, SocketEvents.USER_JOINED);
       alice2.emit(SocketEvents.USER_JOIN, {
         displayName: "Alice",
         reconnectToken: aliceJoined.reconnectToken,
       });
-      const rejoined = await waitForEvent<UserJoinedPayload>(alice2, SocketEvents.USER_JOINED);
+      const rejoined = await rejoinPromise;
 
       expect(rejoined.userId).toBe(aliceJoined.userId);
 
@@ -620,9 +621,10 @@ describe("Room handler", () => {
       alice.emit(SocketEvents.USER_JOIN, { displayName: "Alice" });
       await waitForEvent<UserJoinedPayload>(alice, SocketEvents.USER_JOINED);
 
+      const alicePeerJoin = waitForEvent<UserJoinedPayload>(alice, SocketEvents.USER_JOINED);
       bob.emit(SocketEvents.USER_JOIN, { displayName: "Bob" });
       await waitForEvent<UserJoinedPayload>(bob, SocketEvents.USER_JOINED);
-      await waitForEvent<UserJoinedPayload>(alice, SocketEvents.USER_JOINED);
+      await alicePeerJoin;
 
       const originalToken = room.yjsToken;
 

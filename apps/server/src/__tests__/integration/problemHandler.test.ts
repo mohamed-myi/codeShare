@@ -93,7 +93,7 @@ describe("Problem handler", () => {
     return yjsDocs.get(roomCode);
   }
 
-  beforeEach(() => {
+  beforeEach(async () => {
     logChunks = [];
     logger = createLogger("info", {
       environment: "test",
@@ -101,7 +101,7 @@ describe("Problem handler", () => {
       enablePretty: false,
       enableFileLogging: false,
     });
-    globalCounters.reset();
+    await globalCounters.reset();
     mockGetById.mockReset();
     mockImportFromUrl.mockReset();
     vi.restoreAllMocks();
@@ -195,9 +195,10 @@ describe("Problem handler", () => {
       await Promise.all([waitForEvent(alice, "connect"), waitForEvent(bob, "connect")]);
 
       await joinUser(alice, "Alice");
+      const alicePeerJoin = waitForEvent(alice, SocketEvents.USER_JOINED);
       await joinUser(bob, "Bob");
       // Consume Alice's broadcast about Bob
-      await waitForEvent(alice, SocketEvents.USER_JOINED);
+      await alicePeerJoin;
 
       const aliceLoadedPromise = waitForEvent<ProblemLoadedPayload>(
         alice,
@@ -399,8 +400,8 @@ describe("Problem handler", () => {
         ...importedProblem,
       });
 
-      const canImportSpy = vi.spyOn(globalCounters, "canImport").mockReturnValue(true);
-      const recordImportSpy = vi.spyOn(globalCounters, "recordImport").mockImplementation(() => {});
+      const canImportSpy = vi.spyOn(globalCounters, "canImport").mockResolvedValue(true);
+      const reserveImportSpy = vi.spyOn(globalCounters, "reserveImport").mockResolvedValue(true);
       const { server, room, doc } = await setup();
 
       const alice = connectClient(server.port, room.roomCode);
@@ -408,8 +409,9 @@ describe("Problem handler", () => {
       await Promise.all([waitForEvent(alice, "connect"), waitForEvent(bob, "connect")]);
 
       await joinUser(alice, "Alice");
+      const alicePeerJoin = waitForEvent(alice, SocketEvents.USER_JOINED);
       await joinUser(bob, "Bob");
-      await waitForEvent(alice, SocketEvents.USER_JOINED);
+      await alicePeerJoin;
 
       const aliceStatuses: string[] = [];
       const bobStatuses: string[] = [];
@@ -436,7 +438,7 @@ describe("Problem handler", () => {
 
       expect(mockImportFromUrl).toHaveBeenCalledWith("https://leetcode.com/problems/two-sum/");
       expect(canImportSpy).toHaveBeenCalledOnce();
-      expect(recordImportSpy).toHaveBeenCalledOnce();
+      expect(reserveImportSpy).toHaveBeenCalledOnce();
       expect(room.importsUsed).toBe(1);
       expect(room.problemId).toBe(VALID_UUID);
       expect(doc.getText("monaco").toString()).toBe("def twoSum(nums, target):\n    pass");
@@ -539,7 +541,7 @@ describe("Problem handler", () => {
     });
 
     it("rejects import when the global import limit is exhausted", async () => {
-      vi.spyOn(globalCounters, "canImport").mockReturnValue(false);
+      vi.spyOn(globalCounters, "canImport").mockResolvedValue(false);
       const { server, room } = await setup();
 
       const alice = connectClient(server.port, room.roomCode);
@@ -561,7 +563,7 @@ describe("Problem handler", () => {
     });
 
     it("rejects import when the ip import limit is exhausted", async () => {
-      vi.spyOn(globalCounters, "canImport").mockReturnValue(true);
+      vi.spyOn(globalCounters, "canImport").mockResolvedValue(true);
       const importedProblem = {
         id: VALID_UUID,
         slug: "two-sum",
@@ -642,8 +644,9 @@ describe("Problem handler", () => {
       await Promise.all([waitForEvent(alice, "connect"), waitForEvent(bob, "connect")]);
 
       await joinUser(alice, "Alice");
+      const alicePeerJoin = waitForEvent(alice, SocketEvents.USER_JOINED);
       await joinUser(bob, "Bob");
-      await waitForEvent(alice, SocketEvents.USER_JOINED);
+      await alicePeerJoin;
 
       const aliceStatuses: Array<{ status: string; message?: string }> = [];
       const bobStatuses: Array<{ status: string; message?: string }> = [];
@@ -677,7 +680,7 @@ describe("Problem handler", () => {
 
     it("broadcasts failed status to the whole room after a scraping error", async () => {
       mockImportFromUrl.mockRejectedValue(new Error("LeetCode import failed"));
-      vi.spyOn(globalCounters, "canImport").mockReturnValue(true);
+      vi.spyOn(globalCounters, "canImport").mockResolvedValue(true);
       const { server, room } = await setup();
 
       const alice = connectClient(server.port, room.roomCode);
@@ -685,8 +688,9 @@ describe("Problem handler", () => {
       await Promise.all([waitForEvent(alice, "connect"), waitForEvent(bob, "connect")]);
 
       await joinUser(alice, "Alice");
+      const alicePeerJoin = waitForEvent(alice, SocketEvents.USER_JOINED);
       await joinUser(bob, "Bob");
-      await waitForEvent(alice, SocketEvents.USER_JOINED);
+      await alicePeerJoin;
 
       const aliceStatuses: string[] = [];
       const bobStatuses: string[] = [];
@@ -716,7 +720,7 @@ describe("Problem handler", () => {
         isTimeout: false,
       });
       mockImportFromUrl.mockRejectedValue(dependencyError);
-      vi.spyOn(globalCounters, "canImport").mockReturnValue(true);
+      vi.spyOn(globalCounters, "canImport").mockResolvedValue(true);
       const { server, room } = await setup();
 
       const alice = connectClient(server.port, room.roomCode);

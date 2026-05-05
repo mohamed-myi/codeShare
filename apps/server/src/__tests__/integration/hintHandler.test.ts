@@ -4,7 +4,7 @@ import { SocketEvents, TIMEOUTS } from "@codeshare/shared";
 import type { Socket as ClientSocket } from "socket.io-client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as Y from "yjs";
-import type { IpRateLimiter } from "../../lib/ipRateLimiter.js";
+import type { RateLimitConsumer } from "../../lib/ipRateLimiter.js";
 import { createLogger } from "../../lib/logger.js";
 import { roomManager } from "../../models/RoomManager.js";
 import { type SocketIODeps, setupSocketIO } from "../../ws/socketio.js";
@@ -359,7 +359,7 @@ describe("Hint handler - single user LLM streaming fallback", () => {
     groqClient?: TestGroqClient;
     enableLLMHintFallback?: boolean;
     enableImportedProblemHints?: boolean;
-    ipRateLimiter?: IpRateLimiter;
+    ipRateLimiter?: RateLimitConsumer;
     llmDailyLimit?: number;
   }) {
     const room = roomManager.createRoom("collaboration");
@@ -658,7 +658,7 @@ describe("Hint handler - single user LLM streaming fallback", () => {
         }
         return { allowed: true, retryAfterSeconds: 0 };
       }),
-    } as unknown as IpRateLimiter;
+    } satisfies RateLimitConsumer;
     const mockGroqClient = createMockGroqClient(mockStream(["Hello"]));
     const { room, client } = await setup({
       groqClient: mockGroqClient,

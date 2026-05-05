@@ -20,6 +20,14 @@ const defaultRoomInfo: RoomInfoResponse = {
 };
 
 export const handlers = [
+  http.get("*/api/access/session", () => {
+    return HttpResponse.json({ authenticated: true });
+  }),
+
+  http.post("*/api/access/login", () => {
+    return HttpResponse.json({ authenticated: true, label: "Recruiter" });
+  }),
+
   http.get("*/api/problems", () => {
     return HttpResponse.json({ problems: defaultProblems });
   }),

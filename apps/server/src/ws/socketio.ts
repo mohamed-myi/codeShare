@@ -14,15 +14,17 @@ import { registerProblemHandler } from "../handlers/problemHandler.js";
 import { registerRoomHandler } from "../handlers/roomHandler.js";
 import { registerSolutionHandler } from "../handlers/solutionHandler.js";
 import { registerTestcaseHandler } from "../handlers/testcaseHandler.js";
-import { IpRateLimiter } from "../lib/ipRateLimiter.js";
+import { IpRateLimiter, type RateLimitConsumer } from "../lib/ipRateLimiter.js";
 import { roomCodeLogFields } from "../lib/logger.js";
 import { extractClientIp, isOriginAllowed } from "../lib/networkSecurity.js";
+import type { OperationLimiter } from "../lib/operationLimiter.js";
 import { normalizeRoomCode } from "../lib/roomCode.js";
 import { createAuthMiddleware } from "../middleware/authMiddleware.js";
 import { roomManager } from "../models/RoomManager.js";
+import type { AccessService } from "../services/AccessService.js";
 import type { GenerationContext } from "../services/TestCaseGeneratorService.js";
 
-let activeIpRateLimiter: IpRateLimiter | null = null;
+let activeIpRateLimiter: RateLimitConsumer | null = null;
 
 interface Judge0Client {
   submit(
@@ -52,7 +54,12 @@ export interface SocketIODeps {
     joinAttemptsPerHour?: number;
     importsPerHour?: number;
   };
-  ipRateLimiter?: IpRateLimiter;
+  ipRateLimiter?: RateLimitConsumer;
+  operationLimiters?: {
+    judge0?: OperationLimiter;
+    imports?: OperationLimiter;
+    llm?: OperationLimiter;
+  };
   allowedOrigins?: string[];
   trustedProxyIps?: string[];
   maxCodeBytes?: number;
@@ -68,17 +75,19 @@ export interface SocketIODeps {
   hintConsentMs?: number;
   hintCooldownMs?: number;
   importsDailyLimit?: number;
+  accessService?: AccessService;
   importProblem?: (url: string) => Promise<{ id: string; sourceUrl: string | null }>;
   generateTestCases?: (ctx: GenerationContext) => Promise<void>;
 }
 
 interface SocketIOConfig {
-  ipRateLimiter: IpRateLimiter;
+  ipRateLimiter: RateLimitConsumer;
   wsConnectionsPerMinute: number;
   joinAttemptsPerHour: number;
   importsPerHour: number;
   allowedOrigins?: string[];
   trustedProxyIps: string[];
+  accessService?: AccessService;
 }
 
 /**
@@ -108,8 +117,8 @@ export function setupSocketIO(io: Server, logger: Logger, deps?: SocketIODeps): 
   });
 }
 
-export function resetSocketIORateLimits(): void {
-  activeIpRateLimiter?.clear();
+export async function resetSocketIORateLimits(): Promise<void> {
+  await activeIpRateLimiter?.clear?.();
 }
 
 function resolveSocketIOConfig(deps?: SocketIODeps): SocketIOConfig {
@@ -120,11 +129,31 @@ function resolveSocketIOConfig(deps?: SocketIODeps): SocketIOConfig {
     importsPerHour: deps?.rateLimits?.importsPerHour ?? 10,
     allowedOrigins: deps?.allowedOrigins,
     trustedProxyIps: deps?.trustedProxyIps ?? [],
+    accessService: deps?.accessService,
   };
 }
 
 function createHandshakeMiddleware(logger: Logger, config: SocketIOConfig) {
-  return (socket: Socket, next: (err?: Error) => void) => {
+  return async (socket: Socket, next: (err?: Error) => void) => {
+    if (config.accessService) {
+      const validation = await config.accessService
+        .validateCookie(socket.handshake.headers.cookie)
+        .catch(() => ({ allowed: false as const, reason: "service_unavailable" }));
+      if (!validation.allowed) {
+        logger.warn(
+          {
+            event: "socket_handshake_rejected",
+            socket_id: socket.id,
+            origin: socket.handshake.headers.origin,
+            reason: "private_access_required",
+            access_reason: validation.reason,
+          },
+          "Socket handshake rejected: private access required",
+        );
+        return next(new Error("Access required"));
+      }
+    }
+
     const roomCode = socket.handshake.query.roomCode;
     if (!roomCode || typeof roomCode !== "string") {
       logger.warn(
@@ -161,7 +190,7 @@ function createHandshakeMiddleware(logger: Logger, config: SocketIOConfig) {
       forwardedForHeader: socket.handshake.headers["x-forwarded-for"],
       trustedProxyIps: config.trustedProxyIps,
     });
-    const connectionCheck = config.ipRateLimiter.consume(
+    const connectionCheck = await config.ipRateLimiter.consume(
       "ws-connect",
       clientIp,
       config.wsConnectionsPerMinute,
@@ -222,6 +251,7 @@ function registerSocketHandlers(
       importsDailyLimit: deps.importsDailyLimit ?? 50,
       importProblem: deps.importProblem,
       generateTestCases: deps.generateTestCases,
+      importLimiter: deps.operationLimiters?.imports,
     });
   }
 
@@ -242,6 +272,7 @@ function registerSocketHandlers(
     ipRateLimiter: config.ipRateLimiter,
     llmCallsPerHourPerIp: deps?.llmCallsPerHourPerIp,
     llmDailyLimit: deps?.llmDailyLimit,
+    llmLimiter: deps?.operationLimiters?.llm,
     findStoredHint:
       deps?.findStoredHint ??
       (async (problemId, hintsUsed) => {
@@ -272,5 +303,6 @@ function registerSocketHandlers(
       boilerplateRepository.findByProblemAndLanguage(problemId, language),
     findProblem: (problemId) => problemRepository.findById(problemId),
     maxCodeBytes: deps.maxCodeBytes ?? 65_536,
+    operationLimiter: deps.operationLimiters?.judge0,
   });
 }

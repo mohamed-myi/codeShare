@@ -8,7 +8,7 @@ import { SocketEvents, userJoinSchema } from "@codeshare/shared";
 import type { Logger } from "pino";
 import type { Server, Socket } from "socket.io";
 import { handlerLogContext } from "../lib/handlerContext.js";
-import type { IpRateLimiter } from "../lib/ipRateLimiter.js";
+import type { RateLimitConsumer } from "../lib/ipRateLimiter.js";
 import { getClientIp } from "../lib/ipUtils.js";
 import { normalizeRoomCode } from "../lib/roomCode.js";
 import { validatePayloadOrReject } from "../lib/validation.js";
@@ -21,7 +21,7 @@ export interface RoomLookup {
 }
 
 export interface RoomHandlerDeps {
-  ipRateLimiter: IpRateLimiter;
+  ipRateLimiter: RateLimitConsumer;
   joinAttemptsPerHour: number;
 }
 
@@ -91,7 +91,7 @@ export async function handleUserJoin(
     return;
   }
 
-  if (isJoinRateLimited(context, roomCode)) {
+  if (await isJoinRateLimited(context, roomCode)) {
     return;
   }
 
@@ -158,9 +158,9 @@ function emitJoinRejected(socket: Socket, clientReason: string, retryAfterSecond
   socket.emit(SocketEvents.EVENT_REJECTED, payload);
 }
 
-function isJoinRateLimited(context: RoomHandlerContext, roomCode: string): boolean {
+async function isJoinRateLimited(context: RoomHandlerContext, roomCode: string): Promise<boolean> {
   const clientIp = getClientIp(context.socket);
-  const joinCheck = context.deps.ipRateLimiter.consume(
+  const joinCheck = await context.deps.ipRateLimiter.consume(
     "join-attempt",
     clientIp,
     context.deps.joinAttemptsPerHour,

@@ -145,4 +145,39 @@ describe("RoomManager", () => {
       unsub2();
     });
   });
+
+  describe("destroyIdleRooms", () => {
+    it("destroys rooms with no connected users after the idle ttl", () => {
+      vi.setSystemTime(new Date("2099-01-01T00:00:00Z"));
+      const listener = vi.fn();
+      const unsubscribe = roomManager.onDestroy(listener);
+      const room = roomManager.createRoom("collaboration");
+      trackRoom(room.roomCode);
+      room.lastActivityAt = new Date("2098-12-31T23:50:00Z");
+
+      const destroyed = roomManager.destroyIdleRooms(5 * 60 * 1000, Date.now());
+
+      expect(destroyed).toBe(1);
+      expect(roomManager.getRoom(room.roomCode)).toBeUndefined();
+      expect(listener).toHaveBeenCalledWith(room.roomCode);
+      unsubscribe();
+    });
+
+    it("keeps active rooms and recently active empty rooms", () => {
+      vi.setSystemTime(new Date("2099-01-01T00:00:00Z"));
+      const activeRoom = roomManager.createRoom("collaboration");
+      const recentRoom = roomManager.createRoom("collaboration");
+      trackRoom(activeRoom.roomCode);
+      trackRoom(recentRoom.roomCode);
+      activeRoom.lastActivityAt = new Date("2098-12-31T23:00:00Z");
+      activeRoom.addUser("Alice", "peer", "socket-1");
+      recentRoom.lastActivityAt = new Date("2098-12-31T23:59:00Z");
+
+      const destroyed = roomManager.destroyIdleRooms(5 * 60 * 1000, Date.now());
+
+      expect(destroyed).toBe(0);
+      expect(roomManager.getRoom(activeRoom.roomCode)).toBe(activeRoom);
+      expect(roomManager.getRoom(recentRoom.roomCode)).toBe(recentRoom);
+    });
+  });
 });

@@ -1,6 +1,7 @@
 import { Loader2 } from "lucide-react";
 import { lazy, Suspense } from "react";
 import { Route, Routes } from "react-router-dom";
+import { AccessGate } from "./components/AccessGate.js";
 
 const HomePage = lazy(async () => {
   const module = await import("./pages/HomePage.tsx");
@@ -29,16 +30,18 @@ const SolverPage = lazy(async () => {
 
 export function App() {
   return (
-    <Suspense fallback={<RouteFallback />}>
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/room/:roomCode" element={<JoinPage />} />
-        <Route path="/room/:roomCode/session" element={<RoomSessionPage />}>
-          <Route index element={<ProblemsPage />} />
-          <Route path="solve" element={<SolverPage />} />
-        </Route>
-      </Routes>
-    </Suspense>
+    <AccessGate>
+      <Suspense fallback={<RouteFallback />}>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/room/:roomCode" element={<JoinPage />} />
+          <Route path="/room/:roomCode/session" element={<RoomSessionPage />}>
+            <Route index element={<ProblemsPage />} />
+            <Route path="solve" element={<SolverPage />} />
+          </Route>
+        </Routes>
+      </Suspense>
+    </AccessGate>
   );
 }
 

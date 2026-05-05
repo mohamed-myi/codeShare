@@ -200,10 +200,34 @@ export interface DependencyHealth {
   circuitState: "closed" | "open" | "half_open";
 }
 
+export interface ReliabilityStoreHealth {
+  available: boolean;
+  kind: "memory" | "redis";
+  error?: string;
+}
+
 export interface HealthResponse {
   status: "ok" | "degraded";
   roomCount: number;
   dbConnected: boolean;
+  shuttingDown?: boolean;
+  reliabilityStore?: ReliabilityStoreHealth;
+  yjsDocCount?: number;
+  socketCount?: number;
+  maxActiveRooms?: number;
+  roomCapacityUsed?: number;
+  operationLimiters?: Array<{
+    name: string;
+    active: number;
+    queued: number;
+    maxInFlight: number;
+    maxQueue: number;
+  }>;
+  dailyUsage?: {
+    judge0: number;
+    imports: number;
+    llm: number;
+  };
   judge0?: DependencyHealth;
   groq?: DependencyHealth;
   heapUsedMB?: number;
@@ -216,4 +240,43 @@ export interface RoomInfoResponse {
   mode?: RoomMode;
   userCount?: number;
   maxUsers?: number;
+}
+
+export interface AccessSessionResponse {
+  authenticated: boolean;
+  label?: string;
+  expiresAt?: string;
+}
+
+export interface AccessInviteRecord {
+  id: string;
+  label: string;
+  codeHash: string;
+  maxSessions: number;
+  expiresAt: Date | null;
+  revokedAt: Date | null;
+  lastUsedAt: Date | null;
+}
+
+export interface AccessSessionRecord {
+  id: string;
+  inviteId: string;
+  sessionTokenHash: string;
+  expiresAt: Date;
+  revokedAt: Date | null;
+  inviteLabel: string;
+  inviteExpiresAt: Date | null;
+  inviteRevokedAt: Date | null;
+}
+
+export interface AccessStore {
+  listUsableInvites(now: Date): Promise<AccessInviteRecord[]>;
+  createSession(input: {
+    inviteId: string;
+    sessionTokenHash: string;
+    expiresAt: Date;
+    now: Date;
+  }): Promise<AccessSessionRecord | null>;
+  findSessionById(sessionId: string): Promise<AccessSessionRecord | null>;
+  revokeSession(sessionId: string, now: Date): Promise<void>;
 }

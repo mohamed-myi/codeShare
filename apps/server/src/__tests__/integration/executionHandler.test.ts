@@ -11,7 +11,7 @@ import { ExecutionErrorType, SocketEvents } from "@codeshare/shared";
 import type { Socket as ClientSocket } from "socket.io-client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as Y from "yjs";
-import type { IpRateLimiter } from "../../lib/ipRateLimiter.js";
+import type { RateLimitConsumer } from "../../lib/ipRateLimiter.js";
 import { createLogger } from "../../lib/logger.js";
 import { globalCounters } from "../../lib/rateLimitCounters.js";
 import { roomManager } from "../../models/RoomManager.js";
@@ -152,7 +152,7 @@ describe("Execution handler", () => {
     return yjsDocs.get(roomCode);
   }
 
-  beforeEach(() => {
+  beforeEach(async () => {
     logChunks = [];
     logger = createLogger("info", {
       environment: "test",
@@ -160,7 +160,7 @@ describe("Execution handler", () => {
       enablePretty: false,
       enableFileLogging: false,
     });
-    globalCounters.reset();
+    await globalCounters.reset();
     mockSubmit.mockReset();
     mockFindVisible.mockReset();
     mockFindByProblemId.mockReset();
@@ -188,7 +188,7 @@ describe("Execution handler", () => {
 
   async function setup(opts?: {
     dailyLimit?: number;
-    ipRateLimiter?: IpRateLimiter;
+    ipRateLimiter?: RateLimitConsumer;
     judge0ExecPerHour?: number;
     maxCodeBytes?: number;
   }) {
@@ -733,7 +733,7 @@ describe("Execution handler", () => {
           }
           return { allowed: true, retryAfterSeconds: 0 };
         }),
-      } as unknown as IpRateLimiter;
+      } satisfies RateLimitConsumer;
       const { server, room } = await setup({
         ipRateLimiter,
         judge0ExecPerHour: 1,
@@ -758,7 +758,7 @@ describe("Execution handler", () => {
       room.problemId = VALID_UUID;
 
       // Exhaust global limit
-      vi.spyOn(globalCounters, "reserveSubmission").mockReturnValue(false);
+      vi.spyOn(globalCounters, "reserveSubmission").mockResolvedValue(false);
 
       const alice = connectClient(server.port, room.roomCode);
       await waitForEvent(alice, "connect");

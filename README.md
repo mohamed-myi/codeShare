@@ -9,6 +9,7 @@ Collaborative coding environment for pair programming and interview practice. Us
 - Optional hint system
 - Interview mode with restricted controls
 - Preloaded problem set
+- Optional private demo gate using invite codes
 
 ## Tech Stack
 
@@ -24,7 +25,7 @@ Collaborative coding environment for pair programming and interview practice. Us
 
 - Node.js 22+
 - pnpm 10+
-- Docker (for PostgreSQL)
+- Docker (for PostgreSQL and local Redis)
 - Judge0 API key
 
 ### Install & Run
@@ -47,6 +48,27 @@ Copy `.env.example` -> `.env` and set:
 - `DATABASE_URL` (required)
 - `JUDGE0_API_KEY` (required)
 - `GROQ_API_KEY` (optional)
+- `ENABLE_PRIVATE_ACCESS` (optional, default `false`)
+- `ACCESS_SESSION_SECRET` (required when private access is enabled)
+- `RELIABILITY_STORE` (`memory` locally, `redis` for restart-safe quotas)
+- `REDIS_URL` (required when `RELIABILITY_STORE=redis`)
+
+
+## Private Demo Access
+
+Private access is disabled by default. To lock the app behind invite codes:
+
+```bash
+pnpm db:migrate
+pnpm invite create --label Recruiter
+```
+
+Set `ENABLE_PRIVATE_ACCESS=true` and configure `ACCESS_SESSION_SECRET` as a deployment secret. The invite command prints the plaintext code once; store it outside the repo. Existing invites can be listed or revoked:
+
+```bash
+pnpm invite list
+pnpm invite revoke --id <invite-id>
+```
 
 ## Project Structure
 
@@ -68,6 +90,7 @@ pnpm build       # Build project
 pnpm test        # Run tests
 pnpm lint        # Lint code
 pnpm typecheck   # Type checking
+pnpm invite      # Manage private demo invite codes
 ```
 
 ## Database
@@ -82,5 +105,5 @@ pnpm db:reset
 ## Notes
 
 - Server is authoritative for execution and state
-- No user accounts; sessions are room-based
+- No full user account system; access sessions are invite-based when enabled
 - Validation is enforced at API and event boundaries

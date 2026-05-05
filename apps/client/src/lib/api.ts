@@ -1,4 +1,9 @@
-import type { ProblemListItem, RoomInfoResponse, RoomMode } from "@codeshare/shared";
+import type {
+  AccessSessionResponse,
+  ProblemListItem,
+  RoomInfoResponse,
+  RoomMode,
+} from "@codeshare/shared";
 import { CLIENT_LOG_EVENTS } from "@codeshare/shared";
 import { getBrowserLogger } from "./logger.ts";
 
@@ -36,7 +41,7 @@ export async function fetchProblems(filters?: {
   if (filters?.difficulty) params.set("difficulty", filters.difficulty);
 
   const url = `${BASE}/problems${params.toString() ? `?${params}` : ""}`;
-  const res = await fetch(url);
+  const res = await fetch(url, { credentials: "include" });
   const data = await parseJsonResponse<{ problems: ProblemListItem[] }>(
     url,
     res,
@@ -51,6 +56,7 @@ export async function createRoom(
 ): Promise<{ roomCode: string }> {
   const res = await fetch(`${BASE}/rooms`, {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ mode, displayName }),
   });
@@ -58,10 +64,38 @@ export async function createRoom(
 }
 
 export async function checkRoom(roomCode: string, signal?: AbortSignal): Promise<RoomInfoResponse> {
-  const res = await fetch(`${BASE}/rooms/${encodeURIComponent(roomCode)}`, { signal });
+  const res = await fetch(`${BASE}/rooms/${encodeURIComponent(roomCode)}`, {
+    credentials: "include",
+    signal,
+  });
   return parseJsonResponse<RoomInfoResponse>(
     `${BASE}/rooms/${encodeURIComponent(roomCode)}`,
     res,
     "Failed to check room",
   );
+}
+
+export async function fetchAccessSession(): Promise<AccessSessionResponse> {
+  const res = await fetch(`${BASE}/access/session`, { credentials: "include" });
+  return parseJsonResponse<AccessSessionResponse>(
+    `${BASE}/access/session`,
+    res,
+    "Failed to check access session",
+  );
+}
+
+export async function loginWithInviteCode(code: string): Promise<AccessSessionResponse> {
+  const res = await fetch(`${BASE}/access/login`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ code }),
+  });
+
+  if (res.ok) {
+    return res.json() as Promise<AccessSessionResponse>;
+  }
+
+  const body = (await res.json().catch(() => null)) as { error?: string } | null;
+  throw new Error(body?.error ?? "Invalid invite code.");
 }

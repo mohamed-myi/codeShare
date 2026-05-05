@@ -9,75 +9,85 @@ describe("IpRateLimiter", () => {
   });
 
   describe("consume", () => {
-    it("allows the first request in a window", () => {
-      const result = limiter.consume("create", "192.168.1.1", 5, 60_000, 1000);
+    it("allows the first request in a window", async () => {
+      const result = await limiter.consume("create", "192.168.1.1", 5, 60_000, 1000);
       expect(result.allowed).toBe(true);
       expect(result.retryAfterSeconds).toBe(0);
     });
 
-    it("allows requests up to the limit", () => {
+    it("allows requests up to the limit", async () => {
       for (let i = 0; i < 5; i++) {
-        expect(limiter.consume("create", "192.168.1.1", 5, 60_000, 1000).allowed).toBe(true);
+        await expect(
+          limiter.consume("create", "192.168.1.1", 5, 60_000, 1000),
+        ).resolves.toMatchObject({ allowed: true });
       }
     });
 
-    it("rejects requests exceeding the limit", () => {
+    it("rejects requests exceeding the limit", async () => {
       for (let i = 0; i < 5; i++) {
-        limiter.consume("create", "192.168.1.1", 5, 60_000, 1000);
+        await limiter.consume("create", "192.168.1.1", 5, 60_000, 1000);
       }
-      const result = limiter.consume("create", "192.168.1.1", 5, 60_000, 1000);
+      const result = await limiter.consume("create", "192.168.1.1", 5, 60_000, 1000);
       expect(result.allowed).toBe(false);
       expect(result.retryAfterSeconds).toBeGreaterThan(0);
     });
 
-    it("returns retryAfterSeconds with minimum of 1", () => {
+    it("returns retryAfterSeconds with minimum of 1", async () => {
       for (let i = 0; i < 3; i++) {
-        limiter.consume("create", "192.168.1.1", 3, 60_000, 1000);
+        await limiter.consume("create", "192.168.1.1", 3, 60_000, 1000);
       }
-      const result = limiter.consume("create", "192.168.1.1", 3, 60_000, 60_500);
+      const result = await limiter.consume("create", "192.168.1.1", 3, 60_000, 60_500);
       expect(result.allowed).toBe(false);
       expect(result.retryAfterSeconds).toBe(1);
     });
 
-    it("resets counter after window expires", () => {
+    it("resets counter after window expires", async () => {
       for (let i = 0; i < 5; i++) {
-        limiter.consume("create", "192.168.1.1", 5, 60_000, 1000);
+        await limiter.consume("create", "192.168.1.1", 5, 60_000, 1000);
       }
-      const result = limiter.consume("create", "192.168.1.1", 5, 60_000, 61_001);
+      const result = await limiter.consume("create", "192.168.1.1", 5, 60_000, 61_001);
       expect(result.allowed).toBe(true);
     });
 
-    it("treats different buckets independently", () => {
+    it("treats different buckets independently", async () => {
       for (let i = 0; i < 3; i++) {
-        limiter.consume("create", "192.168.1.1", 3, 60_000, 1000);
+        await limiter.consume("create", "192.168.1.1", 3, 60_000, 1000);
       }
-      expect(limiter.consume("join", "192.168.1.1", 3, 60_000, 1000).allowed).toBe(true);
+      await expect(limiter.consume("join", "192.168.1.1", 3, 60_000, 1000)).resolves.toMatchObject({
+        allowed: true,
+      });
     });
 
-    it("treats different keys within same bucket independently", () => {
+    it("treats different keys within same bucket independently", async () => {
       for (let i = 0; i < 3; i++) {
-        limiter.consume("create", "192.168.1.1", 3, 60_000, 1000);
+        await limiter.consume("create", "192.168.1.1", 3, 60_000, 1000);
       }
-      expect(limiter.consume("create", "10.0.0.1", 3, 60_000, 1000).allowed).toBe(true);
+      await expect(limiter.consume("create", "10.0.0.1", 3, 60_000, 1000)).resolves.toMatchObject({
+        allowed: true,
+      });
     });
 
-    it("calculates retryAfterSeconds based on remaining window time", () => {
+    it("calculates retryAfterSeconds based on remaining window time", async () => {
       for (let i = 0; i < 3; i++) {
-        limiter.consume("create", "192.168.1.1", 3, 60_000, 1000);
+        await limiter.consume("create", "192.168.1.1", 3, 60_000, 1000);
       }
-      const result = limiter.consume("create", "192.168.1.1", 3, 60_000, 31_000);
+      const result = await limiter.consume("create", "192.168.1.1", 3, 60_000, 31_000);
       expect(result.allowed).toBe(false);
       expect(result.retryAfterSeconds).toBe(30);
     });
   });
 
   describe("clear", () => {
-    it("resets all buckets allowing new requests", () => {
+    it("resets all buckets allowing new requests", async () => {
       for (let i = 0; i < 5; i++) {
-        limiter.consume("create", "192.168.1.1", 5, 60_000, 1000);
+        await limiter.consume("create", "192.168.1.1", 5, 60_000, 1000);
       }
-      limiter.clear();
-      expect(limiter.consume("create", "192.168.1.1", 5, 60_000, 1000).allowed).toBe(true);
+      await limiter.clear();
+      await expect(
+        limiter.consume("create", "192.168.1.1", 5, 60_000, 1000),
+      ).resolves.toMatchObject({
+        allowed: true,
+      });
     });
   });
 });

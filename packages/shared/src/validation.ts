@@ -52,6 +52,10 @@ export const roomCreateSchema = z.object({
   displayName: z.string().trim().min(1).max(30),
 });
 
+export const accessLoginSchema = z.object({
+  code: z.string().trim().min(1).max(128),
+});
+
 // --- API Response Schemas ---
 
 export const problemListQuerySchema = z.object({
