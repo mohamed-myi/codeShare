@@ -137,4 +137,37 @@ describe("SocketProvider", () => {
       expect(screen.getByTestId("connectionError").textContent).toBe("");
     });
   });
+
+  it("announces private access loss from the socket", async () => {
+    const mockSocket = createMockSocket();
+    mockIo.mockReturnValue(mockSocket);
+    const accessRequired = vi.fn();
+    window.addEventListener("codeshare:access-required", accessRequired);
+
+    render(
+      <MemoryRouter initialEntries={["/room/abc-xyz/session"]}>
+        <Routes>
+          <Route
+            path="/room/:roomCode/session"
+            element={
+              <SocketProvider>
+                <TestConsumer />
+              </SocketProvider>
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    mockSocket._trigger("access:required", { reason: "session_revoked" });
+
+    await waitFor(() => {
+      expect(accessRequired).toHaveBeenCalledWith(
+        expect.objectContaining({
+          detail: { reason: "session_revoked" },
+        }),
+      );
+    });
+    window.removeEventListener("codeshare:access-required", accessRequired);
+  });
 });

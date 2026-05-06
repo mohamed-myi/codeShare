@@ -26,6 +26,7 @@ interface YjsServerOptions {
   maxMessageBytes?: number;
   maxDocBytes?: number;
   accessService?: AccessService;
+  accessRevalidationIntervalMs?: number;
 }
 
 export function setupYjsServer(
@@ -37,6 +38,7 @@ export function setupYjsServer(
   const maxMessageBytes = options.maxMessageBytes ?? 32_768;
   const maxDocBytes = options.maxDocBytes ?? 65_536;
   const allowedOrigins = options.allowedOrigins;
+  const accessRevalidationIntervalMs = options.accessRevalidationIntervalMs ?? 15_000;
   const wss = new WebSocketServer({
     noServer: true,
     maxPayload: maxMessageBytes,
@@ -51,22 +53,31 @@ export function setupYjsServer(
     const token = extractToken(req.url);
     const origin = req.headers.origin;
 
-    if (options.accessService) {
-      const validation = await options.accessService
+    const validateAccess = async () => {
+      if (!options.accessService) return { allowed: true as const };
+      return options.accessService
         .validateCookie(req.headers.cookie)
         .catch(() => ({ allowed: false as const, reason: "service_unavailable" }));
+    };
+
+    const closeForAccess = (reason: string) => {
+      logger.warn(
+        {
+          event: "yjs_connection_rejected",
+          ...roomCodeLogFields(roomName),
+          origin,
+          reason: "private_access_required",
+          access_reason: reason,
+        },
+        "Yjs connection rejected: private access required",
+      );
+      ws.close(4401, "Access required");
+    };
+
+    if (options.accessService) {
+      const validation = await validateAccess();
       if (!validation.allowed) {
-        logger.warn(
-          {
-            event: "yjs_connection_rejected",
-            ...roomCodeLogFields(roomName),
-            origin,
-            reason: "private_access_required",
-            access_reason: validation.reason,
-          },
-          "Yjs connection rejected: private access required",
-        );
-        ws.close(4401, "Access required");
+        closeForAccess(validation.reason);
         return;
       }
     }
@@ -108,6 +119,20 @@ export function setupYjsServer(
       },
       "Yjs client connected",
     );
+    const accessInterval =
+      options.accessService &&
+      setInterval(() => {
+        void validateAccess().then((validation) => {
+          if (!validation.allowed) {
+            closeForAccess(validation.reason);
+          }
+        });
+      }, accessRevalidationIntervalMs);
+    accessInterval?.unref();
+    ws.on("close", () => {
+      if (accessInterval) clearInterval(accessInterval);
+    });
+
     setupWSConnection(
       ws,
       req,
@@ -118,6 +143,14 @@ export function setupYjsServer(
       },
       roomName,
       connectionId,
+      {
+        validateMessage: async () => {
+          const validation = await validateAccess();
+          if (validation.allowed) return true;
+          closeForAccess(validation.reason);
+          return false;
+        },
+      },
     );
   });
 

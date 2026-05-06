@@ -85,6 +85,11 @@ function toMethodName(slug) {
 }
 
 function extractTestCases(sourceCode) {
+  const assignedCases = extractJsonAssignment(sourceCode, "_TEST_CASES");
+  if (Array.isArray(assignedCases)) {
+    return assignedCases;
+  }
+
   const match = sourceCode.match(/test_cases = (\[[\s\S]*?\])\n\nresults = \[/);
   if (!match) {
     return [];
@@ -93,6 +98,18 @@ function extractTestCases(sourceCode) {
     return JSON.parse(match[1]);
   } catch {
     return [];
+  }
+}
+
+function extractJsonAssignment(sourceCode, variableName) {
+  const match = sourceCode.match(new RegExp(`^${variableName} = (.+)$`, "m"));
+  if (!match) {
+    return null;
+  }
+  try {
+    return JSON.parse(match[1]);
+  } catch {
+    return null;
   }
 }
 
@@ -107,7 +124,22 @@ function extractIndexedMarker(sourceCode, prefix) {
 }
 
 function extractHarnessNonce(sourceCode) {
+  const assignedNonce = extractJsonAssignment(sourceCode, "_NONCE");
+  if (typeof assignedNonce === "string") {
+    return assignedNonce;
+  }
+
   const match = sourceCode.match(/===HARNESS_RESULT_([a-f0-9]+)===/i);
+  return match?.[1] ?? null;
+}
+
+function extractHarnessMethodName(sourceCode) {
+  const assignedMethodName = extractJsonAssignment(sourceCode, "_METHOD_NAME");
+  if (typeof assignedMethodName === "string") {
+    return assignedMethodName;
+  }
+
+  const match = sourceCode.match(/_user_globals\["Solution"\]\(\)\.([A-Za-z_]\w*)\(/);
   return match?.[1] ?? null;
 }
 
@@ -115,6 +147,37 @@ function buildHarnessStdout(results, nonce, userStdout = "") {
   const startTag = nonce ? `===HARNESS_RESULT_${nonce}===` : "===HARNESS_RESULT===";
   const endTag = nonce ? `===END_HARNESS_RESULT_${nonce}===` : "===END_HARNESS_RESULT===";
   return `${startTag}\n${JSON.stringify({ results, userStdout })}\n${endTag}\n`;
+}
+
+function formatRepr(value) {
+  const json = JSON.stringify(value);
+  return json ?? String(value);
+}
+
+function solveTwoSum(input) {
+  const nums = Array.isArray(input?.nums) ? input.nums : [];
+  const target = Number(input?.target);
+  const seen = new Map();
+  for (let i = 0; i < nums.length; i++) {
+    const value = Number(nums[i]);
+    const complement = target - value;
+    if (seen.has(complement)) {
+      return [seen.get(complement), i];
+    }
+    seen.set(value, i);
+  }
+  return [];
+}
+
+function solveContainsDuplicate(input) {
+  const nums = Array.isArray(input?.nums) ? input.nums : [];
+  return new Set(nums).size !== nums.length;
+}
+
+function computeStubActual(methodName, input) {
+  if (methodName === "twoSum") return solveTwoSum(input);
+  if (methodName === "containsDuplicate") return solveContainsDuplicate(input);
+  return null;
 }
 
 function buildJudge0Result(sourceCode) {
@@ -168,30 +231,32 @@ function buildJudge0Result(sourceCode) {
   }
 
   const testCases = extractTestCases(sourceCode);
-  const results = testCases.map((testCase, index) => ({
-    index,
-    passed: true,
-    elapsed_ms: 12,
-    got: null,
-    expected: null,
-    error: null,
-    input: testCase.input,
-  }));
+  const methodName = extractHarnessMethodName(sourceCode);
+  const results = testCases.map((testCase, index) => {
+    const gotJson = computeStubActual(methodName, testCase.input);
+    return {
+      index,
+      status: "ok",
+      elapsed_ms: 12,
+      got_json: gotJson,
+      got_repr: formatRepr(gotJson),
+    };
+  });
 
   const failIndex = extractIndexedMarker(sourceCode, "fail-case");
   if (failIndex !== null && results[failIndex]) {
+    const gotJson = "stub-wrong-answer";
     results[failIndex] = {
       index: failIndex,
-      passed: false,
+      status: "ok",
       elapsed_ms: 14,
-      got: JSON.stringify("stub-wrong-answer"),
-      expected: JSON.stringify(testCases[failIndex]?.expectedOutput ?? null),
-      error: null,
+      got_json: gotJson,
+      got_repr: formatRepr(gotJson),
     };
   }
 
   const slowIndex = extractIndexedMarker(sourceCode, "slow-case");
-  if (slowIndex !== null && results[slowIndex]?.passed) {
+  if (slowIndex !== null && results[slowIndex]?.status === "ok") {
     results[slowIndex].elapsed_ms = 750;
   }
 

@@ -98,8 +98,13 @@ export interface CaseResult {
   got?: string;
   expected?: string;
   error?: string;
+  isErrorTruncated?: boolean;
   input?: string;
   slow?: boolean;
+}
+
+export interface RunOutputMetadata {
+  hasTruncatedUserStdout: boolean;
 }
 
 export interface RunResult {
@@ -108,6 +113,7 @@ export interface RunResult {
   total: number;
   cases: CaseResult[];
   userStdout: string;
+  output?: RunOutputMetadata;
 }
 
 export interface SubmitResult {
@@ -119,6 +125,7 @@ export interface SubmitResult {
     input: string;
     got: string;
     expected: string;
+    isErrorTruncated?: boolean;
   } | null;
 }
 
@@ -252,6 +259,7 @@ export interface AccessInviteRecord {
   id: string;
   label: string;
   codeHash: string;
+  codeLookupHash: string | null;
   maxSessions: number;
   expiresAt: Date | null;
   revokedAt: Date | null;
@@ -271,6 +279,10 @@ export interface AccessSessionRecord {
 
 export interface AccessStore {
   listUsableInvites(now: Date): Promise<AccessInviteRecord[]>;
+  findUsableInviteByLookupHash(
+    codeLookupHash: string,
+    now: Date,
+  ): Promise<AccessInviteRecord | null>;
   createSession(input: {
     inviteId: string;
     sessionTokenHash: string;

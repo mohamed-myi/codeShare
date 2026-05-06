@@ -5,6 +5,7 @@ interface InviteCodeRow {
   id: string;
   label: string;
   code_hash: string;
+  code_lookup_hash: string | null;
   max_sessions: number;
   expires_at: Date | null;
   revoked_at: Date | null;
@@ -26,6 +27,7 @@ export const accessRepository: AccessStore & {
   createInvite(input: {
     label: string;
     codeHash: string;
+    codeLookupHash: string;
     maxSessions: number;
     expiresAt: Date | null;
   }): Promise<AccessInviteRecord>;
@@ -34,14 +36,31 @@ export const accessRepository: AccessStore & {
 } = {
   async listUsableInvites(now: Date): Promise<AccessInviteRecord[]> {
     const { rows } = await pool.query<InviteCodeRow>(
-      `SELECT id, label, code_hash, max_sessions, expires_at, revoked_at, last_used_at
+      `SELECT id, label, code_hash, code_lookup_hash, max_sessions, expires_at, revoked_at, last_used_at
        FROM invite_codes
        WHERE revoked_at IS NULL
          AND (expires_at IS NULL OR expires_at > $1)
+         AND code_lookup_hash IS NULL
        ORDER BY created_at DESC`,
       [now],
     );
     return rows.map(toInviteRecord);
+  },
+
+  async findUsableInviteByLookupHash(
+    codeLookupHash: string,
+    now: Date,
+  ): Promise<AccessInviteRecord | null> {
+    const { rows } = await pool.query<InviteCodeRow>(
+      `SELECT id, label, code_hash, code_lookup_hash, max_sessions, expires_at, revoked_at, last_used_at
+       FROM invite_codes
+       WHERE code_lookup_hash = $1
+         AND revoked_at IS NULL
+         AND (expires_at IS NULL OR expires_at > $2)
+       LIMIT 1`,
+      [codeLookupHash, now],
+    );
+    return rows[0] ? toInviteRecord(rows[0]) : null;
   },
 
   async createSession(input: {
@@ -106,21 +125,22 @@ export const accessRepository: AccessStore & {
   async createInvite(input: {
     label: string;
     codeHash: string;
+    codeLookupHash: string;
     maxSessions: number;
     expiresAt: Date | null;
   }): Promise<AccessInviteRecord> {
     const { rows } = await pool.query<InviteCodeRow>(
-      `INSERT INTO invite_codes (label, code_hash, max_sessions, expires_at)
-       VALUES ($1, $2, $3, $4)
-       RETURNING id, label, code_hash, max_sessions, expires_at, revoked_at, last_used_at`,
-      [input.label, input.codeHash, input.maxSessions, input.expiresAt],
+      `INSERT INTO invite_codes (label, code_hash, code_lookup_hash, max_sessions, expires_at)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id, label, code_hash, code_lookup_hash, max_sessions, expires_at, revoked_at, last_used_at`,
+      [input.label, input.codeHash, input.codeLookupHash, input.maxSessions, input.expiresAt],
     );
     return toInviteRecord(rows[0]);
   },
 
   async listInvites(): Promise<AccessInviteRecord[]> {
     const { rows } = await pool.query<InviteCodeRow>(
-      `SELECT id, label, code_hash, max_sessions, expires_at, revoked_at, last_used_at
+      `SELECT id, label, code_hash, code_lookup_hash, max_sessions, expires_at, revoked_at, last_used_at
        FROM invite_codes
        ORDER BY created_at DESC`,
     );
@@ -156,6 +176,7 @@ function toInviteRecord(row: InviteCodeRow): AccessInviteRecord {
     id: row.id,
     label: row.label,
     codeHash: row.code_hash,
+    codeLookupHash: row.code_lookup_hash,
     maxSessions: row.max_sessions,
     expiresAt: toDateOrNull(row.expires_at),
     revokedAt: toDateOrNull(row.revoked_at),

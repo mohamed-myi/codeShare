@@ -97,6 +97,43 @@ describe("ResultsPanel", () => {
     expect(screen.getByText(/debug line 1/)).toBeDefined();
   });
 
+  it("RunResult truncated stdout: shows truncation indicator", () => {
+    const result: RunResult = {
+      type: "run",
+      passed: 1,
+      total: 1,
+      cases: [{ index: 0, passed: true, elapsedMs: 10 }],
+      userStdout: "debug line",
+      output: { hasTruncatedUserStdout: true },
+    };
+
+    render(<ResultsPanel executionResult={result} executionInProgress={false} lastError={null} />);
+
+    expect(screen.getByText(/console output truncated/i)).toBeDefined();
+  });
+
+  it("RunResult truncated case error: shows truncation indicator", () => {
+    const result: RunResult = {
+      type: "run",
+      passed: 0,
+      total: 1,
+      cases: [
+        {
+          index: 0,
+          passed: false,
+          elapsedMs: 10,
+          error: "Traceback...",
+          isErrorTruncated: true,
+        },
+      ],
+      userStdout: "",
+    };
+
+    render(<ResultsPanel executionResult={result} executionInProgress={false} lastError={null} />);
+
+    expect(screen.getByText(/error output truncated/i)).toBeDefined();
+  });
+
   it("SubmitResult all pass: shows passed count and success", () => {
     const result: SubmitResult = {
       type: "submit",

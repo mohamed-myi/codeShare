@@ -70,6 +70,7 @@ export function setupUpgradeRouting(
     maxMessageBytes: config.MAX_YJS_MESSAGE_BYTES,
     maxDocBytes: config.MAX_YJS_DOC_BYTES,
     accessService,
+    accessRevalidationIntervalMs: config.ACCESS_REVALIDATION_INTERVAL_MS,
   });
   const judge0Client = createJudge0Client(config);
   const groqClient = config.GROQ_API_KEY ? createGroqClient(config) : undefined;
@@ -121,6 +122,7 @@ export function setupUpgradeRouting(
     hintCooldownMs: config.ROOM_HINT_COOLDOWN_MS,
     importsDailyLimit: config.IMPORTS_DAILY_LIMIT,
     accessService,
+    accessRevalidationIntervalMs: config.ACCESS_REVALIDATION_INTERVAL_MS,
     importProblem: (url) => scraperService.importFromUrl(url),
     generateTestCases: testCaseGenerator
       ? (ctx) => {

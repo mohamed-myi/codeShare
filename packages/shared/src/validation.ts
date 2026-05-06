@@ -65,16 +65,54 @@ export const problemListQuerySchema = z.object({
 
 // --- Harness Result Validation ---
 
+type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
+
+const jsonValueSchema: z.ZodType<JsonValue> = z.lazy(() =>
+  z.union([
+    z.null(),
+    z.boolean(),
+    z.number(),
+    z.string(),
+    z.array(jsonValueSchema),
+    z.record(z.string(), jsonValueSchema),
+  ]),
+);
+
+const harnessOkCaseSchema = z.object({
+  index: z.number().int(),
+  status: z.literal("ok"),
+  elapsed_ms: z.number().optional(),
+  got_json: jsonValueSchema,
+  got_repr: z.string().nullish(),
+});
+
+const harnessUnserializableCaseSchema = z.object({
+  index: z.number().int(),
+  status: z.literal("unserializable"),
+  elapsed_ms: z.number().optional(),
+  got_repr: z.string(),
+});
+
+const harnessErrorCaseSchema = z.object({
+  index: z.number().int(),
+  status: z.literal("error"),
+  elapsed_ms: z.number().optional(),
+  error: z.string(),
+  error_truncated: z.boolean().optional(),
+});
+
 export const harnessResultSchema = z.object({
   results: z.array(
-    z.object({
-      index: z.number().int(),
-      passed: z.boolean(),
-      elapsed_ms: z.number().optional(),
-      got: z.string().nullish(),
-      expected: z.string().nullish(),
-      error: z.string().nullish(),
-    }),
+    z.discriminatedUnion("status", [
+      harnessOkCaseSchema,
+      harnessUnserializableCaseSchema,
+      harnessErrorCaseSchema,
+    ]),
   ),
   userStdout: z.string(),
+  metadata: z
+    .object({
+      userStdoutTruncated: z.boolean().optional(),
+    })
+    .optional(),
 });

@@ -1,4 +1,4 @@
-import { CLIENT_LOG_EVENTS } from "@codeshare/shared";
+import { CLIENT_LOG_EVENTS, SocketEvents } from "@codeshare/shared";
 import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { io, type Socket } from "socket.io-client";
@@ -16,6 +16,8 @@ const SocketContext = createContext<SocketContextValue>({
   connected: false,
   connectionError: null,
 });
+
+const ACCESS_REQUIRED_EVENT = "codeshare:access-required";
 
 export function useSocketContext(): SocketContextValue {
   return useContext(SocketContext);
@@ -68,15 +70,20 @@ export function SocketProvider({ children }: { children: ReactNode }) {
         error,
       });
     };
+    const handleAccessRequired = (payload: { reason?: string }) => {
+      window.dispatchEvent(new CustomEvent(ACCESS_REQUIRED_EVENT, { detail: payload }));
+    };
 
     s.on("connect", handleConnect);
     s.on("disconnect", handleDisconnect);
     s.on("connect_error", handleConnectError);
+    s.on(SocketEvents.ACCESS_REQUIRED, handleAccessRequired);
 
     return () => {
       s.off("connect", handleConnect);
       s.off("disconnect", handleDisconnect);
       s.off("connect_error", handleConnectError);
+      s.off(SocketEvents.ACCESS_REQUIRED, handleAccessRequired);
       s.disconnect();
       setSocket(null);
       setConnected(false);

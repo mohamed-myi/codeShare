@@ -1,8 +1,10 @@
 import { Loader2, LockKeyhole } from "lucide-react";
-import { type FormEvent, type ReactNode, useEffect, useState } from "react";
+import { type FormEvent, type ReactNode, useCallback, useEffect, useState } from "react";
 import { fetchAccessSession, loginWithInviteCode } from "../lib/api.js";
 
-type AccessState = "checking" | "authorized" | "locked";
+type AccessState = "checking" | "authorized" | "locked" | "unavailable";
+
+const ACCESS_REQUIRED_EVENT = "codeshare:access-required";
 
 export function AccessGate({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AccessState>("checking");
@@ -10,22 +12,36 @@ export function AccessGate({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const refreshSession = useCallback(async (isActive: () => boolean = () => true) => {
+    setState("checking");
+    setError(null);
+    try {
+      const session = await fetchAccessSession();
+      if (!isActive()) return;
+      setState(session.authenticated ? "authorized" : "locked");
+    } catch {
+      if (!isActive()) return;
+      setState("unavailable");
+    }
+  }, []);
+
   useEffect(() => {
     let active = true;
-    fetchAccessSession()
-      .then((session) => {
-        if (!active) return;
-        setState(session.authenticated ? "authorized" : "locked");
-      })
-      .catch(() => {
-        if (!active) return;
-        setState("locked");
-      });
+    void refreshSession(() => active);
+
+    const handleAccessRequired = () => {
+      if (!active) return;
+      setCode("");
+      setError("Access expired. Enter your invite code again.");
+      setState("locked");
+    };
+    window.addEventListener(ACCESS_REQUIRED_EVENT, handleAccessRequired);
 
     return () => {
       active = false;
+      window.removeEventListener(ACCESS_REQUIRED_EVENT, handleAccessRequired);
     };
-  }, []);
+  }, [refreshSession]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -60,6 +76,55 @@ export function AccessGate({ children }: { children: ReactNode }) {
     return <>{children}</>;
   }
 
+  if (state === "unavailable") {
+    return (
+      <AccessShell>
+        <div className="fade-up-in mt-2 space-y-6">
+          <p className="text-sm text-[var(--color-error-text)]">Unable to verify access.</p>
+          <button
+            type="button"
+            className="ui-flat-button w-full justify-center"
+            onClick={() => void refreshSession()}
+          >
+            Retry
+          </button>
+        </div>
+      </AccessShell>
+    );
+  }
+
+  return (
+    <AccessShell>
+      <form className="fade-up-in mt-2 space-y-6" onSubmit={handleSubmit}>
+        <label className="block">
+          <input
+            type="password"
+            aria-label="Invite code"
+            placeholder="Invite code"
+            value={code}
+            onChange={(event) => {
+              setCode(event.target.value);
+              if (error) setError(null);
+            }}
+            className="ui-line-control text-base"
+            autoComplete="one-time-code"
+          />
+        </label>
+        <button
+          type="submit"
+          className="ui-flat-button w-full justify-center"
+          disabled={!code.trim() || submitting}
+        >
+          {submitting && <Loader2 size={16} className="animate-spin" />}
+          {submitting ? "Entering..." : "Enter"}
+        </button>
+        {error && <p className="text-sm text-[var(--color-error-text)]">{error}</p>}
+      </form>
+    </AccessShell>
+  );
+}
+
+function AccessShell({ children }: { children: ReactNode }) {
   return (
     <main className="app-screen flex min-h-screen flex-col px-6 py-8 md:px-10 md:py-10">
       <div className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-7xl flex-1 flex-col">
@@ -76,32 +141,7 @@ export function AccessGate({ children }: { children: ReactNode }) {
             </h1>
             <p className="mt-5 text-sm text-[var(--color-text-tertiary)]">Private demo access.</p>
           </div>
-
-          <form className="fade-up-in mt-2 space-y-6" onSubmit={handleSubmit}>
-            <label className="block">
-              <input
-                type="password"
-                aria-label="Invite code"
-                placeholder="Invite code"
-                value={code}
-                onChange={(event) => {
-                  setCode(event.target.value);
-                  if (error) setError(null);
-                }}
-                className="ui-line-control text-base"
-                autoComplete="one-time-code"
-              />
-            </label>
-            <button
-              type="submit"
-              className="ui-flat-button w-full justify-center"
-              disabled={!code.trim() || submitting}
-            >
-              {submitting && <Loader2 size={16} className="animate-spin" />}
-              {submitting ? "Entering..." : "Enter"}
-            </button>
-            {error && <p className="text-sm text-[var(--color-error-text)]">{error}</p>}
-          </form>
+          {children}
         </section>
       </div>
     </main>

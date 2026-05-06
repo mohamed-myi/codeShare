@@ -41,6 +41,17 @@ export async function accessRoutes(
         return { authenticated: true } satisfies AccessSessionResponse;
       }
 
+      const existingSession = await opts.accessService
+        ?.validateCookie(request.headers.cookie)
+        .catch(() => null);
+      if (existingSession?.allowed) {
+        return {
+          authenticated: true,
+          label: existingSession.session.inviteLabel,
+          expiresAt: existingSession.session.expiresAt.toISOString(),
+        } satisfies AccessSessionResponse;
+      }
+
       const parsed = accessLoginSchema.safeParse(request.body);
       if (!parsed.success) {
         return reply.status(400).send({ error: "Invalid invite code." });

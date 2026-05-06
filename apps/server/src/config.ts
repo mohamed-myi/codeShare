@@ -45,6 +45,7 @@ const envSchema = z.object({
   ACCESS_SESSION_SECRET: optionalSecretSchema,
   ACCESS_SESSION_TTL_DAYS: z.coerce.number().int().positive().default(30),
   ACCESS_COOKIE_NAME: z.string().min(1).default("codeshare_access"),
+  ACCESS_REVALIDATION_INTERVAL_MS: z.coerce.number().int().positive().default(15_000),
   ENABLE_PROBLEM_IMPORT: booleanFromStringSchema.default(false),
   ENABLE_LLM_HINT_FALLBACK: booleanFromStringSchema.default(false),
   ENABLE_IMPORTED_PROBLEM_HINTS: booleanFromStringSchema.default(false),

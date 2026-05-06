@@ -78,4 +78,45 @@ describe("AccessGate", () => {
       expect(screen.getByText("Invalid invite code.")).toBeDefined();
     });
   });
+
+  it("shows a retryable unavailable state when access verification fails", async () => {
+    server.use(
+      http.get("*/api/access/session", () => {
+        return HttpResponse.json({ error: "Service unavailable" }, { status: 503 });
+      }),
+    );
+
+    renderGate();
+
+    await waitFor(() => {
+      expect(screen.getByText("Unable to verify access.")).toBeDefined();
+      expect(screen.getByRole("button", { name: "Retry" })).toBeDefined();
+    });
+    expect(screen.queryByLabelText("Invite code")).toBeNull();
+  });
+
+  it("returns to the locked prompt when active access is revoked", async () => {
+    server.use(
+      http.get("*/api/access/session", () => {
+        return HttpResponse.json({ authenticated: true, label: "Recruiter" });
+      }),
+    );
+
+    renderGate();
+
+    await waitFor(() => {
+      expect(screen.getByText("App ready")).toBeDefined();
+    });
+
+    window.dispatchEvent(
+      new CustomEvent("codeshare:access-required", {
+        detail: { reason: "session_revoked" },
+      }),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Invite code")).toBeDefined();
+      expect(screen.getByText("Access expired. Enter your invite code again.")).toBeDefined();
+    });
+  });
 });

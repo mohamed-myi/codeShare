@@ -19,6 +19,12 @@ export const GLOBAL_LIMITS = {
   IMPORTS_DAILY: 50,
 } as const;
 
+export const EXECUTION_OUTPUT_LIMITS = {
+  USER_STDOUT_CHARS: 16 * 1024,
+  CASE_ERROR_CHARS: 8 * 1024,
+  HARNESS_PAYLOAD_CHARS: 256 * 1024,
+} as const;
+
 export const TIMEOUTS = {
   GRACE_PERIOD_MS: 5 * 60 * 1000,
   HINT_CONSENT_MS: 30 * 1000,

@@ -5,6 +5,7 @@ import {
   type AccessStore,
   createAccessService,
   createInviteCodeHash,
+  createInviteLookupHash,
 } from "../AccessService.js";
 
 const secret = "test-access-secret-that-is-long-enough";
@@ -13,11 +14,29 @@ const now = new Date("2026-05-04T12:00:00.000Z");
 class MemoryAccessStore implements AccessStore {
   invites: AccessInviteRecord[] = [];
   sessions: AccessSessionRecord[] = [];
+  listUsableInvitesCalls = 0;
+  findInviteByLookupHashCalls = 0;
 
   async listUsableInvites(at: Date): Promise<AccessInviteRecord[]> {
+    this.listUsableInvitesCalls += 1;
     return this.invites.filter(
       (invite) =>
         !invite.revokedAt && (!invite.expiresAt || invite.expiresAt.getTime() > at.getTime()),
+    );
+  }
+
+  async findUsableInviteByLookupHash(
+    codeLookupHash: string,
+    at: Date,
+  ): Promise<AccessInviteRecord | null> {
+    this.findInviteByLookupHashCalls += 1;
+    return (
+      this.invites.find(
+        (invite) =>
+          invite.codeLookupHash === codeLookupHash &&
+          !invite.revokedAt &&
+          (!invite.expiresAt || invite.expiresAt.getTime() > at.getTime()),
+      ) ?? null
     );
   }
 
@@ -68,6 +87,7 @@ function buildStore(): MemoryAccessStore {
     id: "invite-1",
     label: "Recruiter",
     codeHash: createInviteCodeHash("valid-code", "0123456789abcdef"),
+    codeLookupHash: createInviteLookupHash("valid-code", secret),
     maxSessions: 3,
     expiresAt: null,
     revokedAt: null,
@@ -183,5 +203,50 @@ describe("AccessService", () => {
     const validation = await service.validateCookie("codeshare_access=%", now);
 
     expect(validation).toEqual({ allowed: false, reason: "invalid_cookie" });
+  });
+
+  it("uses the indexed invite lookup hash without enumerating all new-format invites", async () => {
+    const store = buildStore();
+    store.invites.unshift({
+      id: "invite-2",
+      label: "Other",
+      codeHash: createInviteCodeHash("other-code", "abcdef0123456789"),
+      codeLookupHash: createInviteLookupHash("other-code", secret),
+      maxSessions: 3,
+      expiresAt: null,
+      revokedAt: null,
+      lastUsedAt: null,
+    });
+    const service = createAccessService({
+      store,
+      cookieName: "codeshare_access",
+      sessionSecret: secret,
+      sessionTtlDays: 30,
+      secureCookies: false,
+    });
+
+    const login = await service.login("valid-code", now);
+
+    expect(login.allowed).toBe(true);
+    expect(store.findInviteByLookupHashCalls).toBe(1);
+    expect(store.listUsableInvitesCalls).toBe(0);
+  });
+
+  it("keeps legacy invites without lookup hashes usable through the fallback path", async () => {
+    const store = buildStore();
+    store.invites[0].codeLookupHash = null;
+    const service = createAccessService({
+      store,
+      cookieName: "codeshare_access",
+      sessionSecret: secret,
+      sessionTtlDays: 30,
+      secureCookies: false,
+    });
+
+    const login = await service.login("valid-code", now);
+
+    expect(login.allowed).toBe(true);
+    expect(store.findInviteByLookupHashCalls).toBe(1);
+    expect(store.listUsableInvitesCalls).toBe(1);
   });
 });

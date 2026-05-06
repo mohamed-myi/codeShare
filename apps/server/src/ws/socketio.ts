@@ -4,7 +4,7 @@ import {
   problemRepository,
   testCaseRepository,
 } from "@codeshare/db";
-import type { Hint } from "@codeshare/shared";
+import { type Hint, SocketEvents } from "@codeshare/shared";
 import type { Logger } from "pino";
 import type { Server, Socket } from "socket.io";
 import type * as Y from "yjs";
@@ -76,6 +76,7 @@ export interface SocketIODeps {
   hintCooldownMs?: number;
   importsDailyLimit?: number;
   accessService?: AccessService;
+  accessRevalidationIntervalMs?: number;
   importProblem?: (url: string) => Promise<{ id: string; sourceUrl: string | null }>;
   generateTestCases?: (ctx: GenerationContext) => Promise<void>;
 }
@@ -88,6 +89,7 @@ interface SocketIOConfig {
   allowedOrigins?: string[];
   trustedProxyIps: string[];
   accessService?: AccessService;
+  accessRevalidationIntervalMs: number;
 }
 
 /**
@@ -112,6 +114,9 @@ export function setupSocketIO(io: Server, logger: Logger, deps?: SocketIODeps): 
       "Socket connected",
     );
 
+    const cleanupAccessRevalidation = registerAccessRevalidation(socket, logger, config);
+    socket.on("disconnect", cleanupAccessRevalidation);
+    socket.use(createAccessEventMiddleware(logger, config)(socket));
     socket.use(authMiddleware(socket));
     registerSocketHandlers(io, socket, logger, deps, config);
   });
@@ -130,6 +135,7 @@ function resolveSocketIOConfig(deps?: SocketIODeps): SocketIOConfig {
     allowedOrigins: deps?.allowedOrigins,
     trustedProxyIps: deps?.trustedProxyIps ?? [],
     accessService: deps?.accessService,
+    accessRevalidationIntervalMs: deps?.accessRevalidationIntervalMs ?? 15_000,
   };
 }
 
@@ -152,6 +158,7 @@ function createHandshakeMiddleware(logger: Logger, config: SocketIOConfig) {
         );
         return next(new Error("Access required"));
       }
+      socket.data.accessCookie = socket.handshake.headers.cookie;
     }
 
     const roomCode = socket.handshake.query.roomCode;
@@ -229,6 +236,66 @@ function createHandshakeMiddleware(logger: Logger, config: SocketIOConfig) {
     );
     next();
   };
+}
+
+function createAccessEventMiddleware(logger: Logger, config: SocketIOConfig) {
+  return (socket: Socket) => {
+    return (_event: [string, ...unknown[]], next: (err?: Error) => void): void => {
+      if (!config.accessService) {
+        next();
+        return;
+      }
+
+      void validateSocketAccess(socket, logger, config).then((allowed) => {
+        if (allowed) {
+          next();
+          return;
+        }
+        next(new Error("Access required"));
+      });
+    };
+  };
+}
+
+function registerAccessRevalidation(socket: Socket, logger: Logger, config: SocketIOConfig) {
+  if (!config.accessService) {
+    return () => {};
+  }
+
+  const interval = setInterval(() => {
+    if (!socket.connected) return;
+    void validateSocketAccess(socket, logger, config);
+  }, config.accessRevalidationIntervalMs);
+  interval.unref();
+
+  return () => clearInterval(interval);
+}
+
+async function validateSocketAccess(
+  socket: Socket,
+  logger: Logger,
+  config: SocketIOConfig,
+): Promise<boolean> {
+  const validation = await config.accessService
+    ?.validateCookie(socket.data.accessCookie as string | undefined)
+    .catch(() => ({ allowed: false as const, reason: "service_unavailable" }));
+  if (validation?.allowed) {
+    return true;
+  }
+
+  const reason = validation?.reason ?? "service_unavailable";
+  logger.warn(
+    {
+      event: "socket_access_revalidation_failed",
+      socket_id: socket.id,
+      ...roomCodeLogFields(socket.data.roomCode as string | undefined),
+      reason,
+    },
+    "Socket access revalidation failed",
+  );
+  socket.emit(SocketEvents.ACCESS_REQUIRED, { reason });
+  setTimeout(() => socket.disconnect(true), 0);
+  return false;
 }
 
 function registerSocketHandlers(

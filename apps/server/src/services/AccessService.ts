@@ -1,12 +1,19 @@
 import crypto from "node:crypto";
+import { promisify } from "node:util";
 import type { AccessInviteRecord, AccessStore } from "@codeshare/shared";
 
 export type { AccessInviteRecord, AccessSessionRecord, AccessStore } from "@codeshare/shared";
 
 const INVITE_HASH_VERSION = "scrypt:v1";
+const INVITE_LOOKUP_HASH_VERSION = "hmac:sha256:v1";
 const COOKIE_VERSION = "v1";
 const SESSION_HASH_VERSION = "hmac:sha256";
 const DAY_MS = 24 * 60 * 60 * 1000;
+const scryptAsync = promisify(crypto.scrypt) as (
+  password: string,
+  salt: string,
+  keylen: number,
+) => Promise<Buffer>;
 
 export type AccessLoginRejectionReason = "invalid_code" | "session_limit_reached";
 export type AccessValidationRejectionReason =
@@ -77,6 +84,14 @@ export function createInviteCodeHash(code: string, salt = crypto.randomBytes(16)
   return `${INVITE_HASH_VERSION}:${salt}:${digest}`;
 }
 
+export function createInviteLookupHash(code: string, secret: string): string {
+  const digest = crypto
+    .createHmac("sha256", secret)
+    .update(normalizeInviteCode(code))
+    .digest("hex");
+  return `${INVITE_LOOKUP_HASH_VERSION}:${digest}`;
+}
+
 export function verifyInviteCodeHash(code: string, codeHash: string): boolean {
   const parsed = parseInviteCodeHash(codeHash);
   if (!parsed) return false;
@@ -86,12 +101,21 @@ export function verifyInviteCodeHash(code: string, codeHash: string): boolean {
   return timingSafeEqual(actual, expected);
 }
 
+async function verifyInviteCodeHashAsync(code: string, codeHash: string): Promise<boolean> {
+  const parsed = parseInviteCodeHash(codeHash);
+  if (!parsed) return false;
+
+  const actual = await scryptAsync(normalizeInviteCode(code), parsed.salt, 32);
+  const expected = Buffer.from(parsed.digest, "hex");
+  return timingSafeEqual(actual, expected);
+}
+
 async function loginWithInviteCode(
   options: AccessServiceOptions,
   code: string,
   now: Date,
 ): Promise<AccessLoginResult> {
-  const invite = await findMatchingInvite(options.store, code, now);
+  const invite = await findMatchingInvite(options.store, code, options.sessionSecret, now);
   if (!invite) {
     return { allowed: false, reason: "invalid_code" };
   }
@@ -187,10 +211,23 @@ async function revokeCookieSession(
 async function findMatchingInvite(
   store: AccessStore,
   code: string,
+  sessionSecret: string,
   now: Date,
 ): Promise<AccessInviteRecord | null> {
-  const invites = await store.listUsableInvites(now);
-  return invites.find((invite) => verifyInviteCodeHash(code, invite.codeHash)) ?? null;
+  const lookupHash = createInviteLookupHash(code, sessionSecret);
+  const indexedInvite = await store.findUsableInviteByLookupHash(lookupHash, now);
+  if (indexedInvite) {
+    return (await verifyInviteCodeHashAsync(code, indexedInvite.codeHash)) ? indexedInvite : null;
+  }
+
+  const legacyInvites = await store.listUsableInvites(now);
+  for (const invite of legacyInvites) {
+    if (invite.codeLookupHash) continue;
+    if (await verifyInviteCodeHashAsync(code, invite.codeHash)) {
+      return invite;
+    }
+  }
+  return null;
 }
 
 function normalizeInviteCode(code: string): string {

@@ -1,14 +1,42 @@
 import crypto from "node:crypto";
+import { isDeepStrictEqual } from "node:util";
 import type { CaseResult, RunResult, SubmitResult, TestCase } from "@codeshare/shared";
-import { ExecutionErrorType, TIMEOUTS } from "@codeshare/shared";
+import { EXECUTION_OUTPUT_LIMITS, ExecutionErrorType, TIMEOUTS } from "@codeshare/shared";
+import { buildPythonHarness } from "./pythonHarness.js";
 
-export interface HarnessCase {
+interface HarnessOkCase {
+  index: number;
+  status: "ok";
+  elapsed_ms?: number;
+  got_json: unknown;
+  got_repr?: string | null;
+}
+
+interface HarnessUnserializableCase {
+  index: number;
+  status: "unserializable";
+  elapsed_ms?: number;
+  got_repr: string;
+}
+
+interface HarnessErrorCase {
+  index: number;
+  status: "error";
+  elapsed_ms?: number;
+  error: string;
+  error_truncated?: boolean;
+}
+
+export type HarnessCase = HarnessOkCase | HarnessUnserializableCase | HarnessErrorCase;
+
+interface GradedHarnessCase {
   index: number;
   passed: boolean;
   elapsed_ms?: number;
   got?: string | null;
   expected?: string | null;
   error?: string | null;
+  isErrorTruncated?: boolean;
 }
 
 interface HarnessModuleErrorPayload {
@@ -20,85 +48,147 @@ interface HarnessModuleError {
   errorType: typeof ExecutionErrorType.COMPILATION_ERROR | typeof ExecutionErrorType.RUNTIME_ERROR;
 }
 
-const HARNESS_TEMPLATE = `import json, time, traceback, sys, io, os, __future__
+type ParseFailureReason = "missing_markers" | "malformed_json" | "payload_too_large";
 
-_real_fd = os.dup(1)
-_real_stdout = os.fdopen(_real_fd, 'w')
-_user_stdout = io.StringIO()
-sys.stdout = _user_stdout
+type TaggedJsonParseResult<T> = { ok: true; data: T } | { ok: false; reason: ParseFailureReason };
 
-_user_code = {user_code_json}
-_user_globals = {"__name__": "__main__"}
+interface HarnessResultPayload {
+  results: unknown[];
+  userStdout: string;
+  metadata?: {
+    userStdoutTruncated?: boolean;
+  };
+}
 
-try:
-    _compiled_user_code = compile(
-        _user_code,
-        "script.py",
-        "exec",
-        flags=__future__.annotations.compiler_flag,
-        dont_inherit=True,
-    )
-    exec(_compiled_user_code, _user_globals)
-except SyntaxError:
-    _real_stdout.write("===HARNESS_COMPILATION_ERROR_{nonce}===\\n")
-    _real_stdout.write(json.dumps({"error": traceback.format_exc()}))
-    _real_stdout.write("\\n===END_HARNESS_COMPILATION_ERROR_{nonce}===\\n")
-    _real_stdout.flush()
-    raise SystemExit(0)
-except Exception:
-    _real_stdout.write("===HARNESS_RUNTIME_ERROR_{nonce}===\\n")
-    _real_stdout.write(json.dumps({"error": traceback.format_exc()}))
-    _real_stdout.write("\\n===END_HARNESS_RUNTIME_ERROR_{nonce}===\\n")
-    _real_stdout.flush()
-    raise SystemExit(0)
+export type HarnessResultParse = TaggedJsonParseResult<HarnessResultPayload>;
 
-test_cases = {test_cases_json}
+function parseTaggedJson<T>(
+  stdout: string,
+  startTag: string,
+  endTag: string,
+): TaggedJsonParseResult<T> {
+  const startIdx = findLastMarkerLine(stdout, startTag);
+  if (startIdx === null) {
+    return { ok: false, reason: "missing_markers" };
+  }
 
-results = []
-for i, tc in enumerate(test_cases):
-    _case_stdout = io.StringIO()
-    sys.stdout = _case_stdout
-    try:
-        start = time.time()
-        got = _user_globals["Solution"]().{method_name}(**tc["input"])
-        elapsed = (time.time() - start) * 1000
-        passed = got == tc["expectedOutput"]
-        results.append({
-            "index": i,
-            "passed": passed,
-            "elapsed_ms": elapsed,
-            "got": repr(got) if not passed else None,
-            "expected": repr(tc["expectedOutput"]) if not passed else None
-        })
-    except Exception:
-        results.append({
-            "index": i,
-            "passed": False,
-            "error": traceback.format_exc()
-        })
-    _user_stdout.write(_case_stdout.getvalue())
+  const startMarkerEnd = startIdx + startTag.length;
 
-_real_stdout.write("===HARNESS_RESULT_{nonce}===\\n")
-_real_stdout.write(json.dumps({"results": results, "userStdout": _user_stdout.getvalue()}))
-_real_stdout.write("\\n===END_HARNESS_RESULT_{nonce}===\\n")
-_real_stdout.flush()`;
-
-function parseTaggedJson<T>(stdout: string, startTag: string, endTag: string): T | null {
-  const startIdx = stdout.lastIndexOf(startTag);
-  if (startIdx === -1) return null;
-
-  const startMarkerEnd = stdout.indexOf("\n", startIdx);
-  if (startMarkerEnd === -1) return null;
-
-  const endIdx = stdout.indexOf(endTag, startMarkerEnd);
-  if (endIdx === -1) return null;
+  const endIdx = findNextMarkerLine(stdout, endTag, startMarkerEnd);
+  if (endIdx === null) {
+    return { ok: false, reason: "missing_markers" };
+  }
 
   const jsonStr = stdout.slice(startMarkerEnd + 1, endIdx).trim();
+  if (jsonStr.length > EXECUTION_OUTPUT_LIMITS.HARNESS_PAYLOAD_CHARS) {
+    return { ok: false, reason: "payload_too_large" };
+  }
+
   try {
-    return JSON.parse(jsonStr);
+    return { ok: true, data: JSON.parse(jsonStr) as T };
   } catch {
+    return { ok: false, reason: "malformed_json" };
+  }
+}
+
+function findLastMarkerLine(stdout: string, marker: string): number | null {
+  let searchFrom = stdout.length;
+  while (searchFrom >= 0) {
+    const markerIdx = stdout.lastIndexOf(marker, searchFrom);
+    if (markerIdx === -1) {
+      return null;
+    }
+
+    const hasLineStart = markerIdx === 0 || stdout[markerIdx - 1] === "\n";
+    const nextChar = stdout[markerIdx + marker.length];
+    if (hasLineStart && nextChar === "\n") {
+      return markerIdx;
+    }
+
+    searchFrom = markerIdx - 1;
+  }
+
+  return null;
+}
+
+function findNextMarkerLine(stdout: string, marker: string, searchFrom: number): number | null {
+  let markerIdx = stdout.indexOf(marker, searchFrom);
+  while (markerIdx !== -1) {
+    const hasLineStart = markerIdx === 0 || stdout[markerIdx - 1] === "\n";
+    const nextChar = stdout[markerIdx + marker.length];
+    if (hasLineStart && (nextChar === "\n" || nextChar === undefined)) {
+      return markerIdx;
+    }
+
+    markerIdx = stdout.indexOf(marker, markerIdx + marker.length);
+  }
+
+  return null;
+}
+
+function formatHarnessValue(value: unknown): string {
+  const json = JSON.stringify(value);
+  return json ?? String(value);
+}
+
+function hasExactCaseIndexes(results: HarnessCase[], testCaseCount: number): boolean {
+  if (results.length !== testCaseCount) {
+    return false;
+  }
+
+  const seen = new Set<number>();
+  for (const result of results) {
+    if (result.index < 0 || result.index >= testCaseCount || seen.has(result.index)) {
+      return false;
+    }
+    seen.add(result.index);
+  }
+
+  return seen.size === testCaseCount;
+}
+
+function gradeHarnessResults(
+  parsedResults: HarnessCase[],
+  testCases: Array<Pick<TestCase, "expectedOutput">>,
+): GradedHarnessCase[] | null {
+  if (!hasExactCaseIndexes(parsedResults, testCases.length)) {
     return null;
   }
+
+  return [...parsedResults]
+    .sort((a, b) => a.index - b.index)
+    .map((result): GradedHarnessCase => {
+      const expectedOutput = testCases[result.index].expectedOutput;
+
+      if (result.status === "error") {
+        return {
+          index: result.index,
+          passed: false,
+          elapsed_ms: result.elapsed_ms,
+          error: result.error,
+          isErrorTruncated: result.error_truncated,
+        };
+      }
+
+      if (result.status === "unserializable") {
+        return {
+          index: result.index,
+          passed: false,
+          elapsed_ms: result.elapsed_ms,
+          got: result.got_repr,
+          expected: formatHarnessValue(expectedOutput),
+        };
+      }
+
+      const passed = isDeepStrictEqual(result.got_json, expectedOutput);
+      return {
+        index: result.index,
+        passed,
+        elapsed_ms: result.elapsed_ms,
+        got: passed ? null : formatHarnessValue(result.got_json),
+        expected: passed ? null : formatHarnessValue(expectedOutput),
+      };
+    });
 }
 
 export const executionService = {
@@ -107,20 +197,15 @@ export const executionService = {
   },
 
   buildHarness(userCode: string, testCases: TestCase[], methodName: string, nonce: string): string {
-    const userCodeJson = JSON.stringify(userCode);
-    const testCasesJson = JSON.stringify(
-      testCases.map((tc) => ({
-        input: tc.input,
-        expectedOutput: tc.expectedOutput,
-      })),
+    return buildPythonHarness(
+      userCode,
+      testCases.map((tc) => ({ input: tc.input })),
+      methodName,
+      nonce,
     );
-    return HARNESS_TEMPLATE.replace("{user_code_json}", userCodeJson)
-      .replace("{test_cases_json}", testCasesJson)
-      .replace("{method_name}", methodName)
-      .replaceAll("{nonce}", nonce);
   },
 
-  parseResult(stdout: string, nonce: string): { results: unknown[]; userStdout: string } | null {
+  parseResult(stdout: string, nonce: string): HarnessResultParse {
     return parseTaggedJson(
       stdout,
       `===HARNESS_RESULT_${nonce}===`,
@@ -134,9 +219,9 @@ export const executionService = {
       `===HARNESS_COMPILATION_ERROR_${nonce}===`,
       `===END_HARNESS_COMPILATION_ERROR_${nonce}===`,
     );
-    if (compilationError) {
+    if (compilationError.ok) {
       return {
-        error: compilationError.error,
+        error: compilationError.data.error,
         errorType: ExecutionErrorType.COMPILATION_ERROR,
       };
     }
@@ -146,9 +231,9 @@ export const executionService = {
       `===HARNESS_RUNTIME_ERROR_${nonce}===`,
       `===END_HARNESS_RUNTIME_ERROR_${nonce}===`,
     );
-    if (runtimeError) {
+    if (runtimeError.ok) {
       return {
-        error: runtimeError.error,
+        error: runtimeError.data.error,
         errorType: ExecutionErrorType.RUNTIME_ERROR,
       };
     }
@@ -160,8 +245,14 @@ export const executionService = {
     parsedResults: HarnessCase[],
     userStdout: string,
     testCases: Array<Pick<TestCase, "input" | "expectedOutput">>,
-  ): RunResult {
-    const cases: CaseResult[] = parsedResults.map((r) => {
+    metadata?: { userStdoutTruncated?: boolean },
+  ): RunResult | null {
+    const gradedResults = gradeHarnessResults(parsedResults, testCases);
+    if (!gradedResults) {
+      return null;
+    }
+
+    const cases: CaseResult[] = gradedResults.map((r) => {
       const tc = testCases[r.index];
       const elapsedMs = r.elapsed_ms ?? 0;
       const caseResult: CaseResult = {
@@ -175,6 +266,7 @@ export const executionService = {
       if (!r.passed) {
         if (r.error) {
           caseResult.error = r.error;
+          caseResult.isErrorTruncated = r.isErrorTruncated || undefined;
         } else {
           caseResult.got = r.got ?? undefined;
           caseResult.expected = r.expected ?? undefined;
@@ -192,17 +284,23 @@ export const executionService = {
       total: cases.length,
       cases,
       userStdout,
+      output: metadata?.userStdoutTruncated ? { hasTruncatedUserStdout: true } : undefined,
     };
   },
 
   buildSubmitResult(
     parsedResults: HarnessCase[],
     allTestCases: Array<Pick<TestCase, "input" | "expectedOutput" | "isVisible">>,
-  ): SubmitResult {
-    const passed = parsedResults.filter((r) => r.passed).length;
-    const total = parsedResults.length;
+  ): SubmitResult | null {
+    const gradedResults = gradeHarnessResults(parsedResults, allTestCases);
+    if (!gradedResults) {
+      return null;
+    }
 
-    const firstFailed = parsedResults.find((r) => !r.passed);
+    const passed = gradedResults.filter((r) => r.passed).length;
+    const total = gradedResults.length;
+
+    const firstFailed = gradedResults.find((r) => !r.passed);
     let firstFailure: SubmitResult["firstFailure"] = null;
 
     if (firstFailed) {
@@ -215,6 +313,7 @@ export const executionService = {
           ? "Output did not match a hidden test case."
           : (firstFailed.got ?? firstFailed.error ?? ""),
         expected: hiddenFailure ? "Hidden test case expectation." : (firstFailed.expected ?? ""),
+        isErrorTruncated: !hiddenFailure && firstFailed.isErrorTruncated ? true : undefined,
       };
     }
 

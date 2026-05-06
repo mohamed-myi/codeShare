@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  harnessResultSchema,
   problemImportSchema,
   roomCodeSchema,
   roomCreateSchema,
@@ -91,6 +92,56 @@ describe("problemImportSchema", () => {
   it("rejects non-LeetCode URLs", () => {
     const result = problemImportSchema.safeParse({
       leetcodeUrl: "https://example.com/problems/two-sum/",
+    });
+
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("harnessResultSchema", () => {
+  it("accepts actual-only case results from the Judge0 harness", () => {
+    const result = harnessResultSchema.safeParse({
+      results: [
+        { index: 0, status: "ok", elapsed_ms: 12, got_json: [0, 1], got_repr: "[0, 1]" },
+        {
+          index: 1,
+          status: "error",
+          elapsed_ms: 3,
+          error: "ValueError: bad input",
+          error_truncated: true,
+        },
+        { index: 2, status: "unserializable", elapsed_ms: 4, got_repr: "<object object>" },
+      ],
+      userStdout: "debug output",
+      metadata: { userStdoutTruncated: true },
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid truncation metadata", () => {
+    const result = harnessResultSchema.safeParse({
+      results: [{ index: 0, status: "error", elapsed_ms: 3, error: "ValueError" }],
+      userStdout: "debug output",
+      metadata: { userStdoutTruncated: "yes" },
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects legacy harness payloads that grade inside Python", () => {
+    const result = harnessResultSchema.safeParse({
+      results: [{ index: 0, passed: true, elapsed_ms: 12, got: null, expected: null }],
+      userStdout: "",
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects ok cases without a JSON actual output", () => {
+    const result = harnessResultSchema.safeParse({
+      results: [{ index: 0, status: "ok", elapsed_ms: 12, got_repr: "[0, 1]" }],
+      userStdout: "",
     });
 
     expect(result.success).toBe(false);

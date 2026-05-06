@@ -30,6 +30,7 @@ export function createTestConfig(overrides?: Partial<Config>): Config {
     ACCESS_SESSION_SECRET: undefined,
     ACCESS_SESSION_TTL_DAYS: 30,
     ACCESS_COOKIE_NAME: "codeshare_access",
+    ACCESS_REVALIDATION_INTERVAL_MS: 15_000,
     ENABLE_PROBLEM_IMPORT: false,
     ENABLE_LLM_HINT_FALLBACK: false,
     ENABLE_IMPORTED_PROBLEM_HINTS: false,

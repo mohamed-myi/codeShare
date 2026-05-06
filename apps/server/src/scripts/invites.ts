@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { accessRepository, pool } from "@codeshare/db";
-import { createInviteCodeHash } from "../services/AccessService.js";
+import { createInviteCodeHash, createInviteLookupHash } from "../services/AccessService.js";
 
 type Command = "create" | "list" | "revoke";
 
@@ -35,9 +35,14 @@ async function createInvite(args: ParsedArgs): Promise<void> {
   }
 
   const code = args.code ?? crypto.randomBytes(18).toString("base64url");
+  const sessionSecret = process.env.ACCESS_SESSION_SECRET?.trim();
+  if (!sessionSecret) {
+    throw new Error("ACCESS_SESSION_SECRET is required to create private access invites.");
+  }
   const invite = await accessRepository.createInvite({
     label: args.label,
     codeHash: createInviteCodeHash(code),
+    codeLookupHash: createInviteLookupHash(code, sessionSecret),
     maxSessions: args.maxSessions,
     expiresAt: args.expiresAt,
   });

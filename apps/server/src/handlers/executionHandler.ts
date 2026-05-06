@@ -12,7 +12,7 @@ import { isOperationLimitExceededError, type OperationLimiter } from "../lib/ope
 import { globalCounters } from "../lib/rateLimitCounters.js";
 import { createHandlerSession } from "../lib/sessionFactory.js";
 import type { Room } from "../models/Room.js";
-import { executionService } from "../services/ExecutionService.js";
+import { executionService, type HarnessCase } from "../services/ExecutionService.js";
 
 const MAX_STDERR_CHARS = 500;
 
@@ -48,15 +48,11 @@ interface LoadedExecutionResources {
 }
 
 interface ParsedHarnessResult {
-  results: Array<{
-    index: number;
-    passed: boolean;
-    elapsed_ms?: number;
-    got?: string | null;
-    expected?: string | null;
-    error?: string | null;
-  }>;
+  results: HarnessCase[];
   userStdout: string;
+  metadata?: {
+    userStdoutTruncated?: boolean;
+  };
 }
 
 export interface ExecutionHandlerDeps {
@@ -299,19 +295,27 @@ function emitExecutionResult(
   session: ExecutionSession,
   parsedResults: ParsedHarnessResult,
   testCases: TestCase[],
-): void {
+): boolean {
   if (session.executionType === "run") {
     const result = executionService.buildRunResult(
       parsedResults.results,
       parsedResults.userStdout,
       testCases,
+      parsedResults.metadata,
     );
+    if (!result) {
+      return false;
+    }
     session.io.to(session.roomCode).emit(SocketEvents.EXECUTION_RESULT, result);
-    return;
+    return true;
   }
 
   const result = executionService.buildSubmitResult(parsedResults.results, testCases);
+  if (!result) {
+    return false;
+  }
   session.io.to(session.roomCode).emit(SocketEvents.EXECUTION_RESULT, result);
+  return true;
 }
 
 function handleAcceptedExecutionResult(
@@ -333,17 +337,20 @@ function handleAcceptedExecutionResult(
   }
 
   const parsed = executionService.parseResult(stdout, nonce);
-  if (!parsed) {
+  if (!parsed.ok) {
+    const isOutputLimit = parsed.reason === "payload_too_large";
     emitExecutionError(
       { io: session.io, socket: session.socket, roomCode: session.roomCode },
-      ExecutionErrorType.PARSE_ERROR,
-      "Could not parse execution results.",
+      isOutputLimit ? ExecutionErrorType.OUTPUT_LIMIT : ExecutionErrorType.PARSE_ERROR,
+      isOutputLimit
+        ? "Execution output exceeded the allowed size."
+        : "Could not parse execution results.",
       "room",
     );
     return;
   }
 
-  const validated = harnessResultSchema.safeParse(parsed);
+  const validated = harnessResultSchema.safeParse(parsed.data);
   if (!validated.success) {
     emitExecutionError(
       { io: session.io, socket: session.socket, roomCode: session.roomCode },
@@ -354,7 +361,14 @@ function handleAcceptedExecutionResult(
     return;
   }
 
-  emitExecutionResult(session, validated.data, testCases);
+  if (!emitExecutionResult(session, validated.data, testCases)) {
+    emitExecutionError(
+      { io: session.io, socket: session.socket, roomCode: session.roomCode },
+      ExecutionErrorType.PARSE_ERROR,
+      "Execution results failed validation.",
+      "room",
+    );
+  }
 }
 
 async function submitExecution(

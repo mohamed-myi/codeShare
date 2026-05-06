@@ -85,6 +85,11 @@ function RunResultView({ result }: { result: RunResult }) {
           <pre className="whitespace-pre-wrap border-l border-[var(--color-border-subtle)] pl-4 font-[var(--font-family-mono)] text-xs leading-6 text-[var(--color-text-secondary)]">
             {result.userStdout}
           </pre>
+          {result.output?.hasTruncatedUserStdout && (
+            <div className="mt-2 text-xs text-[var(--color-warning-text)]">
+              Console output truncated.
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -115,9 +120,16 @@ function CaseResultView({ caseResult }: { caseResult: CaseResult }) {
       </div>
 
       {caseResult.error && (
-        <pre className="mt-2 whitespace-pre-wrap font-[var(--font-family-mono)] text-xs leading-6 text-[var(--color-error-text)]">
-          {caseResult.error}
-        </pre>
+        <>
+          <pre className="mt-2 whitespace-pre-wrap font-[var(--font-family-mono)] text-xs leading-6 text-[var(--color-error-text)]">
+            {caseResult.error}
+          </pre>
+          {caseResult.isErrorTruncated && (
+            <div className="mt-2 text-xs text-[var(--color-warning-text)]">
+              Error output truncated.
+            </div>
+          )}
+        </>
       )}
 
       {!caseResult.error && !caseResult.passed && (
@@ -191,6 +203,9 @@ function SubmitResultView({ result }: { result: SubmitResult }) {
               {result.firstFailure.got}
             </span>
           </div>
+          {result.firstFailure.isErrorTruncated && (
+            <div className="mt-2 text-[var(--color-warning-text)]">Error output truncated.</div>
+          )}
         </div>
       )}
     </div>

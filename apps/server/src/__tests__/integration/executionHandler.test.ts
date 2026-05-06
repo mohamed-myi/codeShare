@@ -7,7 +7,7 @@ import type {
   SubmitResult,
   TestCase,
 } from "@codeshare/shared";
-import { ExecutionErrorType, SocketEvents } from "@codeshare/shared";
+import { EXECUTION_OUTPUT_LIMITS, ExecutionErrorType, SocketEvents } from "@codeshare/shared";
 import type { Socket as ClientSocket } from "socket.io-client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as Y from "yjs";
@@ -117,13 +117,25 @@ let logger = createLogger("silent");
 let logChunks: string[] = [];
 
 function extractNonceFromHarness(harnessSource: string): string {
-  const match = harnessSource.match(/===HARNESS_RESULT_([a-f0-9]+)===/);
+  const match =
+    harnessSource.match(/===HARNESS_RESULT_([a-f0-9]+)===/) ??
+    harnessSource.match(/_NONCE = "([a-f0-9]+)"/);
   return match?.[1] ?? "unknown";
 }
 
 function makeSuccessStdout(results: unknown[], nonce: string): string {
   const payload = JSON.stringify({ results, userStdout: "" });
   return `===HARNESS_RESULT_${nonce}===\n${payload}\n===END_HARNESS_RESULT_${nonce}===\n`;
+}
+
+function makeOkHarnessResult(index: number, gotJson: unknown, elapsedMs = 10) {
+  return {
+    index,
+    status: "ok",
+    elapsed_ms: elapsedMs,
+    got_json: gotJson,
+    got_repr: JSON.stringify(gotJson),
+  };
 }
 
 function mockJudge0Success(
@@ -234,9 +246,7 @@ describe("Execution handler", () => {
       const { server, room } = await setup();
       room.problemId = VALID_UUID;
 
-      mockSubmit.mockImplementation(
-        mockJudge0Success([{ index: 0, passed: true, elapsed_ms: 10, got: null, expected: null }]),
-      );
+      mockSubmit.mockImplementation(mockJudge0Success([makeOkHarnessResult(0, [0, 1])]));
 
       const alice = connectClient(server.port, room.roomCode);
       const bob = connectClient(server.port, room.roomCode);
@@ -267,10 +277,7 @@ describe("Execution handler", () => {
       room.customTestCases = [{ input: { nums: [1, 3], target: 4 }, expectedOutput: [0, 1] }];
 
       mockSubmit.mockImplementation(
-        mockJudge0Success([
-          { index: 0, passed: true, elapsed_ms: 10, got: null, expected: null },
-          { index: 1, passed: true, elapsed_ms: 5, got: null, expected: null },
-        ]),
+        mockJudge0Success([makeOkHarnessResult(0, [0, 1]), makeOkHarnessResult(1, [0, 1], 5)]),
       );
 
       const alice = connectClient(server.port, room.roomCode);
@@ -306,10 +313,7 @@ describe("Execution handler", () => {
       expect(room.executionInProgress).toBe(true);
 
       resolveSubmit({
-        stdout: makeSuccessStdout(
-          [{ index: 0, passed: true, elapsed_ms: 10, got: null, expected: null }],
-          capturedNonce,
-        ),
+        stdout: makeSuccessStdout([makeOkHarnessResult(0, [0, 1])], capturedNonce),
         stderr: null,
         status: { id: 3, description: "Accepted" },
         time: "0.01",
@@ -327,10 +331,7 @@ describe("Execution handler", () => {
       room.problemId = VALID_UUID;
 
       mockSubmit.mockImplementation(
-        mockJudge0Success([
-          { index: 0, passed: true, elapsed_ms: 10, got: null, expected: null },
-          { index: 1, passed: false, elapsed_ms: 9, got: "[0, 2]", expected: "[1, 2]" },
-        ]),
+        mockJudge0Success([makeOkHarnessResult(0, [0, 1]), makeOkHarnessResult(1, [0, 2], 9)]),
       );
 
       const alice = connectClient(server.port, room.roomCode);
@@ -357,10 +358,7 @@ describe("Execution handler", () => {
       room.problemId = VALID_UUID;
 
       mockSubmit.mockImplementation(
-        mockJudge0Success([
-          { index: 0, passed: true, elapsed_ms: 10, got: null, expected: null },
-          { index: 1, passed: true, elapsed_ms: 8, got: null, expected: null },
-        ]),
+        mockJudge0Success([makeOkHarnessResult(0, [0, 1]), makeOkHarnessResult(1, [1, 2], 8)]),
       );
 
       const alice = connectClient(server.port, room.roomCode);
@@ -383,10 +381,7 @@ describe("Execution handler", () => {
       room.customTestCases = [{ input: { nums: [99], target: 99 }, expectedOutput: 99 }];
 
       mockSubmit.mockImplementation(
-        mockJudge0Success([
-          { index: 0, passed: true, elapsed_ms: 10, got: null, expected: null },
-          { index: 1, passed: true, elapsed_ms: 8, got: null, expected: null },
-        ]),
+        mockJudge0Success([makeOkHarnessResult(0, [0, 1]), makeOkHarnessResult(1, [1, 2], 8)]),
       );
 
       const alice = connectClient(server.port, room.roomCode);
@@ -399,6 +394,37 @@ describe("Execution handler", () => {
 
       // Should only have 2 (all DB test cases), not 3 (with custom)
       expect(submitResult.total).toBe(2);
+    });
+
+    it("sends only test case inputs to Judge0 when submitting hidden cases", async () => {
+      const { server, room } = await setup();
+      room.problemId = VALID_UUID;
+
+      mockFindByProblemId.mockResolvedValueOnce([
+        { ...allTestCases[0], expectedOutput: "visible-secret-expected" },
+        { ...allTestCases[1], expectedOutput: "hidden-secret-expected" },
+      ]);
+      mockSubmit.mockImplementation(
+        mockJudge0Success([
+          makeOkHarnessResult(0, "visible-secret-expected"),
+          makeOkHarnessResult(1, "hidden-secret-expected", 8),
+        ]),
+      );
+
+      const alice = connectClient(server.port, room.roomCode);
+      await waitForEvent(alice, "connect");
+      await joinUser(alice, "Alice");
+
+      const result = waitForEvent<SubmitResult>(alice, SocketEvents.EXECUTION_RESULT);
+      alice.emit(SocketEvents.CODE_SUBMIT);
+      await result;
+
+      const harnessSource = mockSubmit.mock.calls[0][0] as string;
+      expect(harnessSource).toContain('"input":{"nums":[2,7,11,15],"target":9}');
+      expect(harnessSource).toContain('"input":{"nums":[3,2,4],"target":6}');
+      expect(harnessSource).not.toContain("expectedOutput");
+      expect(harnessSource).not.toContain("visible-secret-expected");
+      expect(harnessSource).not.toContain("hidden-secret-expected");
     });
   });
 
@@ -653,6 +679,63 @@ describe("Execution handler", () => {
       expect(errPayload.errorType).toBe("parse_error");
     });
 
+    it("oversized harness payload -> output_limit before schema validation", async () => {
+      const { server, room } = await setup();
+      room.problemId = VALID_UUID;
+
+      mockSubmit.mockImplementation((harnessSource: string) => {
+        const nonce = extractNonceFromHarness(harnessSource);
+        const oversizedPayload = "x".repeat(EXECUTION_OUTPUT_LIMITS.HARNESS_PAYLOAD_CHARS + 1);
+        return Promise.resolve({
+          stdout: `===HARNESS_RESULT_${nonce}===\n${oversizedPayload}\n===END_HARNESS_RESULT_${nonce}===\n`,
+          stderr: null,
+          status: { id: 3, description: "Accepted" },
+          time: "0.01",
+          memory: 9000,
+        });
+      });
+
+      const alice = connectClient(server.port, room.roomCode);
+      await waitForEvent(alice, "connect");
+      await joinUser(alice, "Alice");
+
+      const error = waitForEvent<ExecutionError>(alice, SocketEvents.EXECUTION_ERROR);
+      alice.emit(SocketEvents.CODE_RUN);
+      const errPayload = await error;
+
+      expect(errPayload.errorType).toBe(ExecutionErrorType.OUTPUT_LIMIT);
+    });
+
+    it("emits run result metadata for capped user stdout", async () => {
+      const { server, room } = await setup();
+      room.problemId = VALID_UUID;
+
+      mockSubmit.mockImplementation((harnessSource: string) => {
+        const nonce = extractNonceFromHarness(harnessSource);
+        return Promise.resolve({
+          stdout: `===HARNESS_RESULT_${nonce}===\n${JSON.stringify({
+            results: [makeOkHarnessResult(0, [0, 1])],
+            userStdout: "debug output",
+            metadata: { userStdoutTruncated: true },
+          })}\n===END_HARNESS_RESULT_${nonce}===\n`,
+          stderr: null,
+          status: { id: 3, description: "Accepted" },
+          time: "0.01",
+          memory: 9000,
+        });
+      });
+
+      const alice = connectClient(server.port, room.roomCode);
+      await waitForEvent(alice, "connect");
+      await joinUser(alice, "Alice");
+
+      const result = waitForEvent<RunResult>(alice, SocketEvents.EXECUTION_RESULT);
+      alice.emit(SocketEvents.CODE_RUN);
+      const runResult = await result;
+
+      expect(runResult.output?.hasTruncatedUserStdout).toBe(true);
+    });
+
     it("does not count a failed pre-submit configuration check as a submission", async () => {
       const { server, room } = await setup();
       room.problemId = VALID_UUID;
@@ -722,6 +805,32 @@ describe("Execution handler", () => {
 
       expect(errPayload.errorType).toBe(ExecutionErrorType.PARSE_ERROR);
       expect(errPayload.message).toBe("Execution results failed validation.");
+    });
+
+    it("returns parse_error when Judge0 returns the legacy Python-graded harness shape", async () => {
+      const { server, room } = await setup();
+      room.problemId = VALID_UUID;
+
+      mockSubmit.mockImplementation((harnessSource: string) => {
+        const nonce = extractNonceFromHarness(harnessSource);
+        return Promise.resolve({
+          stdout: `===HARNESS_RESULT_${nonce}===\n{"results":[{"index":0,"passed":true,"elapsed_ms":10,"got":null,"expected":null}],"userStdout":""}\n===END_HARNESS_RESULT_${nonce}===\n`,
+          stderr: null,
+          status: { id: 3, description: "Accepted" },
+          time: "0.01",
+          memory: 9000,
+        });
+      });
+
+      const alice = connectClient(server.port, room.roomCode);
+      await waitForEvent(alice, "connect");
+      await joinUser(alice, "Alice");
+
+      const error = waitForEvent<ExecutionError>(alice, SocketEvents.EXECUTION_ERROR, 500);
+      alice.emit(SocketEvents.CODE_RUN);
+      const errPayload = await error;
+
+      expect(errPayload.errorType).toBe(ExecutionErrorType.PARSE_ERROR);
     });
 
     it("rejects execution when the per-IP Judge0 limit is reached", async () => {

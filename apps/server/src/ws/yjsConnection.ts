@@ -2,7 +2,7 @@ import type { IncomingMessage } from "node:http";
 import * as decoding from "lib0/decoding";
 import * as encoding from "lib0/encoding";
 import type { Logger } from "pino";
-import type { WebSocket } from "ws";
+import type { RawData, WebSocket } from "ws";
 import * as awarenessProtocol from "y-protocols/awareness.js";
 import * as syncProtocol from "y-protocols/sync.js";
 import * as Y from "yjs";
@@ -23,6 +23,11 @@ interface ConnectionLimits {
   maxDocBytes: number;
 }
 
+interface ConnectionGuards {
+  validateMessage?: () => Promise<boolean>;
+  onMessageRejected?: () => void;
+}
+
 export function setupWSConnection(
   conn: WebSocket,
   req: IncomingMessage,
@@ -30,6 +35,7 @@ export function setupWSConnection(
   limits: ConnectionLimits,
   docName = extractRoomName(req.url),
   connectionId = crypto.randomUUID(),
+  guards: ConnectionGuards = {},
 ): void {
   conn.binaryType = "arraybuffer";
   const doc = getOrCreateSharedDoc(docName);
@@ -48,6 +54,22 @@ export function setupWSConnection(
   });
 
   conn.on("message", (message) => {
+    void handleIncomingMessage(message);
+  });
+
+  async function handleIncomingMessage(message: RawData): Promise<void> {
+    if (guards.validateMessage) {
+      try {
+        if (!(await guards.validateMessage())) {
+          guards.onMessageRejected?.();
+          return;
+        }
+      } catch {
+        guards.onMessageRejected?.();
+        return;
+      }
+    }
+
     const uint8Message = toUint8Array(message);
     if (uint8Message.byteLength > limits.maxMessageBytes) {
       logger.warn(
@@ -65,7 +87,7 @@ export function setupWSConnection(
     }
 
     messageListener(conn, doc, uint8Message, logger, limits.maxDocBytes, connectionId);
-  });
+  }
 
   let pongReceived = true;
   const pingInterval = setInterval(() => {
