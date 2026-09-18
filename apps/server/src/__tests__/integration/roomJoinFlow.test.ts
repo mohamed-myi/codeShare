@@ -49,8 +49,9 @@ describe("Integration: two-client room join flow", () => {
     const alice = connectClient(server.port, room.roomCode);
     await waitForEvent(alice, "connect");
 
+    const aliceJoinedPromise = waitForEvent<UserJoinedPayload>(alice, SocketEvents.USER_JOINED);
     alice.emit(SocketEvents.USER_JOIN, { displayName: "Alice" });
-    const aliceJoined = await waitForEvent<UserJoinedPayload>(alice, SocketEvents.USER_JOINED);
+    const aliceJoined = await aliceJoinedPromise;
     expect(aliceJoined.displayName).toBe("Alice");
     expect(aliceJoined.role).toBe("peer");
     expect(aliceJoined.reconnectToken).toBeDefined();
@@ -61,8 +62,9 @@ describe("Integration: two-client room join flow", () => {
 
     const aliceBroadcastPromise = waitForEvent<UserJoinedPayload>(alice, SocketEvents.USER_JOINED);
 
+    const bobJoinedPromise = waitForEvent<UserJoinedPayload>(bob, SocketEvents.USER_JOINED);
     bob.emit(SocketEvents.USER_JOIN, { displayName: "Bob" });
-    const bobJoined = await waitForEvent<UserJoinedPayload>(bob, SocketEvents.USER_JOINED);
+    const bobJoined = await bobJoinedPromise;
     expect(bobJoined.displayName).toBe("Bob");
     expect(bobJoined.role).toBe("peer");
 
@@ -71,9 +73,10 @@ describe("Integration: two-client room join flow", () => {
     expect(aliceBroadcast.displayName).toBe("Bob");
 
     // --- Bob disconnects ---
+    const leftPayloadPromise = waitForEvent<{ userId: string }>(alice, SocketEvents.USER_LEFT);
     bob.disconnect();
 
-    const leftPayload = await waitForEvent<{ userId: string }>(alice, SocketEvents.USER_LEFT);
+    const leftPayload = await leftPayloadPromise;
     expect(leftPayload.userId).toBe(bobJoined.userId);
 
     // --- Bob reconnects with token ---
@@ -107,7 +110,8 @@ describe("Integration: two-client room join flow", () => {
     const charlie = connectClient(server.port, room.roomCode);
     await waitForEvent(charlie, "connect");
 
+    const roomFullPromise = waitForEvent(charlie, SocketEvents.ROOM_FULL);
     charlie.emit(SocketEvents.USER_JOIN, { displayName: "Charlie" });
-    await waitForEvent(charlie, SocketEvents.ROOM_FULL);
+    await roomFullPromise;
   });
 });

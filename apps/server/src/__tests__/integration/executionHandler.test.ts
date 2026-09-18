@@ -235,8 +235,9 @@ describe("Execution handler", () => {
   }
 
   async function joinUser(client: ClientSocket, displayName: string) {
+    const userJoinedPromise = waitForEvent(client, SocketEvents.USER_JOINED);
     client.emit(SocketEvents.USER_JOIN, { displayName });
-    await waitForEvent(client, SocketEvents.USER_JOINED);
+    await userJoinedPromise;
   }
 
   // --- CODE_RUN tests ---
@@ -252,8 +253,9 @@ describe("Execution handler", () => {
       const bob = connectClient(server.port, room.roomCode);
       await Promise.all([waitForEvent(alice, "connect"), waitForEvent(bob, "connect")]);
       await joinUser(alice, "Alice");
+      const userJoinedPromise2 = waitForEvent(alice, SocketEvents.USER_JOINED);
       await joinUser(bob, "Bob");
-      await waitForEvent(alice, SocketEvents.USER_JOINED);
+      await userJoinedPromise2;
 
       const aliceStarted = waitForEvent(alice, SocketEvents.EXECUTION_STARTED);
       const bobStarted = waitForEvent(bob, SocketEvents.EXECUTION_STARTED);
@@ -308,8 +310,10 @@ describe("Execution handler", () => {
       await waitForEvent(alice, "connect");
       await joinUser(alice, "Alice");
 
+      const executionResultPromise = waitForEvent(alice, SocketEvents.EXECUTION_RESULT);
+      const executionStartedPromise = waitForEvent(alice, SocketEvents.EXECUTION_STARTED);
       alice.emit(SocketEvents.CODE_RUN);
-      await waitForEvent(alice, SocketEvents.EXECUTION_STARTED);
+      await executionStartedPromise;
       expect(room.executionInProgress).toBe(true);
 
       resolveSubmit({
@@ -320,7 +324,7 @@ describe("Execution handler", () => {
         memory: 9000,
       });
 
-      await waitForEvent(alice, SocketEvents.EXECUTION_RESULT);
+      await executionResultPromise;
       expect(room.executionInProgress).toBe(false);
     });
   });

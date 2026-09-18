@@ -5,12 +5,12 @@
     "dev": "bash scripts/run-with-env.sh turbo dev",
     "build": "turbo build",
     "test": "turbo test",
-    "typecheck": "turbo typecheck",
-    "lint": "turbo lint",
+    "typecheck": "turbo typecheck && tsc -p tsconfig.benchmark.json",
+    "lint": "turbo lint && biome check scripts/benchmark-*.mjs scripts/e2e*.mjs scripts/test-stability.mjs e2e/",
     "lint:fix": "biome check --write .",
-    "e2e": "playwright test --config e2e/playwright.config.ts --grep-invert @live",
-    "e2e:ui": "playwright test --config e2e/playwright.config.ts --grep-invert @live --ui",
-    "e2e:live": "PLAYWRIGHT_LIVE=1 playwright test --config e2e/playwright.config.ts --grep @live",
+    "e2e": "node scripts/e2e.mjs",
+    "e2e:ui": "node scripts/e2e.mjs --ui",
+    "e2e:live": "node scripts/e2e.mjs --live",
     "db:migrate": "bash scripts/run-with-env.sh pnpm --filter @codeshare/db migrate",
     "db:seed": "bash scripts/run-with-env.sh pnpm --filter @codeshare/db seed",
     "invite": "bash scripts/run-with-env.sh pnpm --filter @codeshare/server invite --",
@@ -24,7 +24,10 @@
     "load-test": "pnpm --filter codeshare-load-tests lt",
     "load-test:all": "pnpm --filter codeshare-load-tests lt",
     "load-test:auto": "pnpm --filter codeshare-load-tests lt:auto",
-    "load-test:smoke": "pnpm --filter codeshare-load-tests lt --auto-start --skip-db-setup --scenarios LT-2,LT-3"
+    "load-test:smoke": "pnpm --filter codeshare-load-tests lt --auto-start --skip-db-setup --scenarios LT-2,LT-3",
+    "test:harness": "node --test scripts/*.test.mjs",
+    "test:stability": "node scripts/test-stability.mjs",
+    "verify:benchmark": "node scripts/benchmark-preflight.mjs && pnpm lint && pnpm typecheck && pnpm build && pnpm test:harness && pnpm test --force && pnpm e2e"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.3",
@@ -47,5 +50,6 @@
   },
   "engines": {
     "node": ">=22.0.0"
-  }
+  },
+  "license": "MIT"
 }

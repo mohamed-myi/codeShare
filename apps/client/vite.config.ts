@@ -1,3 +1,4 @@
+import path from "node:path";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig, loadEnv } from "vite";
@@ -8,10 +9,13 @@ function normalizeProxyTarget(value: string | undefined): string {
 }
 
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), "");
+  const envDir = process.env.E2E_ENV_DIR ?? process.cwd();
+  const env = loadEnv(mode, envDir, "");
   const realtimeTarget = normalizeProxyTarget(env.VITE_REALTIME_URL);
 
   return {
+    envDir,
+    cacheDir: process.env.E2E_ENV_DIR ? path.join(envDir, "vite-cache") : undefined,
     plugins: [react(), tailwindcss()],
     build: {
       rolldownOptions: {
@@ -35,6 +39,9 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
+      // Shared builds during verification must not reload pages under test.
+      watch: process.env.E2E_ENV_DIR ? null : undefined,
+      hmr: process.env.E2E_ENV_DIR ? false : undefined,
       port: 5173,
       proxy: {
         "/api": {

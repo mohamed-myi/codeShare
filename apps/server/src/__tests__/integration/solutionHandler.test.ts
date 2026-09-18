@@ -98,10 +98,11 @@ describe("Solution handler", () => {
     clients.push(candidate);
     await waitForEvent(candidate, "connect");
     const joinPC = waitForEvent<UserJoinedPayload>(candidate, SocketEvents.USER_JOINED);
+    const userJoinedPromise = waitForEvent(interviewer, SocketEvents.USER_JOINED);
     candidate.emit(SocketEvents.USER_JOIN, { displayName: "Candidate" });
     await joinPC;
     // Consume the broadcast that interviewer receives about candidate joining
-    await waitForEvent(interviewer, SocketEvents.USER_JOINED);
+    await userJoinedPromise;
 
     return { room, interviewer, candidate, server };
   }

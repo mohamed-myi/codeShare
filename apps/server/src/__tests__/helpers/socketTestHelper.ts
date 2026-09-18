@@ -47,19 +47,41 @@ export function createTestClient(
   });
 }
 
+interface EventSource {
+  on(event: string, listener: (value: unknown) => void): unknown;
+  off(event: string, listener: (value: unknown) => void): unknown;
+}
+
+// Keep the established call signature used by the integration suites.
 export function waitForEvent<T = unknown>(
-  socket: ClientSocket,
+  socket: EventSource,
   event: string,
-  timeoutMs = 3000,
+  options: number | { timeoutMs?: number; accept?: (value: T) => boolean } = 3000,
 ): Promise<T> {
+  const { timeoutMs = 3000, accept } =
+    typeof options === "number" ? { timeoutMs: options } : options;
   return new Promise<T>((resolve, reject) => {
+    const cleanup = () => {
+      clearTimeout(timer);
+      socket.off(event, onEvent);
+      socket.off("disconnect", onFailure);
+      socket.off("connect_error", onFailure);
+    };
+    const onEvent = (data: unknown) => {
+      if (accept && !accept(data as T)) return;
+      cleanup();
+      resolve(data as T);
+    };
+    const onFailure = (reason: unknown) => {
+      cleanup();
+      reject(reason instanceof Error ? reason : new Error(String(reason)));
+    };
     const timer = setTimeout(() => {
+      cleanup();
       reject(new Error(`Timed out waiting for event "${event}" after ${timeoutMs}ms`));
     }, timeoutMs);
-
-    socket.once(event, (data: T) => {
-      clearTimeout(timer);
-      resolve(data);
-    });
+    socket.on(event, onEvent);
+    if (event !== "disconnect") socket.on("disconnect", onFailure);
+    if (event !== "connect_error") socket.on("connect_error", onFailure);
   });
 }

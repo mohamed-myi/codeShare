@@ -114,12 +114,13 @@ describe("Auth middleware", () => {
 
     room.addUser("Candidate", "candidate", client.id as string);
 
-    client.emit(SocketEvents.PROBLEM_SELECT, { problemId: "some-uuid" });
-
-    const rejection = await waitForEvent<{ event: string; reason: string }>(
+    const rejectionPromise = waitForEvent<{ event: string; reason: string }>(
       client,
       SocketEvents.EVENT_REJECTED,
     );
+    client.emit(SocketEvents.PROBLEM_SELECT, { problemId: "some-uuid" });
+
+    const rejection = await rejectionPromise;
 
     expect(rejection.event).toBe(SocketEvents.PROBLEM_SELECT);
     expect(rejection.reason).toBeDefined();
@@ -141,12 +142,13 @@ describe("Auth middleware", () => {
     room.problemId = "problem-1";
     room.executionInProgress = true;
 
-    client.emit(SocketEvents.CODE_RUN);
-
-    const rejection = await waitForEvent<{ event: string; reason: string }>(
+    const rejectionPromise2 = waitForEvent<{ event: string; reason: string }>(
       client,
       SocketEvents.EVENT_REJECTED,
     );
+    client.emit(SocketEvents.CODE_RUN);
+
+    const rejection = await rejectionPromise2;
 
     expect(rejection.event).toBe(SocketEvents.CODE_RUN);
     expect(rejection.reason).toContain("progress");
@@ -163,12 +165,13 @@ describe("Auth middleware", () => {
 
     room.addUser("Interviewer", "interviewer", client.id as string);
 
-    client.emit(SocketEvents.HINT_REQUEST);
-
-    const rejection = await waitForEvent<{ event: string; reason: string }>(
+    const rejectionPromise3 = waitForEvent<{ event: string; reason: string }>(
       client,
       SocketEvents.EVENT_REJECTED,
     );
+    client.emit(SocketEvents.HINT_REQUEST);
+
+    const rejection = await rejectionPromise3;
 
     expect(rejection.event).toBe(SocketEvents.HINT_REQUEST);
   });
@@ -191,12 +194,13 @@ describe("Auth middleware", () => {
       requestedAt: new Date().toISOString(),
     };
 
-    requester.emit(SocketEvents.HINT_APPROVE);
-
-    const rejection = await waitForEvent<{ event: string; reason: string }>(
+    const rejectionPromise4 = waitForEvent<{ event: string; reason: string }>(
       requester,
       SocketEvents.EVENT_REJECTED,
     );
+    requester.emit(SocketEvents.HINT_APPROVE);
+
+    const rejection = await rejectionPromise4;
 
     expect(rejection.event).toBe(SocketEvents.HINT_APPROVE);
     expect(rejection.reason).toContain("other participant");
@@ -220,12 +224,13 @@ describe("Auth middleware", () => {
       requestedAt: new Date().toISOString(),
     };
 
-    requester.emit(SocketEvents.HINT_DENY);
-
-    const rejection = await waitForEvent<{ event: string; reason: string }>(
+    const rejectionPromise5 = waitForEvent<{ event: string; reason: string }>(
       requester,
       SocketEvents.EVENT_REJECTED,
     );
+    requester.emit(SocketEvents.HINT_DENY);
+
+    const rejection = await rejectionPromise5;
 
     expect(rejection.event).toBe(SocketEvents.HINT_DENY);
     expect(rejection.reason).toContain("other participant");
@@ -241,14 +246,15 @@ describe("Auth middleware", () => {
     room.addUser("Alice", "peer", client.id as string);
     room.executionInProgress = true;
 
+    const rejectionPromise6 = waitForEvent<{ event: string; reason: string }>(
+      client,
+      SocketEvents.EVENT_REJECTED,
+    );
     client.emit(SocketEvents.PROBLEM_IMPORT, {
       leetcodeUrl: "https://leetcode.com/problems/two-sum/",
     });
 
-    const rejection = await waitForEvent<{ event: string; reason: string }>(
-      client,
-      SocketEvents.EVENT_REJECTED,
-    );
+    const rejection = await rejectionPromise6;
 
     expect(rejection.event).toBe(SocketEvents.PROBLEM_IMPORT);
     expect(rejection.reason).toContain("running");
@@ -264,14 +270,15 @@ describe("Auth middleware", () => {
     room.addUser("Alice", "peer", client.id as string);
     room.hintStreaming = true;
 
+    const rejectionPromise7 = waitForEvent<{ event: string; reason: string }>(
+      client,
+      SocketEvents.EVENT_REJECTED,
+    );
     client.emit(SocketEvents.PROBLEM_IMPORT, {
       leetcodeUrl: "https://leetcode.com/problems/two-sum/",
     });
 
-    const rejection = await waitForEvent<{ event: string; reason: string }>(
-      client,
-      SocketEvents.EVENT_REJECTED,
-    );
+    const rejection = await rejectionPromise7;
 
     expect(rejection.event).toBe(SocketEvents.PROBLEM_IMPORT);
     expect(rejection.reason).toContain("hint");

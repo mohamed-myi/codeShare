@@ -107,3 +107,13 @@ pnpm db:reset
 - Server is authoritative for execution and state
 - No full user account system; access sessions are invite-based when enabled
 - Validation is enforced at API and event boundaries
+
+## Benchmark verification
+
+See [the benchmark guide](docs/benchmark.md) for the pinned environment, isolated
+browser runner, and stability checks. After installing prerequisites, run
+`pnpm verify:benchmark`. It does not require a developer `.env` file.
+
+## License
+
+[MIT](LICENSE) — Copyright (c) 2026 Mohamed Ibrahim.
