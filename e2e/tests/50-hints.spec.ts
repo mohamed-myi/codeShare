@@ -75,7 +75,7 @@ test.describe("MVP hint flows", () => {
 
     await page.getByRole("button", { name: /request hint/i }).click();
     await bob.getByTestId("deny-hint-button").click();
-    await expect(page.getByText(/denied|approval/i)).toBeVisible();
+    await expect(page.getByText("Hint request denied.")).toBeVisible();
     await bob.close();
 
     const timeoutPage = await browser.newPage();
@@ -89,8 +89,9 @@ test.describe("MVP hint flows", () => {
     await goToSolver(dan);
 
     await timeoutPage.getByRole("button", { name: /request hint/i }).click();
-    await timeoutPage.waitForTimeout(1_700);
-    await expect(timeoutPage.getByText(/denied|approval/i)).toBeVisible();
+    await expect(dan.getByTestId("hint-consent-card")).toBeVisible();
+    await expect(dan.getByTestId("hint-consent-card")).toBeHidden();
+    await expect(timeoutPage.getByText("Hint request denied.")).toBeVisible();
     await dan.close();
     await timeoutPage.close();
   });

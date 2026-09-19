@@ -1,6 +1,6 @@
 import http from "node:http";
 import * as encoding from "lib0/encoding";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import WebSocket from "ws";
 import * as syncProtocol from "y-protocols/sync.js";
 import { WebsocketProvider } from "y-websocket";
@@ -9,6 +9,7 @@ import { createLogger } from "../../lib/logger.js";
 import { roomManager } from "../../models/RoomManager.js";
 import { setupYjsServer } from "../../ws/yjs.js";
 import { listenOnLocalhost, TEST_HOST } from "../helpers/networkTestHelper.js";
+import { waitForSharedCode } from "../helpers/yjsTestHelper.js";
 
 type YDoc = import("yjs").Doc;
 type YWebsocketProvider = import("y-websocket").WebsocketProvider;
@@ -36,11 +37,11 @@ async function startServer(options?: Parameters<typeof setupYjsServer>[2]): Prom
     httpServer,
     port,
     getDoc,
-    cleanup: () =>
-      new Promise<void>((res) => {
-        wss.close();
-        httpServer.close(() => res());
-      }),
+    cleanup: async () => {
+      for (const client of wss.clients) client.terminate();
+      await new Promise<void>((resolve) => wss.close(() => resolve()));
+      await new Promise<void>((resolve) => httpServer.close(() => resolve()));
+    },
   };
 }
 
@@ -57,19 +58,8 @@ function createYjsClient(
   return { doc, provider };
 }
 
-function waitForSync(provider: YWebsocketProvider): Promise<void> {
-  return new Promise<void>((resolve) => {
-    if (provider.synced) {
-      resolve();
-      return;
-    }
-    provider.on("sync", function handler(synced: boolean) {
-      if (synced) {
-        provider.off("sync", handler);
-        resolve();
-      }
-    });
-  });
+async function waitForSync(provider: YWebsocketProvider): Promise<void> {
+  await vi.waitFor(() => expect(provider.synced).toBe(true));
 }
 
 describe("y-websocket server", () => {
@@ -77,9 +67,72 @@ describe("y-websocket server", () => {
   const providers: YWebsocketProvider[] = [];
   const createdRoomCodes: string[] = [];
 
+  it("observes empty code with the browser origin required by the server", async () => {
+    const origin = "http://client.test";
+    const server = await startServer({ allowedOrigins: [origin] });
+    cleanup = server.cleanup;
+    const { roomCode, yjsToken } = createTestRoom();
+    await expect(
+      waitForSharedCode({
+        url: `ws://${TEST_HOST}:${server.port}`,
+        roomCode,
+        token: yjsToken,
+        origin,
+        code: "",
+      }),
+    ).resolves.toBeUndefined();
+  });
+
+  it("times out and disposes an observer when the expected code never arrives", async () => {
+    const server = await startServer();
+    cleanup = server.cleanup;
+    const { roomCode, yjsToken } = createTestRoom();
+    await expect(
+      waitForSharedCode({
+        url: `ws://${TEST_HOST}:${server.port}`,
+        roomCode,
+        token: yjsToken,
+        code: "missing",
+        timeoutMs: 100,
+      }),
+    ).rejects.toThrow("Timed out");
+  });
+
+  it("observes server-acknowledged editor updates without a fixed delay", async () => {
+    const server = await startServer();
+    cleanup = server.cleanup;
+    const { roomCode, yjsToken } = createTestRoom();
+    const client = createYjsClient(server.port, roomCode, yjsToken);
+    providers.push(client.provider);
+    const observed = waitForSharedCode({
+      url: `ws://${TEST_HOST}:${server.port}`,
+      roomCode,
+      token: yjsToken,
+      code: "updated",
+    });
+    await waitForSync(client.provider);
+    client.doc.getText("monaco").insert(0, "updated");
+    await expect(observed).resolves.toBeUndefined();
+  });
+
+  it("rejects an editor observer with an invalid token", async () => {
+    const server = await startServer();
+    cleanup = server.cleanup;
+    const { roomCode } = createTestRoom();
+    await expect(
+      waitForSharedCode({
+        url: `ws://${TEST_HOST}:${server.port}`,
+        roomCode,
+        token: "invalid",
+        code: "",
+      }),
+    ).rejects.toThrow("connection closed");
+  });
+
   afterEach(async () => {
     for (const p of providers) {
       p.destroy();
+      p.doc.destroy();
     }
     providers.length = 0;
     for (const code of createdRoomCodes) {
@@ -111,9 +164,7 @@ describe("y-websocket server", () => {
 
     c1.doc.getText("monaco").insert(0, "hello");
 
-    await new Promise((r) => setTimeout(r, 200));
-
-    expect(c2.doc.getText("monaco").toString()).toBe("hello");
+    await vi.waitFor(() => expect(c2.doc.getText("monaco").toString()).toBe("hello"));
   });
 
   it("two clients with different roomNames have isolated documents", async () => {
@@ -130,8 +181,10 @@ describe("y-websocket server", () => {
 
     c1.doc.getText("monaco").insert(0, "room-a-text");
 
-    await new Promise((r) => setTimeout(r, 200));
-
+    await vi.waitFor(() =>
+      expect(server.getDoc(roomA.roomCode)?.getText("monaco").toString()).toBe("room-a-text"),
+    );
+    expect(server.getDoc(roomB.roomCode)?.getText("monaco").toString()).toBe("");
     expect(c2.doc.getText("monaco").toString()).toBe("");
   });
 
@@ -147,8 +200,9 @@ describe("y-websocket server", () => {
 
     c1.doc.getText("monaco").insert(0, "server-readable");
 
-    await new Promise((r) => setTimeout(r, 200));
-
+    await vi.waitFor(() =>
+      expect(server.getDoc(roomCode)?.getText("monaco").toString()).toBe("server-readable"),
+    );
     const serverDoc = server.getDoc(roomCode);
     expect(serverDoc).toBeDefined();
     expect(serverDoc?.getText("monaco").toString()).toBe("server-readable");
@@ -164,7 +218,9 @@ describe("y-websocket server", () => {
 
     await waitForSync(client.provider);
     client.doc.getText("monaco").insert(0, "ephemeral");
-    await new Promise((r) => setTimeout(r, 100));
+    await vi.waitFor(() =>
+      expect(server.getDoc(roomCode)?.getText("monaco").toString()).toBe("ephemeral"),
+    );
 
     expect(server.getDoc(roomCode)).toBeDefined();
 
@@ -253,11 +309,9 @@ describe("y-websocket server", () => {
     });
 
     ws.on("error", () => {});
+    const closed = new Promise<number>((resolve) => ws.once("close", resolve));
     ws.send(Buffer.alloc(128, 1));
-
-    const closeCode = await new Promise<number>((resolve) => {
-      ws.on("close", (code) => resolve(code));
-    });
+    const closeCode = await closed;
 
     expect(closeCode).toBe(1009);
   });
@@ -275,11 +329,9 @@ describe("y-websocket server", () => {
     });
 
     ws.on("error", () => {});
+    const closed = new Promise<number>((resolve) => ws.once("close", resolve));
     ws.send(Buffer.from([0xff]));
-
-    const closeCode = await new Promise<number>((resolve) => {
-      ws.on("close", (code) => resolve(code));
-    });
+    const closeCode = await closed;
 
     expect(closeCode).toBe(1003);
   });
@@ -304,13 +356,12 @@ describe("y-websocket server", () => {
     const encoder = encoding.createEncoder();
     encoding.writeVarUint(encoder, 0);
     syncProtocol.writeUpdate(encoder, Y.encodeStateAsUpdate(doc));
+    doc.destroy();
 
     ws.on("error", () => {});
+    const closed = new Promise<number>((resolve) => ws.once("close", resolve));
     ws.send(Buffer.from(encoding.toUint8Array(encoder)));
-
-    const closeCode = await new Promise<number>((resolve) => {
-      ws.on("close", (code) => resolve(code));
-    });
+    const closeCode = await closed;
 
     expect(closeCode).toBe(1009);
   });

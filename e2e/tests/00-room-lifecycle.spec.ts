@@ -86,8 +86,12 @@ test.describe("MVP room lifecycle", () => {
     await joinRoom(bob, roomCode, "Bob");
 
     const sessionState = await captureSessionState(page);
+    await expect.poll(() => bob.evaluate(() => sessionStorage.getItem("yjsToken"))).toBeTruthy();
+    const previousToken = await bob.evaluate(() => sessionStorage.getItem("yjsToken"));
     await page.close();
-    await bob.waitForTimeout(1_800);
+    await expect
+      .poll(() => bob.evaluate(() => sessionStorage.getItem("yjsToken")))
+      .not.toBe(previousToken);
 
     const charlie = await browser.newPage();
     await charlie.addInitScript(() => {

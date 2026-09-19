@@ -4,8 +4,5 @@ export default defineConfig({
   test: {
     unstubGlobals: true,
     unstubEnvs: true,
-    environment: "jsdom",
-    setupFiles: ["./src/__tests__/setup.ts"],
-    css: false,
   },
 });

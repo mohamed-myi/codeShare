@@ -15,10 +15,11 @@ vi.mock("../lib/logger.ts", () => ({
 import { useLayoutState } from "../hooks/useLayoutState.ts";
 
 const STORAGE_KEY = "codeshare:layout";
-const { store, mock: mockStorage } = createMockLocalStorage();
+let store: ReturnType<typeof createMockLocalStorage>["store"];
+let mockStorage: ReturnType<typeof createMockLocalStorage>["mock"];
 
 beforeEach(() => {
-  store.clear();
+  ({ store, mock: mockStorage } = createMockLocalStorage());
   vi.stubGlobal("localStorage", mockStorage);
   Object.defineProperty(window, "localStorage", {
     value: mockStorage,

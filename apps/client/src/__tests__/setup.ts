@@ -17,7 +17,7 @@ globalThis.ResizeObserver = class {
 
 // MSW lifecycle
 beforeAll(() => {
-  server.listen({ onUnhandledRequest: "bypass" });
+  server.listen({ onUnhandledRequest: "error" });
 });
 
 afterEach(() => {

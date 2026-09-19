@@ -13,12 +13,27 @@ import {
 } from "../support/app";
 
 async function waitForAnimations(page: Page) {
-  await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)));
+  // Opening a dialog can cancel an outgoing transition and reject its finished promise.
+  await page.waitForFunction(() =>
+    document
+      .getAnimations()
+      .every((animation) => !animation.pending && animation.playState !== "running"),
+  );
 }
 
 function scanPage(page: Page) {
   return new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
 }
+
+test("animation readiness tolerates cancelled transitions", async ({ page }) => {
+  await page.setContent('<button id="animated">Example</button>');
+  await page.evaluate(() => {
+    const animation = document.getElementById("animated")?.animate({ opacity: [0, 1] }, 10_000);
+    setTimeout(() => animation?.cancel(), 100);
+  });
+  await waitForAnimations(page);
+  expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
+});
 
 test.describe("MVP accessibility smoke", () => {
   test.beforeEach(async ({ request }) => {

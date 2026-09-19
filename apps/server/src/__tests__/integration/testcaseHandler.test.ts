@@ -77,8 +77,9 @@ describe("Testcase handler", () => {
   }
 
   async function joinUser(client: ClientSocket, displayName: string) {
+    const userJoinedPromise = waitForEvent(client, SocketEvents.USER_JOINED);
     client.emit(SocketEvents.USER_JOIN, { displayName });
-    await waitForEvent(client, SocketEvents.USER_JOINED);
+    await userJoinedPromise;
   }
 
   describe("valid test case", () => {
@@ -90,8 +91,9 @@ describe("Testcase handler", () => {
       const bob = connectClient(server.port, room.roomCode);
       await Promise.all([waitForEvent(alice, "connect"), waitForEvent(bob, "connect")]);
       await joinUser(alice, "Alice");
+      const userJoinedPromise2 = waitForEvent(alice, SocketEvents.USER_JOINED);
       await joinUser(bob, "Bob");
-      await waitForEvent(alice, SocketEvents.USER_JOINED);
+      await userJoinedPromise2;
 
       const aliceAdded = waitForEvent<{ testCase: CustomTestCase }>(
         alice,
@@ -122,12 +124,13 @@ describe("Testcase handler", () => {
       await waitForEvent(alice, "connect");
       await joinUser(alice, "Alice");
 
+      const errorPromise = waitForEvent<{ message: string }>(alice, SocketEvents.TESTCASE_ERROR);
       alice.emit(SocketEvents.TESTCASE_ADD, {
         input: { wrongKey: [1, 2] },
         expectedOutput: [0, 1],
       });
 
-      const error = await waitForEvent<{ message: string }>(alice, SocketEvents.TESTCASE_ERROR);
+      const error = await errorPromise;
       expect(error.message).toMatch(/input keys/i);
     });
   });
@@ -145,12 +148,13 @@ describe("Testcase handler", () => {
       await waitForEvent(alice, "connect");
       await joinUser(alice, "Alice");
 
+      const errorPromise2 = waitForEvent<{ message: string }>(alice, SocketEvents.TESTCASE_ERROR);
       alice.emit(SocketEvents.TESTCASE_ADD, {
         input: { nums: [99], target: 99 },
         expectedOutput: 99,
       });
 
-      const error = await waitForEvent<{ message: string }>(alice, SocketEvents.TESTCASE_ERROR);
+      const error = await errorPromise2;
       expect(error.message).toMatch(/limit/i);
     });
   });
@@ -165,12 +169,13 @@ describe("Testcase handler", () => {
       await joinUser(alice, "Alice");
 
       const largeValue = "x".repeat(11_000);
+      const errorPromise3 = waitForEvent<{ message: string }>(alice, SocketEvents.TESTCASE_ERROR);
       alice.emit(SocketEvents.TESTCASE_ADD, {
         input: { nums: largeValue, target: 1 },
         expectedOutput: 1,
       });
 
-      const error = await waitForEvent<{ message: string }>(alice, SocketEvents.TESTCASE_ERROR);
+      const error = await errorPromise3;
       expect(error.message).toMatch(/size/i);
     });
   });
@@ -184,12 +189,13 @@ describe("Testcase handler", () => {
       await waitForEvent(alice, "connect");
       await joinUser(alice, "Alice");
 
+      const errorPromise4 = waitForEvent<{ message: string }>(alice, SocketEvents.TESTCASE_ERROR);
       alice.emit(SocketEvents.TESTCASE_ADD, {
         input: { nums: [1], target: 1 },
         expectedOutput: 1,
       });
 
-      const error = await waitForEvent<{ message: string }>(alice, SocketEvents.TESTCASE_ERROR);
+      const error = await errorPromise4;
       expect(error.message).toMatch(/problem/i);
     });
   });
@@ -203,9 +209,10 @@ describe("Testcase handler", () => {
       await waitForEvent(alice, "connect");
       await joinUser(alice, "Alice");
 
+      const errorPromise5 = waitForEvent<{ message: string }>(alice, SocketEvents.TESTCASE_ERROR);
       alice.emit(SocketEvents.TESTCASE_ADD, { badField: true });
 
-      const error = await waitForEvent<{ message: string }>(alice, SocketEvents.TESTCASE_ERROR);
+      const error = await errorPromise5;
       expect(error.message).toMatch(/invalid/i);
     });
   });

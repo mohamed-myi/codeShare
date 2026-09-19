@@ -88,7 +88,6 @@ function findPythonCommand(): string | null {
 }
 
 const pythonCommand = findPythonCommand();
-const pythonIt = pythonCommand ? it : it.skip;
 
 function runPythonHarness(userCode: string, testCases: TestCase[], methodName = "solve") {
   if (!pythonCommand) {
@@ -242,7 +241,7 @@ describe("buildHarness", () => {
 });
 
 describe("Python harness runtime", () => {
-  pythonIt("caps captured userStdout and reports truncation metadata", () => {
+  it("caps captured userStdout and reports truncation metadata", () => {
     const { nonce, stdout, status } = runPythonHarness(
       [
         "class Solution:",
@@ -260,7 +259,7 @@ describe("Python harness runtime", () => {
     expect(data.metadata?.userStdoutTruncated).toBe(true);
   });
 
-  pythonIt("caps per-case tracebacks and reports truncation metadata", () => {
+  it("caps per-case tracebacks and reports truncation metadata", () => {
     const { nonce, stdout, status } = runPythonHarness(
       [
         "class Solution:",
@@ -282,7 +281,7 @@ describe("Python harness runtime", () => {
     expect(firstResult.error_truncated).toBe(true);
   });
 
-  pythonIt("isolates global state between cases", () => {
+  it("isolates global state between cases", () => {
     const { nonce, stdout, status } = runPythonHarness(
       [
         "counter = 0",
@@ -304,7 +303,7 @@ describe("Python harness runtime", () => {
     ]);
   });
 
-  pythonIt("keeps monkey-patched modules from corrupting harness output", () => {
+  it("keeps monkey-patched modules from corrupting harness output", () => {
     const { nonce, stdout, status } = runPythonHarness(
       [
         "import json, time, traceback",
@@ -324,7 +323,7 @@ describe("Python harness runtime", () => {
     expect(data.results).toMatchObject([{ index: 0, status: "ok", got_json: { value: 7 } }]);
   });
 
-  pythonIt("blocks practical frame inspection imports from user code", () => {
+  it("blocks practical frame inspection imports from user code", () => {
     const { nonce, stdout, status } = runPythonHarness(
       [
         "class Solution:",
@@ -344,7 +343,7 @@ describe("Python harness runtime", () => {
     expect(data.results).toMatchObject([{ index: 0, status: "ok", got_json: "blocked" }]);
   });
 
-  pythonIt("prevents stdout marker spoofing from raw user output", () => {
+  it("prevents stdout marker spoofing from raw user output", () => {
     const spoofNonce = "deadbeef01234567";
     const { nonce, stdout, status } = runPythonHarness(
       [
@@ -365,7 +364,7 @@ describe("Python harness runtime", () => {
     expect(data.userStdout).toContain("HARNESS_RESULT");
   });
 
-  pythonIt("contains os._exit attempts as user-code errors", () => {
+  it("contains os._exit attempts as user-code errors", () => {
     const { nonce, stdout, status } = runPythonHarness(
       [
         "class Solution:",

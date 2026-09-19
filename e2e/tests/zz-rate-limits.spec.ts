@@ -1,10 +1,14 @@
 import { type APIRequestContext, type Browser, expect, test } from "@playwright/test";
-import { type Socket as ClientSocket, io as ioClient } from "socket.io-client";
+import {
+  createTestClient,
+  waitForEvent,
+} from "../../apps/server/src/__tests__/helpers/socketTestHelper";
 import { SocketEvents } from "../../packages/shared/src/events";
 import {
   buildImportedProblemUrl,
   clientOrigin,
   createRoom,
+  extractRoomCode,
   goToProblems,
   readEditorCode,
   resetTestState,
@@ -13,6 +17,8 @@ import {
   setEditorCode,
   uniqueImportSlug,
 } from "../support/app";
+
+type ClientSocket = ReturnType<typeof createTestClient>;
 
 async function _openPageForForwardedIp(browser: Browser, ip: string) {
   const context = await browser.newContext({
@@ -36,60 +42,38 @@ async function createRoomViaApi(request: APIRequestContext, displayName: string)
   return payload.roomCode;
 }
 
-async function connectImportClient(roomCode: string, displayName: string): Promise<ClientSocket> {
-  const socket = ioClient(serverUrl, {
-    path: "/ws/socket",
-    transports: ["websocket"],
-    autoConnect: true,
-    query: { roomCode },
+async function connectRoomClient(roomCode: string, displayName: string): Promise<ClientSocket> {
+  const socket = createTestClient(Number(new URL(serverUrl).port), roomCode, {
+    autoConnect: false,
     extraHeaders: {
       origin: clientOrigin,
       "x-forwarded-for": "203.0.113.8",
     },
   });
 
-  await new Promise<void>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error("Timed out connecting import client.")), 5_000);
-    socket.once("connect", () => {
-      clearTimeout(timer);
-      resolve();
-    });
-    socket.once("connect_error", (error) => {
-      clearTimeout(timer);
-      reject(error);
-    });
-  });
-
-  const joined = new Promise<void>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error("Timed out waiting for USER_JOINED.")), 5_000);
-    socket.once(SocketEvents.USER_JOINED, () => {
-      clearTimeout(timer);
-      resolve();
-    });
-  });
-  socket.emit(SocketEvents.USER_JOIN, { displayName });
-  await joined;
-  return socket;
+  try {
+    const connected = waitForEvent(socket, "connect", 5_000);
+    socket.connect();
+    await connected;
+    const joined = waitForEvent(socket, SocketEvents.USER_JOINED, 5_000);
+    socket.emit(SocketEvents.USER_JOIN, { displayName });
+    await joined;
+    return socket;
+  } catch (error) {
+    socket.disconnect();
+    throw error;
+  }
 }
 
-async function waitForImportStatus(
-  socket: ClientSocket,
-): Promise<{ status: string; message?: string }> {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(
-      () => reject(new Error("Timed out waiting for import status.")),
-      10_000,
-    );
-    const handleStatus = (payload: { status: string; message?: string }) => {
-      if (payload.status === "scraping") {
-        return;
-      }
-      clearTimeout(timer);
-      socket.off(SocketEvents.PROBLEM_IMPORT_STATUS, handleStatus);
-      resolve(payload);
-    };
-    socket.on(SocketEvents.PROBLEM_IMPORT_STATUS, handleStatus);
-  });
+function waitForImportStatus(socket: ClientSocket) {
+  return waitForEvent<{ status: string; message?: string }>(
+    socket,
+    SocketEvents.PROBLEM_IMPORT_STATUS,
+    {
+      timeoutMs: 10_000,
+      accept: (payload) => payload.status !== "scraping",
+    },
+  );
 }
 
 test.describe("MVP rate and cap gates", () => {
@@ -117,7 +101,6 @@ test.describe("MVP rate and cap gates", () => {
   });
 
   test("enforces the global execution cap across rooms", async ({ browser, page }) => {
-    const pages = [page];
     await createRoom(page, { displayName: "Runner 0" });
     await goToProblems(page);
     await selectProblem(page, "two-sum");
@@ -130,7 +113,6 @@ test.describe("MVP rate and cap gates", () => {
     for (let attempt = 0; attempt < 10; attempt += 1) {
       const runner = attempt === 0 ? page : await browser.newPage();
       if (attempt > 0) {
-        pages.push(runner);
         await createRoom(runner, { displayName: `Runner ${attempt}` });
         await goToProblems(runner);
         await selectProblem(runner, "two-sum");
@@ -141,14 +123,24 @@ test.describe("MVP rate and cap gates", () => {
         );
       }
 
-      for (let run = 0; run < 3; run += 1) {
-        await runner.getByTestId("run-code-button").click();
-        await expect(runner.getByTestId("results-panel")).toContainText("3/3 passed");
+      const observer = await connectRoomClient(extractRoomCode(runner.url()), "Quota observer");
+      try {
+        for (let run = 0; run < 3; run += 1) {
+          const result = waitForEvent(observer, SocketEvents.EXECUTION_RESULT);
+          await Promise.all([
+            expect(result).resolves.toMatchObject({ type: "run", passed: 3, total: 3 }),
+            runner.getByTestId("run-code-button").click(),
+          ]);
+          await expect(runner.getByTestId("results-panel")).toContainText("3/3 passed");
+        }
+      } finally {
+        observer.disconnect();
       }
+      // The global quota survives disconnects; completed rooms need no live browser.
+      if (attempt > 0) await runner.close();
     }
 
     const overflow = await browser.newPage();
-    pages.push(overflow);
     await createRoom(overflow, { displayName: "Overflow" });
     await goToProblems(overflow);
     await selectProblem(overflow, "two-sum");
@@ -162,9 +154,7 @@ test.describe("MVP rate and cap gates", () => {
       "Daily execution limit reached",
     );
 
-    for (const runner of pages.slice(1)) {
-      await runner.close();
-    }
+    await overflow.close();
   });
 
   test("enforces the import IP rate limit", async ({ request }) => {
@@ -173,28 +163,30 @@ test.describe("MVP rate and cap gates", () => {
     try {
       for (let roomIndex = 0; roomIndex < 2; roomIndex += 1) {
         const roomCode = await createRoomViaApi(request, `Importer ${roomIndex}`);
-        const client = await connectImportClient(roomCode, `Importer ${roomIndex}`);
+        const client = await connectRoomClient(roomCode, `Importer ${roomIndex}`);
         clients.push(client);
 
         for (let importIndex = 0; importIndex < 2; importIndex += 1) {
+          const imported = waitForImportStatus(client);
           client.emit(SocketEvents.PROBLEM_IMPORT, {
             leetcodeUrl: buildImportedProblemUrl(
               uniqueImportSlug(`ip-limit-${roomIndex}-${importIndex}`),
             ),
           });
-          await expect(waitForImportStatus(client)).resolves.toMatchObject({ status: "saved" });
+          await expect(imported).resolves.toMatchObject({ status: "saved" });
         }
       }
 
       const overflowRoom = await createRoomViaApi(request, "Importer overflow");
-      const overflowClient = await connectImportClient(overflowRoom, "Importer overflow");
+      const overflowClient = await connectRoomClient(overflowRoom, "Importer overflow");
       clients.push(overflowClient);
 
+      const rejected = waitForImportStatus(overflowClient);
       overflowClient.emit(SocketEvents.PROBLEM_IMPORT, {
         leetcodeUrl: buildImportedProblemUrl(uniqueImportSlug("ip-limit-overflow")),
       });
 
-      await expect(waitForImportStatus(overflowClient)).resolves.toMatchObject({
+      await expect(rejected).resolves.toMatchObject({
         status: "failed",
         message: expect.stringContaining("Too many import attempts"),
       });

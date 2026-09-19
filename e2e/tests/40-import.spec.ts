@@ -71,7 +71,10 @@ test.describe("MVP import flows", () => {
       await importProblem(page, buildImportedProblemUrl(slug));
       await goToProblems(page);
     }
-    await importProblem(page, buildImportedProblemUrl(roomSlugs[3]));
+    await importProblem(page, {
+      url: buildImportedProblemUrl(roomSlugs[3]),
+      expectedError: "Session import limit",
+    });
     await expect(page.getByTestId("import-status-message")).toContainText("Session import limit");
 
     for (let roomIndex = 0; roomIndex < 3; roomIndex += 1) {
@@ -97,10 +100,10 @@ test.describe("MVP import flows", () => {
     );
     await createRoom(finalRoom, { displayName: "Global Limit" });
     await goToProblems(finalRoom);
-    await importProblem(
-      finalRoom,
-      buildImportedProblemUrl(uniqueImportSlug("global-cap-overflow")),
-    );
+    await importProblem(finalRoom, {
+      url: buildImportedProblemUrl(uniqueImportSlug("global-cap-overflow")),
+      expectedError: "Daily import limit reached",
+    });
     await expect(finalRoom.getByTestId("import-status-message")).toContainText(
       "Daily import limit reached",
     );

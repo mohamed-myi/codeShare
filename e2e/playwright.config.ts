@@ -1,31 +1,10 @@
-import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 
-function loadDotEnv() {
-  const envPath = path.resolve(__dirname, "../.env");
-  if (!existsSync(envPath)) {
-    return {};
-  }
-
-  const entries: Record<string, string> = {};
-  for (const line of readFileSync(envPath, "utf8").split(/\r?\n/)) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) {
-      continue;
-    }
-    const equalsIndex = trimmed.indexOf("=");
-    if (equalsIndex === -1) {
-      continue;
-    }
-    const key = trimmed.slice(0, equalsIndex).trim();
-    const value = trimmed.slice(equalsIndex + 1).trim();
-    entries[key] = value;
-  }
-  return entries;
+if (!process.env.E2E_ENV_DIR || !process.env.DATABASE_URL) {
+  throw new Error("Run browser tests through pnpm e2e to provision isolated state");
 }
 
-const fileEnv = loadDotEnv();
 const clientPort = process.env.E2E_CLIENT_PORT ?? "5173";
 const serverPort = process.env.E2E_SERVER_PORT ?? "3001";
 const stubPort = process.env.E2E_STUB_PORT ?? "4100";
@@ -33,10 +12,9 @@ const clientUrl = `http://127.0.0.1:${clientPort}`;
 const serverUrl = `http://127.0.0.1:${serverPort}`;
 const stubUrl = `http://127.0.0.1:${stubPort}`;
 const baseEnv = {
-  DATABASE_URL:
-    process.env.DATABASE_URL ??
-    fileEnv.DATABASE_URL ??
-    "postgresql://codeshare:codeshare@127.0.0.1:5432/codeshare_dev",
+  DATABASE_URL: process.env.DATABASE_URL,
+  RELIABILITY_STORE: "memory",
+  ENABLE_PRIVATE_ACCESS: "false",
   JUDGE0_API_URL: `${stubUrl}/judge0`,
   JUDGE0_API_KEY: "e2e-stub",
   JUDGE0_DAILY_LIMIT: "30",
@@ -82,16 +60,21 @@ const baseEnv = {
 export default defineConfig({
   testDir: "./tests",
   fullyParallel: false,
-  forbidOnly: !!process.env.CI,
+  forbidOnly: true,
   retries: 0,
   workers: 1,
-  globalSetup: "./support/global-setup.mjs",
-  globalTeardown: "./support/global-teardown.mjs",
-  reporter: process.env.CI ? "github" : "list",
+  outputDir: process.env.E2E_OUTPUT_DIR,
+  reporter: [
+    [process.env.CI ? "github" : "list"],
+    [
+      "json",
+      { outputFile: path.join(process.env.E2E_OUTPUT_DIR ?? "test-results", "results.json") },
+    ],
+  ],
   timeout: 60_000,
   use: {
     baseURL: clientUrl,
-    trace: "on-first-retry",
+    trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
   projects: [
@@ -108,7 +91,6 @@ export default defineConfig({
       reuseExistingServer: false,
       timeout: 30_000,
       env: {
-        ...fileEnv,
         ...process.env,
         E2E_STUB_PORT: stubPort,
       },
@@ -120,19 +102,17 @@ export default defineConfig({
       reuseExistingServer: false,
       timeout: 120_000,
       env: {
-        ...fileEnv,
         ...process.env,
         ...baseEnv,
       },
     },
     {
-      command: `pnpm --filter @codeshare/client exec vite --host 127.0.0.1 --port ${clientPort}`,
+      command: `pnpm --filter @codeshare/client exec vite --host 127.0.0.1 --port ${clientPort} --strictPort`,
       cwd: "..",
       url: clientUrl,
       reuseExistingServer: false,
       timeout: 120_000,
       env: {
-        ...fileEnv,
         ...process.env,
         VITE_REALTIME_URL: serverUrl,
         E2E_SERVER_URL: serverUrl,

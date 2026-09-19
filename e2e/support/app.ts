@@ -1,4 +1,5 @@
 import { type APIRequestContext, type Browser, expect, type Page } from "@playwright/test";
+import { waitForSharedCode } from "../../apps/server/src/__tests__/helpers/yjsTestHelper";
 import { ROOM_CODE } from "../../packages/shared/src/constants.ts";
 
 const ROOM_URL_RE = new RegExp(
@@ -17,15 +18,15 @@ const ROOM_MODE_LABEL: Record<RoomMode, string> = {
 };
 
 export async function resetTestState(request: APIRequestContext): Promise<void> {
-  await request.post(`${serverUrl}/api/test/reset`);
-  await request.post(`${stubUrl}/__reset`);
+  expect((await request.post(`${serverUrl}/api/test/reset`)).ok()).toBeTruthy();
+  expect((await request.post(`${stubUrl}/__reset`)).ok()).toBeTruthy();
 }
 
 export async function setStubScenario(
   request: APIRequestContext,
   scenario: Record<string, unknown>,
 ): Promise<void> {
-  await request.post(`${stubUrl}/__scenario`, { data: scenario });
+  expect((await request.post(`${stubUrl}/__scenario`, { data: scenario })).ok()).toBeTruthy();
 }
 
 export async function getStubJournal(request: APIRequestContext) {
@@ -56,6 +57,7 @@ export async function createRoom(
   }
   await page.getByTestId("create-room-button").click();
   await expect(page).toHaveURL(ROOM_URL_RE);
+  await expect(page.getByTestId("room-header")).toContainText(options.displayName);
   return extractRoomCode(page.url());
 }
 
@@ -65,6 +67,7 @@ export async function joinRoom(page: Page, roomCode: string, displayName: string
   await page.getByLabel("Display name").fill(displayName);
   await page.getByTestId("join-room-button").click();
   await expect(page).toHaveURL(new RegExp(`/room/${roomCode}/session$`));
+  await expect(page.getByTestId("room-header")).toContainText(displayName);
 }
 
 export async function openSessionPage(
@@ -140,7 +143,15 @@ export async function setEditorCode(page: Page, code: string): Promise<void> {
   await page.evaluate((value) => {
     window.__codeshareEditor?.setValue(value);
   }, code);
-  await page.waitForTimeout(1000);
+  const token = await page.evaluate(() => window.sessionStorage.getItem("yjsToken"));
+  if (!token) throw new Error("Editor synchronization requires the room's Yjs token");
+  await waitForSharedCode({
+    url: `${serverUrl.replace(/^http/, "ws")}/ws/yjs`,
+    roomCode: extractRoomCode(page.url()),
+    token,
+    origin: clientOrigin,
+    code,
+  });
 }
 
 export async function readEditorCode(page: Page): Promise<string> {
@@ -157,29 +168,19 @@ export async function openImportDialog(page: Page): Promise<void> {
   await expect(page.getByTestId("import-dialog")).toBeVisible();
 }
 
-export async function importProblem(page: Page, url: string): Promise<void> {
+export async function importProblem(
+  page: Page,
+  input: string | { url: string; expectedError: string },
+): Promise<void> {
+  const url = typeof input === "string" ? input : input.url;
   await openImportDialog(page);
   await page.getByTestId("import-url-input").fill(url);
   await page.getByTestId("submit-import-button").click();
-  const dialog = page.getByTestId("import-dialog");
-  await Promise.race([
-    dialog.waitFor({ state: "hidden" }),
-    page.getByTestId("import-status-message").waitFor({ state: "visible" }),
-  ]);
-  await dialog.waitFor({ state: "hidden", timeout: 5_000 }).catch(() => undefined);
-
-  const succeeded = await page
-    .getByTestId("import-status-message")
-    .textContent({ timeout: 2_000 })
-    .then((value) => value?.includes("Problem imported and loaded.") ?? false)
-    .catch(() => false);
-  if (succeeded && (await dialog.isVisible().catch(() => false))) {
-    await page
-      .getByRole("button", { name: /close import dialog/i })
-      .click({ timeout: 2_000 })
-      .catch(() => undefined);
-    await dialog.waitFor({ state: "hidden", timeout: 5_000 }).catch(() => undefined);
+  if (typeof input !== "string") {
+    await expect(page.getByTestId("import-status-message")).toContainText(input.expectedError);
+    return;
   }
+  await expect(page.getByTestId("import-dialog")).toBeHidden();
 }
 
 export async function addCustomTestCase(
